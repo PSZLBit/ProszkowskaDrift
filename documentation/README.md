@@ -24,21 +24,22 @@ Always read this file plus `00-meta/documentation-rules.md` and `00-meta/glossar
 | Task | Read first |
 |------|------------|
 | Any coding task | This file + module file(s) below + glossary + open decisions in `05-architecture-decisions/decision-log.md` |
-| New feature / requirement | `01-vision-scope/vision-scope.md`, `04-product/requirements.md`, relevant file in `02-flanki-domain/` and `03-users-permissions/` |
-| Bracket / tournament logic | `02-flanki-domain/domain-overview.md` |
-| Accounts, roles, authz, age, privacy | `03-users-permissions/roles-permissions-gdpr.md` |
-| Tech stack, hosting, DB, framework | `05-architecture-decisions/decision-log.md` — if status is `TBD`, do not introduce a choice |
+| New feature / requirement | `01-vision-scope/vision-scope.md`, `04-product/requirements.md`, relevant file in `02-game-domain/` and `03-players-sessions/` |
+| Game / session logic | `02-game-domain/domain-overview.md` |
+| Players, slots, session permissions, privacy | `03-players-sessions/roles-sessions.md` |
+| Tech stack, transport, engine, hosting | `05-architecture-decisions/decision-log.md` — if status is `TBD`, do not introduce a choice |
 | Git, tests, AI workflow | `06-development/workflow.md` |
 
 ## Map
 
 - `00-meta/` — how to write docs, glossary.
 - `01-vision-scope/` — vision, MVP scope, non-goals.
-- `02-flanki-domain/` — Flanki rules, tournament lifecycle, single-elimination.
-- `03-users-permissions/` — roles, permission matrix, GDPR and 18+ policy.
-- `04-product/` — functional requirements, user stories.
+- `02-game-domain/` — game concept (TBD), session lifecycle, real-time constraints.
+- `03-players-sessions/` — player/host roles, slot permissions, session privacy (no accounts).
+- `04-product/` — functional requirements per component (controller/server/game).
 - `05-architecture-decisions/` — decision log and ADRs. Undecided stack lives here.
-- `06-development/` — git workflow, testing, working with AI agents.
+- `06-development/` — monorepo layout, git workflow, testing, working with AI agents.
+- `archive/` — superseded Flanki Organizer docs, kept for history only. Do not implement from these.
 - `_templates/` — templates for ADR, decision entry, feature spec.
 
 ## Update Rule

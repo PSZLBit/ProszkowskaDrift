@@ -10,7 +10,7 @@ One paragraph: what user problem does this solve?
 
 ## Users and Roles
 
-Who can use it (Competitor / Organizer / Administrator)? Link to `03-users-permissions/roles-permissions-gdpr.md`.
+Who can use it (Player / Host / Spectator)? Link to `03-players-sessions/roles-sessions.md`.
 
 ## Requirements
 
@@ -19,7 +19,7 @@ Who can use it (Competitor / Organizer / Administrator)? Link to `03-users-permi
 
 ## Domain Rules
 
-Tournament lifecycle states, bracket edge cases, validation rules.
+Session lifecycle states, game edge cases, validation rules. Game concept is TBD — see `02-game-domain/domain-overview.md`.
 
 ## Authorization
 
@@ -27,7 +27,7 @@ Who can do what, enforced on the server.
 
 ## Privacy
 
-What personal data is touched; confirm no date of birth leaks.
+What session data is touched; confirm no accounts or personal data are retained.
 
 ## Docs Update Checklist
 

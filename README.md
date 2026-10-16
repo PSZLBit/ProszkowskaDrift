@@ -1,29 +1,35 @@
-# Flanki Organizer
+# Real-Time Play System
 
-Flanki Organizer is a web app for organizing Flanki tournaments at speedcubing competitions. It is inspired by the World Cube Association's competition platform and is intended to make single-elimination tournaments easier to run and follow.
+Local multiplayer system: Android tablets act as controllers, a PC server receives inputs, drives a swappable game, and renders it on a connected big screen.
 
-At major championships, participant counts have grown from about 30 at Worlds 2023 in Incheon, to 100 at Euros 2024 in Pamplona, and 150 at Euros 2026. Managing brackets and competition details on the go becomes increasingly difficult at that scale. Flanki Organizer aims to bring those tasks into one place.
+One session hosts 1–4 players on the local network. The host opens a lobby on the server PC, players join via code/QR, and the server routes validated inputs to the active game. No accounts.
+
+## Components
+
+- `server/` — session ownership, input handling, game driving, big-screen display. (Not yet scaffolded; stack TBD.)
+- `game/` — swappable game module behind the server game interface. (Concept TBD.)
+- `controller-android/` — Kotlin native Android tablet controller. (Input set TBD.)
+- `documentation/` — source of truth, including `archive/` for superseded Flanki Organizer docs.
 
 ## Planned Features
 
-- Create an account with a name, date of birth (private), and country.
-- It's gonna be GDPR compliant
-- Browse announced competitions and register to compete.
-- Create and manage competitions as an organizer.
-- Generate single-elimination tournament brackets.
-- Allow administrators to manage the website and announce competitions to competitors.
+- Host opens a lobby with join code/QR on the server screen.
+- 1–4 tablets join over the local network and take player slots.
+- Tablets send real-time inputs; server validates slots and passes inputs to the game.
+- Game output renders on the connected screen.
+- Server/game separation allows swapping games without changing controllers or networking.
 
 ## Technology
 
-To be decided with the team.
+To be decided with the team. See `documentation/05-architecture-decisions/decision-log.md` — `TBD` rows block implementation.
 
 ## Getting Started
 
-Development is at an early stage. Setup instructions will be added after the team chooses the technology stack and establishes the development workflow.
+Development is at an early stage. Setup instructions will be added after the team chooses the technology stack per component.
 
 ## Project Status
 
-The project is at the start of development. Features described above are planned and may not yet be implemented.
+Pivot in progress: docs rewritten for the new system on 2026-10-16; old Flanki tournament-management docs are archived under `documentation/archive/`. Features above are planned and not yet implemented.
 
 ## License
 
