@@ -1,0 +1,16 @@
+#!/bin/sh
+# Block direct pushes to main.
+# Install with: git config core.hooksPath .githooks
+# Changes must go to other branches and reach main via a pull request on GitHub.
+
+protected_ref="refs/heads/main"
+
+while read local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "$protected_ref" ]; then
+    echo "Blocked: direct push to main is not allowed." >&2
+    echo "Push to another branch instead and open a pull request on GitHub." >&2
+    exit 1
+  fi
+done
+
+exit 0
