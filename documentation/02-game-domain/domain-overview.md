@@ -5,7 +5,6 @@ Last updated: 2026-10-16
 
 ## Concept (TBD)
 
-Brand-new real-time game, unrelated to the archived Flanki tournament model.
 Genre, rules, win condition, and scoring are TBD (see D-13).
 Do not implement game logic until this section reaches `Decided`.
 

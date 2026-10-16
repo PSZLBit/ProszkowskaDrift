@@ -30,7 +30,6 @@ rewiring controllers, networking, or display.
 - No accounts, no persistent profiles.
 - No internet play; local network only.
 - No iOS controllers.
-- No fixed game design yet — game concept is TBD and blocks game logic.
 
 ## Open Questions (TBD)
 

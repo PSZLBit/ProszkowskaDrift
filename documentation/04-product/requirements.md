@@ -3,10 +3,6 @@
 Status: Draft
 Last updated: 2026-10-16
 
-All items below are planned and not implemented unless marked otherwise.
-Old Flanki account/competition/bracket requirements are archived —
-see `archive/README.md`.
-
 ## Functional Requirements
 
 Controller (`controller-android/`, Kotlin native, Android only):
