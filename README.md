@@ -29,7 +29,7 @@ Development is at an early stage. Setup instructions will be added after the tea
 
 ## Project Status
 
-Pivot in progress: docs rewritten for the new system on 2026-10-16; old Flanki tournament-management docs are archived under `documentation/archive/`. Features above are planned and not yet implemented.
+Project is now in planning stage.
 
 ## License
 

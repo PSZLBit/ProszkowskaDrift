@@ -21,7 +21,7 @@ rewiring controllers, networking, or display.
 - Host opens a lobby on the server PC; lobby shows a join code/QR.
 - 1–4 Android tablets join over the local network and take player slots.
 - Tablets send real-time inputs to the server; input set is TBD.
-- Server routes inputs to the game and renders game output on the connected screen.
+- Server routes inputs to the game.
 - Host can start/end the game and manage player slots.
 - One swappable-game slot with a TBD first game.
 
