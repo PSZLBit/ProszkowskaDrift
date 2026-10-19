@@ -29,6 +29,9 @@ Monorepo layout (D-07): `server/` (Go), `game/` (Godot 4),
 - D-25: in-memory state only; no accounts, names, photos, or personal data.
 - D-27: one-week sprints, weekly demo/retro, GitHub Projects, DoR/DoD, peer
   review, CI, AI-assistance disclosure.
+- D-28: working agreement: English artifacts, small regular commits with
+  conventional prefixes, test-first for pure logic, tests or documented manual
+  hardware checks for behavior changes.
 - D-14 is still TBD: the controller input scheme must be chosen by playtesting
   on the real tablets. Do not hard-code a scheme as final.
 
@@ -38,8 +41,9 @@ explore it.
 
 ## Language
 
-All project artifacts — documentation, code, comments, commit messages, UI
-strings — are in English (D-05).
+All project artifacts are in English (D-05): documentation, code, comments,
+commit messages, issue and PR titles/descriptions, review comments, branch
+names, and UI strings. Do not add non-English content to the repository.
 
 ## Documentation Is the Source of Truth
 
@@ -63,6 +67,56 @@ entry when a decision changed. A change without a docs update is incomplete.
 Truth hierarchy: `documentation/` (`Decided` / `Implemented`) > code > chat
 discussion. If docs and code disagree, fix one of them with a dated update
 instead of leaving them inconsistent.
+
+## Collaboration Rules
+
+Detailed process: `documentation/06-development/workflow.md`. Detailed testing:
+`documentation/06-development/testing.md`. These rules are binding for agents.
+
+### Issues and PRs
+
+- Work from a GitHub issue. Link the PR with `Closes #<n>`.
+- One PR does one thing. Include what changed, why, and how it was tested.
+- Disclose AI assistance and state what the author verified.
+- Use the PR template. Never describe planned behavior as implemented.
+- Keep the board accurate and write blockers in the issue or PR, not only in
+  chat.
+
+### Commits
+
+- English, imperative summary, conventional prefix:
+  `<type>(<scope>): <summary>`.
+- Types: `feat`, `fix`, `docs`, `test`, `chore`, `spike`.
+- Scopes: `server`, `game`, `controller`, `docs`, `ops`.
+- Commit small and regularly: one logical change per commit, and commit each
+  coherent step instead of batching days of work.
+- Never bundle unrelated refactors, formatting, or generated files.
+- No direct commits to `main`. No force-push and no history rewrite on shared
+  branches.
+- Commit and push only when the task asks for it; then push the branch and open
+  a PR instead of merging locally.
+- Keep branches short-lived: days, not weeks.
+
+### Way of Working
+
+- Work in small vertical slices. Prefer a working end-to-end path over a broad
+  unfinished layer. Demo on the real target hardware every week when the work
+  touches the controller, game, or network.
+- **Test-first for pure logic:** scoring, task assignment, session/slot logic,
+  input validation, protocol parsing. Red → green → refactor.
+- **Manual check first for UI, visual, and hardware behavior:** write the check
+  in the issue or in `testing.md`, then implement and run it on the real device.
+- No behavior change without an automated test or a documented manual check.
+- Bug fix: add a regression test when practical.
+- Spikes are exempt from test-first but must record what was measured and the
+  conclusion (D-18).
+- Stop and ask when blocked, when a `TBD` blocks the work, or when scope is
+  ambiguous. Do not invent a decision or hard-code a `TBD`.
+- Prefer the simplest solution that fits the documented design. No speculative
+  abstraction, new dependency, or new runtime without a decision.
+- Definition of Done: `documentation/06-development/workflow.md`. Do not mark an
+  item done before docs, tests, review, CI, and applicable hardware checks are
+  complete.
 
 ## Working Guidelines
 
