@@ -107,8 +107,9 @@ outcome and acceptance criteria. Link every PR to an issue.
   not rewrite history after review.
 - Keep branches short-lived: days, not weeks. Bring in `main` before review if
   needed, without rewriting published history.
-- Commit and push only when the task asks for it. Then push the branch and open
-  a PR using the template, linked to the issue.
+- On a task branch, commit each coherent step without waiting for a separate
+  instruction. Pushing, merging, and opening a pull request still require an
+  explicit request (D-29).
 - One PR should do one thing. Include what changed, why, how it was tested, and
   any AI assistance.
 - Do not commit generated artifacts, APKs, logs, or local configuration.

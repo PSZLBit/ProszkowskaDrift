@@ -71,5 +71,7 @@ Superseded decisions stay in the log. Do not delete history.
 - Delivery: one-week sprints, GitHub Projects, DoR/DoD, CI (D-27).
 - Working agreement: English artifacts, small regular commits with
   conventional prefixes, test-first for pure logic (D-28).
+- Commit cadence: commit each coherent step on a task branch; push, merge, and
+  PR only on explicit request (D-29).
 - Open: controller input scheme (D-14), map/tuning details, festival date and
   hardware specs.

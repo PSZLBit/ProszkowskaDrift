@@ -32,6 +32,8 @@ Monorepo layout (D-07): `server/` (Go), `game/` (Godot 4),
 - D-28: working agreement: English artifacts, small regular commits with
   conventional prefixes, test-first for pure logic, tests or documented manual
   hardware checks for behavior changes.
+- D-29: on a task branch, commit each coherent step without waiting; pushing,
+  merging, and opening a PR still require an explicit request.
 - D-14 is still TBD: the controller input scheme must be chosen by playtesting
   on the real tablets. Do not hard-code a scheme as final.
 
@@ -91,10 +93,14 @@ Detailed process: `documentation/06-development/workflow.md`. Detailed testing:
 - Commit small and regularly: one logical change per commit, and commit each
   coherent step instead of batching days of work.
 - Never bundle unrelated refactors, formatting, or generated files.
+- Never commit secrets, tokens, personal data, generated builds, or local
+  configuration. If a secret is committed, report it; do not rewrite shared
+  history yourself.
 - No direct commits to `main`. No force-push and no history rewrite on shared
   branches.
-- Commit and push only when the task asks for it; then push the branch and open
-  a PR instead of merging locally.
+- Commit each coherent step on a task branch without waiting for a separate
+  instruction. Pushing, merging, and opening a PR require an explicit request
+  (D-29).
 - Keep branches short-lived: days, not weeks.
 
 ### Way of Working
@@ -148,6 +154,8 @@ Detailed process: `documentation/06-development/workflow.md`. Detailed testing:
   that could not be run.
 - Keep commits small, focused, and in English. Follow
   `documentation/06-development/workflow.md`.
+- Do not add tooling before its trigger; follow
+  `documentation/06-development/tooling-plan.md`.
 - Preserve existing user changes and do not discard unrelated work.
 - AI-assisted code is allowed. Do not merge code that was not reviewed,
   understood, and tested. Never paste secrets, tokens, or personal data into an
