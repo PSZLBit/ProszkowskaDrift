@@ -1,29 +1,43 @@
-# Tech Stack Options — Analysis for Team Choice
+# Tech Stack Options — Analysis and Outcome
 
 Status: Draft
 Last updated: 2026-10-19
 
-Analysis-only document. No decision is made here.
-Blocks implementation until the team moves items to `Decided`:
-`D-01` (stack, database, hosting), `D-17` (server language, game engine,
-transport), `D-16` (latency target, tick rate).
-See `05-architecture-decisions/decision-log.md`.
-Do not implement from this file.
+This file preserves the analysis that led to D-22 and ADR-0001. The decision is
+recorded there; the options below are context, not open choices.
+
+## Selected Outcome (2026-10-19)
+
+| Area | Selection | Decision |
+|------|-----------|----------|
+| Server runtime | Go | D-22, ADR-0001 |
+| Game/display | Godot 4 | D-22, ADR-0001 |
+| Controller | Minimal Kotlin for Android 4.4.2 | D-20, ADR-0002 |
+| Transport | WebSocket + JSON | D-22 |
+| Simulation owner | Godot (server owns session/input authority) | D-22 |
+| Persistence | In-memory only | D-25 |
+| Hosting | Self-contained laptop app | D-22 |
+| Connection | Auto-connect + device token slot reclaim | D-21 |
+
+The Sprint 0 spike validates compatibility. If it fails, a new dated decision
+supersedes the affected part; do not silently change the stack.
 
 ## Constraints (from Decided docs)
 
-- `controller-android/` is fixed: Kotlin native, Android tablets only (D-08, D-10).
+- `controller-android/` is fixed: Kotlin native, Android tablets only, API 19
+  (D-08, D-10, D-20).
 - `server/` runs on a screen-connected PC, owns sessions, enforces all
-  privileged actions server-side (D-11, `04-product/requirements.md` NFR-01).
-- `game/` is swappable behind a stable server-driven interface (D-11, FR-S05).
-- Local network only, 1–4 players, lobby code/QR join, no internet play (D-09).
+  privileged actions server-side (D-11, D-22, `04-product/requirements.md` NFR-01).
+- `game/` is swappable behind a stable server-driven interface (D-11, D-22).
+- Local network only, 1–4 players, fixed tablets auto-connect, no internet play
+  (D-21).
 - No accounts, transient session state only (slots, connection handles,
-  game state), discarded at session end (D-12).
+  game state), discarded at session end (D-12, D-25).
 - English only (D-05).
 - `server/`, `game/` are not scaffolded yet; no test runner configured
   (`06-development/workflow.md`).
 
-## 1. Server language / runtime (D-17, D-01)
+## 1. Server language / runtime (D-17, D-01 — resolved by D-22)
 
 | Option                                                          | Pros                                                                                                                                                                                                               | Cons                                                                                                                                                                                               | Fits when                                                                         |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -39,10 +53,10 @@ Test/build if chosen: A — Gradle + JUnit/Kotest; B — npm + Vitest/Jest;
 C — dotnet test/xUnit; D — `go test`. Document exact commands in
 `06-development/workflow.md` once decided.
 
-## 2. Game engine / game module tech (D-17, D-13, FR-G01, FR-S05)
+## 2. Game engine / game module tech (D-17, D-13 — resolved by D-19/D-22)
 
-The game concept is TBD, so this choice is about rendering + loop + the
-server↔game interface shape.
+The game concept is now a top-down 2D parking time attack (D-19), so this
+choice is about rendering, collision, and the server↔game interface shape.
 
 | Option                                                                      | Pros                                                                                                                                                                                     | Cons                                                                                                                                  | Fits when                                                                    |
 | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -53,24 +67,26 @@ server↔game interface shape.
 
 Interface note (FR-S05): regardless of engine, keep the contract narrow and
 engine-agnostic, e.g. `init(config) / update(slotInputs, dt) → gameState /
-renderSnapshot / reset`. Decide binary vs JSON snapshot when D-16 is set.
+renderSnapshot / reset`. JSON is adopted for MVP; binary is only a post-MVP
+optimisation if measurements require it (D-22, D-23).
 
-## 3. Controller-to-server transport (D-17, D-16, FR-C02/FR-S03)
+## 3. Controller-to-server transport (D-17, D-16 — resolved by D-22/D-23)
 
 | Option                                                | Pros                                                                                                                                                                             | Cons                                                                                                                 | Fits when                                                               |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| A. WebSockets + JSON (upgrade to CBOR/Protobuf later) | Simple over shared WiFi; works on all server options; OkHttp on Android ↔ Ktor/Node/.NET/Go servers; easy slot-auth, kick, heartbeat; enough for 1–4 players at party-game rates | TCP head-of-line blocking; not the lowest possible latency; needs app-level sequence/ack for lost inputs             | Default for MVP; choose unless latency tests prove otherwise            |
+| A. WebSockets + JSON (upgrade to CBOR/Protobuf later) | Simple over shared WiFi; works on all server options; OkHttp on Android ↔ Ktor/Node/.NET/Go servers; easy slot-auth, kick, heartbeat; enough for 1–4 players at party-game rates | TCP head-of-line blocking; not the lowest possible latency; needs app-level sequence/ack for lost inputs             | Selected for MVP (D-22); revisit only if measured latency requires it |
 | B. WebRTC DataChannel                                 | Low-latency, NAT-friendly; built-in encryption                                                                                                                                   | Needs signaling (still WebSockets/HTTP) + STUN/TURN complexity; overkill for same-WiFi MVP; harder on Android native | Only if later play goes beyond local WiFi                               |
-| C. Raw UDP / ENet / KCP (custom reliability)          | Lowest latency, full tick control                                                                                                                                                | Must reimplement ordering, reliability, reconnect, and slot-auth; firewall/WiFi quirks; most custom code             | Only if a latency target (D-16) demands it and the team can own netcode |
+| C. Raw UDP / ENet / KCP (custom reliability)          | Lowest latency, full tick control                                                                                                                                                | Must reimplement ordering, reliability, reconnect, and slot-auth; firewall/WiFi quirks; most custom code             | Only if measured latency (D-23) demands it and the team can own netcode |
 | D. HTTP polling / SSE only                            | Trivial to debug                                                                                                                                                                 | Wrong shape for bidirectional real-time input; latency/jitter worse than WebSockets                                  | Not recommended; useful only as fallback join/lobby channel             |
 
-Discovery/join (FR-C01/FR-S01) is orthogonal: QR encodes
-`ws://<pc-ip>:<port>/join?code=XXXX` (or mDNS name); manual code entry as
-fallback. mDNS (`_proszkowska._tcp`) is optional convenience and is not part
-of the MVP connection model.
+Connection/join (FR-C01/FR-S01) is separate from transport: the four fixed
+tablets auto-connect to the configured server address and reclaim slots by
+device token (D-21). QR or manual address entry is only a setup fallback.
+mDNS (`_proszkowska._tcp`) is optional convenience and is not part of the MVP
+connection model.
 
-Recommended MVP pairing: WebSockets + JSON, 20–30 Hz input send with
-server tick to be set under D-16, binary encoding only if measured need.
+Adopted MVP pairing: WebSocket + JSON, 20–30 Hz input, 60 FPS display, target
+≤100 ms input-to-visible response (D-22, D-23).
 
 ## 4. Database / persistence (D-01, constrained by D-12)
 
@@ -78,7 +94,7 @@ No accounts and no retained personal data are Decided. Viable options:
 
 | Option                                                  | Pros                                                      | Cons                                              | Fits when                        |
 | ------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------- | -------------------------------- |
-| A. In-memory only, discard at session end (recommended) | Matches D-12 exactly; zero ops; no migration/GDPR surface | No history/stats across sessions                  | MVP default                      |
+| A. In-memory only, discard at session end (selected) | Matches D-12 and D-25; zero ops; no migration/GDPR surface | No history/stats across sessions | MVP default (D-25) |
 | B. SQLite file for local diagnostics only (optional)    | Zero-service crash logs / score history on the host PC    | Must prove no personal data is stored; extra code | Team explicitly wants local logs |
 | C. No embedded DB + flat JSON log (optional)            | Simplest inspectable diagnostics                          | Same privacy care as B; no querying               | Light alternative to B           |
 
@@ -95,22 +111,27 @@ Local-only MVP: no cloud host, no container orchestrator.
 | B. Docker image for the server                                                                                              | Reproducible env                                                  | Docker on a presentation PC is friction for MVP; display forwarding is awkward |
 | C. Cloud relay / internet hosting                                                                                           | —                                                                 | Explicit non-goal for MVP (D-09); do not choose                                |
 
-## 6. Suggested decision path for the team
+## 6. Outcome (2026-10-19)
 
-1. Pick server language (Section 1): Kotlin+Ktor if language unity matters,
-   Node+TS if prototype speed matters, .NET if Unity/C# skill matters.
-2. Pick game tech (Section 2): custom loop for fastest MVP, Godot 4 for
-   2D editor support, Unity only if game scope demands it.
-3. Confirm transport (Section 3): WebSockets+JSON default; set numeric
-   latency target and tick rate to close D-16.
-4. Confirm persistence (Section 4): in-memory only unless diagnostics file
-   is explicitly wanted.
-5. Record each as `Decided` rows in `decision-log.md` with ADR links, then
-   scaffold `server/`, `game/`, and the `GameInterface` (FR-S05).
+1. Server: Go (Section 1, option D). Chosen for the team's strongest backend
+   skill, simple single-binary deployment, and easy supervision of the game.
+2. Game/display: Godot 4 (Section 2, option A). Chosen for 2D rendering,
+   collisions, scene editing, and fast iteration.
+3. Transport: WebSocket + JSON (Section 3, option A). Revisit only if the
+   Sprint 0 latency measurement misses D-23.
+4. Persistence: in-memory only (Section 4, option A), matching D-12/D-25.
+5. Hosting: self-contained laptop app (Section 5, option A): Go binary + Godot
+   export + supervisor/launcher.
+6. Controller: minimal Kotlin app for Android 4.4.2 (ADR-0002).
+7. The Sprint 0 spike validates the stack and the controller toolchain. A
+   failure produces a new dated decision, not a silent change.
 
-## Open questions left for ADRs
+## Open questions
 
-- Numeric latency budget and tick/update rate (D-16).
-- Input set and per-controller feedback (D-14).
-- Game concept/rules/win condition (D-13).
+- Controller input scheme and per-controller feedback (D-14) — resolve by
+  playtesting buttons, slider, and virtual joystick on the real tablets.
+- Exact map layout and tuning values — `02-game-domain/game-design.md` is
+  `Draft` and will be updated after playtests.
+- Festival date, laptop/TV specifications, and budget — needed for the delivery
+  roadmap and operations plan.
 - Disconnect/rejoin/late-join/host-crash handling (D-15).
