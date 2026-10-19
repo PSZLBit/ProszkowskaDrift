@@ -134,4 +134,3 @@ Local-only MVP: no cloud host, no container orchestrator.
   `Draft` and will be updated after playtests.
 - Festival date, laptop/TV specifications, and budget — needed for the delivery
   roadmap and operations plan.
-- Disconnect/rejoin/late-join/host-crash handling (D-15).
