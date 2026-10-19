@@ -134,8 +134,9 @@ Host keyboard --> Game --host_request--> Server --host_command--> Game
 
 - `server/`: Go binary, config file, logs directory.
 - `game/`: Godot export (Windows and/or Linux, decided by the laptop OS).
-- `ops/`: launch script or small supervisor that starts the server, waits for
-  health, starts/stops the game, and restarts on failure.
+- `server/ops/`: launch script or small supervisor that starts the server,
+  waits for health, starts/stops the game, and restarts on failure. It stays
+  inside `server/` to respect the D-07 layout.
 - Development: separate commands for Go and Godot, documented after scaffolding.
 - Festival: one folder, one launch action, fullscreen, no developer tools.
 - Version and build info visible in a diagnostics screen/log, not in the player
