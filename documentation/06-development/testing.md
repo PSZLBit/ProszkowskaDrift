@@ -13,6 +13,23 @@ Last updated: 2026-10-19
   router, and festival-like conditions.
 - Keep tests cheap enough for a four-person team and free-tier CI.
 
+## Test-First Practice
+
+- **Pure logic:** write the test first for game rules, scoring, task
+  assignment, session/slot logic, input validation, and protocol parsing.
+  Red → green → refactor.
+- **UI, visual, and hardware behavior:** write the manual check first in the
+  issue or in this file, then implement and run it on the real hardware.
+- **Bug fixes:** add a regression test first when practical; otherwise document
+  the manual reproduction and fix verification.
+- **Spikes:** exempt from test-first, but must record what was measured and the
+  conclusion (D-18).
+- **Coverage:** cover decisions, boundaries, and edge cases that can break a
+  round or the festival stand. Do not chase a coverage percentage.
+- **Determinism:** unit and contract tests must not depend on real time, a real
+  network, or a real tablet. Use fakes and fixed clocks.
+- **Speed:** keep the PR test suite fast enough to run on every pull request.
+
 ## Test Layers
 
 | Layer | What | Where | When |

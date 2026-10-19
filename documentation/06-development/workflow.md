@@ -96,13 +96,46 @@ outcome and acceptance criteria. Link every PR to an issue.
   at least one review, and green CI.
 - Branch names: `feat/<short-name>`, `fix/<short-name>`, `docs/<short-name>`,
   `spike/<short-name>`, `chore/<short-name>`.
-- Commits are small, focused, and in English. Prefixes: `feat:`, `fix:`,
-  `docs:`, `test:`, `chore:`, `spike:`.
+- Commit convention: `<type>(<scope>): <summary>`, for example
+  `feat(server): validate input rate`. Types: `feat`, `fix`, `docs`, `test`,
+  `chore`, `spike`. Scopes: `server`, `game`, `controller`, `docs`, `ops`.
+  Summary in imperative English; explain why in the body when it is not obvious.
+- Commit small and regularly: one logical change per commit, and commit as soon
+  as a coherent step is complete. Do not leave days of work uncommitted. Never
+  bundle unrelated refactors, formatting, or generated files.
+- Push feature branches, never `main`. Do not force-push a shared branch and do
+  not rewrite history after review.
+- Keep branches short-lived: days, not weeks. Bring in `main` before review if
+  needed, without rewriting published history.
+- Commit and push only when the task asks for it. Then push the branch and open
+  a PR using the template, linked to the issue.
 - One PR should do one thing. Include what changed, why, how it was tested, and
   any AI assistance.
-- Do not bundle unrelated refactors. Do not commit generated artifacts, APKs, or
-  local configuration.
+- Do not commit generated artifacts, APKs, logs, or local configuration.
 - Merge only after review and CI. Delete the branch after merge.
+
+## Working Agreement
+
+- Work in small vertical slices that produce something demoable. Prefer a
+  working end-to-end path over a broad unfinished layer.
+- **Test-first for pure logic:** game rules, scoring, task assignment, session
+  and slot logic, input validation, and protocol parsing. Write the failing test
+  first, then the implementation.
+- **Manual check first for UI, visual, and hardware behavior:** write the check
+  in the issue or in `06-development/testing.md`, then implement and run it on
+  the real hardware. Automated UI tests are not required for MVP.
+- No behavior change without either an automated test or a documented manual
+  verification. A bug fix adds a regression test when practical.
+- Do not chase coverage percentages. Cover decisions, boundaries, and edge cases
+  that can break the round or the festival stand.
+- Stop and ask when blocked, when a TBD blocks the work, or when scope is
+  ambiguous. Do not invent a decision, hard-code a TBD, or silently expand scope.
+- Prefer the simplest solution that fits the documented design. Do not add
+  speculative abstraction, a new dependency, or a new runtime without a decision.
+- Keep the board accurate: update the issue status and write blockers in the
+  issue/PR, not only in chat.
+- Demo on the real target hardware every week when the work touches controller,
+  game, or network behavior.
 
 ## Definition of Ready
 

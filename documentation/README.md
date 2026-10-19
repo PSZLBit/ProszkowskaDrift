@@ -62,10 +62,13 @@ Superseded decisions stay in the log. Do not delete history.
 
 - Game: top-down 2D parking time attack (D-19).
 - Stack: Go server + Godot 4 game + minimal Kotlin controller (D-22).
-- Controller: Android 4.4.2, API 19, no Compose/AndroidX (D-20).
+- Controller: Android 4.4.2, API 19, no Compose/OkHttp 4, AndroidX only if
+  proven compatible (D-20).
 - Connection: fixed tablets auto-connect and reclaim slots (D-21).
 - Real-time: 60 FPS, 20–30 Hz input, ≤100 ms target (D-23).
 - State: in-memory only, no personal data (D-25).
 - Delivery: one-week sprints, GitHub Projects, DoR/DoD, CI (D-27).
+- Working agreement: English artifacts, small regular commits with
+  conventional prefixes, test-first for pure logic (D-28).
 - Open: controller input scheme (D-14), map/tuning details, festival date and
   hardware specs.
