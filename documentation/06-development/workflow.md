@@ -205,6 +205,8 @@ AI assistance is expected and allowed. The human author remains accountable.
 
 ## Testing and CI
 
-See `06-development/testing.md`. The planned CI runs Go tests/vet and builds the
-Android APK; Godot headless tests are added once the project exists. Use free-tier
-GitHub Actions and cache dependencies. Report any check that cannot run.
+See `06-development/testing.md` for the strategy and
+`06-development/tooling-plan.md` for the planned tooling and quality gates. The
+planned CI runs Go tests/vet and builds the Android APK; Godot headless tests are
+added once the project exists. Use free-tier GitHub Actions and cache
+dependencies. Report any check that cannot run.

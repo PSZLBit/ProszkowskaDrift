@@ -34,6 +34,7 @@ Always read this file plus `00-meta/documentation-rules.md` and
 | Tech stack, transport, engine, hosting | `05-architecture-decisions/decision-log.md`, ADRs, `06-development/architecture.md` |
 | Protocol messages | `06-development/protocol.md` |
 | Git, tests, Agile, AI workflow | `06-development/workflow.md`, `06-development/testing.md`, `06-development/roadmap.md` |
+| Tooling, hooks, CI quality gates | `06-development/tooling-plan.md` |
 | Festival setup and recovery | `06-development/festival-operations.md` |
 
 ## Map
@@ -46,8 +47,8 @@ Always read this file plus `00-meta/documentation-rules.md` and
   reconnect rules, session privacy.
 - `04-product/` — functional and non-functional requirements per component.
 - `05-architecture-decisions/` — decision log, ADRs, retained stack analysis.
-- `06-development/` — architecture, protocol, workflow, testing, roadmap,
-  festival runbook.
+- `06-development/` — architecture, protocol, workflow, testing, tooling plan,
+  roadmap, festival runbook.
 - `_templates/` — templates for ADR, decision entry, feature spec.
 
 ## Update Rule

@@ -123,7 +123,8 @@ Run on all four actual tablets, not only one.
 
 ## CI Plan
 
-Free-tier GitHub Actions, planned after scaffolding:
+Free-tier GitHub Actions, planned after scaffolding. Tooling details, triggers,
+and the "do not add yet" list live in `06-development/tooling-plan.md`.
 
 - `server`: `go test -race ./...`, `go vet ./...`, build.
 - `controller-android`: Gradle `assembleDebug`; cache Gradle; upload APK artifact.
