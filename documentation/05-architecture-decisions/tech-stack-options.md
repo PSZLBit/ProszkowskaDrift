@@ -1,7 +1,7 @@
 # Tech Stack Options — Analysis for Team Choice
 
 Status: Draft
-Last updated: 2026-10-16
+Last updated: 2026-10-19
 
 Analysis-only document. No decision is made here.
 Blocks implementation until the team moves items to `Decided`:
@@ -66,7 +66,8 @@ renderSnapshot / reset`. Decide binary vs JSON snapshot when D-16 is set.
 
 Discovery/join (FR-C01/FR-S01) is orthogonal: QR encodes
 `ws://<pc-ip>:<port>/join?code=XXXX` (or mDNS name); manual code entry as
-fallback. mDNS (`_flanki._tcp`) is optional convenience, not transport.
+fallback. mDNS (`_proszkowska._tcp`) is optional convenience and is not part
+of the MVP connection model.
 
 Recommended MVP pairing: WebSockets + JSON, 20–30 Hz input send with
 server tick to be set under D-16, binary encoding only if measured need.

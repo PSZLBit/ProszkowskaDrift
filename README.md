@@ -9,7 +9,7 @@ One session hosts 1–4 players on the local network. The host opens a lobby on 
 - `server/` — session ownership, input handling, game driving, big-screen display. (Not yet scaffolded; stack TBD.)
 - `game/` — swappable game module behind the server game interface. (Concept TBD.)
 - `controller-android/` — Kotlin native Android tablet controller. (Input set TBD.)
-- `documentation/` — source of truth, including `archive/` for superseded Flanki Organizer docs.
+- `documentation/` — source of truth and decision history.
 
 ## Planned Features
 

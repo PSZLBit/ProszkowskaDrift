@@ -1,14 +1,14 @@
 # Players, Sessions, and Permissions
 
 Status: Draft
-Last updated: 2026-10-16
+Last updated: 2026-10-19
 
 There are no accounts. A play session is local and short-lived.
 
 ## Roles
 
 - `Player` — one person with one Android tablet controller. Can join a lobby via code/QR, send game inputs, and leave.
-- `Host` — the person operating the server PC connected to the screen. Can open/close the lobby, start/end the game, and remove a player slot.W
+- `Host` — the person operating the server PC connected to the screen. Can open/close the lobby, start/end the game, and remove a player slot.
 
 ## Permission Matrix (Draft)
 

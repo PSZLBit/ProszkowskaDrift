@@ -1,14 +1,14 @@
 # Development Workflow
 
 Status: Draft
-Last updated: 2026-10-16
+Last updated: 2026-10-19
 
 ## Monorepo Layout
 
 - `server/` — PC program owning sessions, inputs, game driving, and display. (Not yet scaffolded; stack TBD per D-17.)
 - `game/` — swappable game module behind the server game interface. (Concept TBD per D-13.)
 - `controller-android/` — Kotlin native Android tablet controller. (Input set TBD per D-14.)
-- `documentation/` — source of truth, including `archive/` for superseded Flanki docs.
+- `documentation/` — source of truth and decision history.
 
 ## Git
 

@@ -1,7 +1,7 @@
 # Glossary
 
 Status: Draft
-Last updated: 2026-10-16
+Last updated: 2026-10-19
 
 Single definition place for domain terms. Use these spellings in code, docs, and UI.
 
@@ -21,9 +21,10 @@ Single definition place for domain terms. Use these spellings in code, docs, and
 | Local network | Same-site network (e.g. WiFi) controllers and server share. | No internet play for MVP. |
 | Disconnect | Loss of a controller connection; rejoin behavior is TBD. | See `02-game-domain/domain-overview.md`. |
 
-Archived Flanki tournament terms (competition, bracket, seeding, bye, walkover,
-competitor, organizer, administrator, WCA, GDPR date-of-birth handling) are
-superseded — see `archive/README.md`.
+Historical note: the original Flanki Organizer concept was superseded by D-06
+on 2026-10-16. Old archive files were removed from the working tree; the decision
+history is retained in `05-architecture-decisions/decision-log.md`. Do not
+reintroduce tournament terms without a new decision.
 
 ## Rules
 

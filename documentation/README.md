@@ -39,7 +39,6 @@ Always read this file plus `00-meta/documentation-rules.md` and `00-meta/glossar
 - `04-product/` — functional requirements per component (controller/server/game).
 - `05-architecture-decisions/` — decision log and ADRs. Undecided stack lives here.
 - `06-development/` — monorepo layout, git workflow, testing, working with AI agents.
-- `archive/` — superseded Flanki Organizer docs, kept for history only. Do not implement from these.
 - `_templates/` — templates for ADR, decision entry, feature spec.
 
 ## Update Rule
