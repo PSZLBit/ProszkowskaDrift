@@ -5,6 +5,8 @@
 # Component owners: replace the placeholders with real GitHub usernames or team
 # slugs when roles are assigned, then uncomment. Until then the default applies.
 #
+# TODO
+#
 # /server/              @<backend-github-user>
 # /game/                @<game-github-user>
 # /controller-android/  @<controller-github-user>
