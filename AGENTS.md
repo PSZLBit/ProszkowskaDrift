@@ -2,7 +2,7 @@
 
 ## Project Context
 
-Flanki Organizer is an early-stage web app for managing Flanki competitions, including competitor registration, organizer tools, announcements, and single-elimination bracket generation. The technology stack and development workflow have not yet been selected.
+Local real-time play system: Android tablets (Kotlin native) act as controllers, a PC server receives inputs, drives a swappable game, and renders it on a connected big screen. One session hosts 1–4 players on a local network via lobby code/QR. No accounts. Monorepo layout: `server/`, `game/`, `controller-android/`, `documentation/`. Game concept, controller input set, session edge cases, latency target, and server/game/transport stack are TBD and block implementation.
 
 ## Language
 
@@ -26,11 +26,10 @@ Truth hierarchy: `documentation/` (`Decided` / `Implemented`) > code > chat disc
 ## Working Guidelines
 
 - Inspect the repository before making changes and follow its existing structure and conventions.
-- Do not assume or introduce a framework, database, hosting platform, or other major technology choice; the team is still deciding the stack. A `TBD` entry in the decision log blocks implementation of that topic.
+- Do not assume or introduce a server language, game engine, transport protocol, database, hosting platform, or other major technology choice; the team is still deciding the stack. A `TBD` entry in the decision log blocks implementation of that topic.
 - Keep changes focused and avoid unrelated refactors or new dependencies unless the task requires them.
-- Treat account details, especially dates of birth, as personal information. Avoid exposing them unnecessarily in UI, logs, or public competition views.
-- Enforce 18+ eligibility handling without leaking dates of birth; see `documentation/03-users-permissions/roles-permissions-gdpr.md`.
-- Keep authorization boundaries clear between competitors, competition organizers, and site administrators. Do not rely on UI visibility alone to protect privileged actions; enforce checks on the server.
+- Sessions hold transient state only (player slots, connection handles, game state). Do not store accounts or personal data; discard session data when the session ends unless a decision says otherwise.
+- Keep authorization boundaries clear between players and the host. Do not rely on controller UI visibility alone to protect privileged actions; enforce slot, kick, start/end, and input-validity checks on the server; see `documentation/03-players-sessions/roles-sessions.md`.
 - Do not describe planned features as implemented unless the code supports them.
 - Add or update focused tests for behavior changes. Check the repository for its current test and build commands before running verification; report any checks that could not be run.
 - Preserve existing user changes and do not discard unrelated work.

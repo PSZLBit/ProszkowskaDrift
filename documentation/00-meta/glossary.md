@@ -1,24 +1,29 @@
 # Glossary
 
 Status: Draft
-Last updated: 2026-10-13
+Last updated: 2026-10-16
 
 Single definition place for domain terms. Use these spellings in code, docs, and UI.
 
 | Term | Definition | Notes |
 |------|------------|-------|
-| Flanki | Polish team drinking game; tournaments run after speedcubing competitions. Exact rules TBD — see `02-flanki-domain/domain-overview.md`. | Keep rules in domain file, not here. |
-| Competition | One announced Flanki event (place, date, organizer, participant list). | Inspired by WCA competition model. |
-| Tournament | Single-elimination bracket run within a competition. | One competition may host one tournament for MVP. |
-| Competitor | Registered user who can browse competitions and register to compete. | — |
-| Organizer | User who can create and manage competitions and brackets. | — |
-| Administrator | Site-level user who can manage the website and announce competitions. | — |
-| Single-elimination | Knockout format: a team is out after one loss. | MVP format. |
-| Bye | Automatic advance when participant count is not a power of two. | Needs seeding rule, TBD. |
-| Seeding | Initial bracket placement method (e.g. random, registration order). | TBD. |
-| Walkover | Win by default when the opponent does not show up or is disqualified. | TBD handling. |
-| WCA | World Cube Association. Reference model for competitions, not a dependency. | — |
-| GDPR | EU data protection regulation. Dates of birth are private personal data. | See `03-users-permissions/roles-permissions-gdpr.md`. |
+| System | The local real-time play setup: controllers + server + game + display. | — |
+| Controller | Android tablet app (Kotlin native) used as a game input device. | One per player, 1–4 per session. |
+| Player | Person holding a controller in a session. | No account. |
+| Host | Person operating the server PC. | Opens lobby, manages slots, starts/ends game. |
+| Server | PC program that owns the session, receives inputs, drives the game, renders the display. | Runs on the screen-connected PC; separate from the game. |
+| Game | Swappable module driven by the server through a stable interface. | Concrete game is TBD. |
+| Display / Screen | Big screen connected to the server PC showing game output. | — |
+| Session | One local play instance from lobby open to end. | Holds only transient slot/connection/game state. |
+| Lobby | Joinable session state advertising a join code/QR on the local network. | — |
+| Slot | One of the 1–4 player places in a session. | Assigned by the server. |
+| Input event | Real-time message from a controller to the server. | Exact set is TBD. |
+| Local network | Same-site network (e.g. WiFi) controllers and server share. | No internet play for MVP. |
+| Disconnect | Loss of a controller connection; rejoin behavior is TBD. | See `02-game-domain/domain-overview.md`. |
+
+Archived Flanki tournament terms (competition, bracket, seeding, bye, walkover,
+competitor, organizer, administrator, WCA, GDPR date-of-birth handling) are
+superseded — see `archive/README.md`.
 
 ## Rules
 

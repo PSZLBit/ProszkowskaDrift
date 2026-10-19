@@ -1,37 +1,39 @@
 # Vision and Scope
 
 Status: Draft
-Last updated: 2026-10-13
+Last updated: 2026-10-16
 
 ## Vision
 
-Flanki Organizer is a web app for organizing Flanki tournaments at speedcubing competitions.
-It is inspired by the WCA competition platform and brings registrations, announcements,
-and single-elimination brackets into one place that works on the go.
+A local real-time play system: players use Android tablets as controllers,
+a PC server receives the inputs, drives a swappable game, and shows it
+on a big screen everyone in the room can see.
 
 ## Context
 
-Participant counts at major championships grew from about 30 (Worlds 2023, Incheon)
-to 100 (Euros 2024, Pamplona) and 150 (Euros 2026). Manual bracket management
-does not scale to that size.
+One session hosts 1–4 players, each with one Android tablet (Kotlin native),
+joined to a server PC over the local network via lobby code/QR.
+The server and the game are separate so games can be swapped without
+rewiring controllers, networking, or display.
 
 ## MVP Scope (Planned, Not Implemented)
 
-- Create an account with name, private date of birth, and country.
-- Browse announced competitions and register to compete.
-- Create and manage competitions as an organizer.
-- Generate single-elimination tournament brackets.
-- Administrators manage the website and announce competitions.
+- Host opens a lobby on the server PC; lobby shows a join code/QR.
+- 1–4 Android tablets join over the local network and take player slots.
+- Tablets send real-time inputs to the server; input set is TBD.
+- Server routes inputs to the game.
+- Host can start/end the game and manage player slots.
+- One swappable-game slot with a TBD first game.
 
 ## Non-Goals for MVP
 
-- No multi-format brackets (only single-elimination).
-- No payment handling.
-- No integration with external competition systems.
-- No native mobile apps.
+- No accounts, no persistent profiles.
+- No internet play; local network only.
+- No iOS controllers.
 
 ## Open Questions (TBD)
 
-- Exact Flanki team size and match rules — must be defined in `02-flanki-domain/domain-overview.md`.
-- Minimum age enforcement flow — see `03-users-permissions/roles-permissions-gdpr.md`.
-- Technology stack, hosting, database — must be decided in `05-architecture-decisions/decision-log.md`.
+- Game concept, rules, and win condition — see `02-game-domain/domain-overview.md`.
+- Controller input set and feedback — TBD.
+- Disconnect, rejoin, late join, and host-crash handling — TBD.
+- Latency target and transport protocol — see `05-architecture-decisions/decision-log.md`.
