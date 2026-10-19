@@ -1,0 +1,56 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+
+# Local environment, secrets, and machine-specific configuration
+.env
+.env.*
+!.env.example
+*.local
+*.secret
+*.pem
+*.key
+local.properties
+
+# Logs and temporary files
+*.log
+logs/
+tmp/
+.cache/
+
+# Go
+/server/bin/
+/server/ops/bin/
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Android / Gradle
+.gradle/
+/controller-android/build/
+/controller-android/app/build/
+/controller-android/captures/
+/controller-android/.cxx/
+*.apk
+*.aab
+
+# Godot
+/game/.godot/
+/game/export/
+/game/build/
+
+# Godot export presets may contain keystore paths or passwords; keep them local.
+/game/export_presets.cfg
+
+# Build and distribution output
+/dist/
+/build/
+/out/
