@@ -34,7 +34,8 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
 - Go server, Godot 4 game, minimal Kotlin controller.
 - WebSocket + JSON for controller↔server and server↔game.
 - In-memory state only: no database, accounts, or personal data.
-- Android 4.4.2 (API 19) compatibility: no Compose, no AndroidX, no OkHttp 4.
+- Android 4.4.2 (API 19) compatibility: no Compose, no OkHttp 4, and no
+  AndroidX unless a library is proven API 19 compatible.
 - Display: fixed full-map view, 1920×1080 reference, 60 FPS target.
 - Input: 20–30 Hz, target ≤100 ms input-to-visible response.
 

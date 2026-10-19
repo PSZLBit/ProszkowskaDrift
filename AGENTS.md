@@ -17,7 +17,8 @@ Monorepo layout (D-07): `server/` (Go), `game/` (Godot 4),
 - D-19: top-down 2D parking time attack; 1–4 independent players; fixed map;
   five tasks per player; environment collisions only.
 - D-20: Android 4.4.2 controller; minimal Kotlin; plain Views; no Compose, no
-  AndroidX, no OkHttp 4; compatibility is a Sprint 0 gate.
+  OkHttp 4, and no AndroidX unless a library is proven API 19 compatible;
+  compatibility is a Sprint 0 gate, with a minimal Java app as fallback.
 - D-21: fixed tablets auto-connect to a configured server and reclaim slots with
   a random device token; QR/manual address is only a setup fallback.
 - D-22: Go server + Godot 4 game + minimal Kotlin controller; WebSocket + JSON;

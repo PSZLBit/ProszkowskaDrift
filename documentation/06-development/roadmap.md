@@ -125,7 +125,8 @@ Do not start M1 until S0-03, S0-04, S0-05, and S0-06 have a clear result.
 
 ### E2 — Controller (Kotlin, API 19)
 
-- Project scaffold with minSdk 19, no Compose/AndroidX.
+- Project scaffold with minSdk 19; no Compose/OkHttp 4; avoid AndroidX unless
+  API 19 compatible.
 - WebSocket connect/reconnect.
 - Touch controls and input loop.
 - Task/score/time/state UI.

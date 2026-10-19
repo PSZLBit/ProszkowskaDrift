@@ -96,8 +96,9 @@ protocol are in `06-development/architecture.md` and `06-development/protocol.md
   in-memory event scores may be shown (D-25).
 - `NFR-04` Real-time targets: 60 FPS display, 20–30 Hz input, ≤100 ms
   input-to-visible response (D-23).
-- `NFR-05` Controller compatibility: Android 4.4.2 (API 19), no Compose,
-  AndroidX, or OkHttp 4; validated in Sprint 0 (D-20).
+- `NFR-05` Controller compatibility: Android 4.4.2 (API 19); no Compose or
+  OkHttp 4; avoid AndroidX unless a library is proven API 19 compatible;
+  validated in Sprint 0 (D-20).
 - `NFR-06` Festival robustness: auto-reconnect, auto-restart after game/server
   crash, clear recovery states, and a documented runbook.
 - `NFR-07` English-only documentation, code, comments, commits, and UI strings
