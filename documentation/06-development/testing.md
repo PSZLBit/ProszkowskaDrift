@@ -147,7 +147,7 @@ Run before merging a documentation or site-config change:
 2. `mkdocs build --strict` succeeds.
 3. The generated site has the router as its home page, no `_templates/` pages,
    and no broken relative links reported by `--strict`.
-4. After the first deployment from `main`, open
+4. After a deployment from `main`, open
    <https://pszlbit.github.io/ProszkowskaDrift/> and check the home page, a deep
    page, navigation, search, and the 404 page with styles loaded.
 

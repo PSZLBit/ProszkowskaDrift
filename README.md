@@ -53,6 +53,8 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
 
 ## Documentation
 
+Published site: <https://pszlbit.github.io/ProszkowskaDrift/>.
+
 Start with [`documentation/README.md`](documentation/README.md), then read:
 
 - [`documentation/01-vision-scope/vision-scope.md`](documentation/01-vision-scope/vision-scope.md)
