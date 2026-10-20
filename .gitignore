@@ -54,5 +54,4 @@ coverage.html
 /dist/
 /build/
 /out/
-
-site/
+/site/

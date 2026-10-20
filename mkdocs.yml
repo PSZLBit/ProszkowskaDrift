@@ -1,6 +1,7 @@
-site_name: Prószkowska Drift documentation
+site_name: Proszkowska Drift documentation
+site_url: https://pszlbit.github.io/ProszkowskaDrift/
 repo_url: https://github.com/PSZLBit/ProszkowskaDrift
-edit_uri: blob/main/documentation/
+edit_uri: edit/main/documentation/
 docs_dir: documentation
 theme:
   name: readthedocs
@@ -8,4 +9,5 @@ theme:
   hljs_languages:
     - yaml
     - go
-    - golang
+exclude_docs: |
+  _templates/
