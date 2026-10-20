@@ -20,8 +20,7 @@ Developer tooling for the project. A tool enters the repository only with a
 ## Documentation Site
 
 The project documentation is built with MkDocs and published to GitHub Pages
-from the `main` branch (D-30). The first deployment is pending until the
-repository's Pages source is set to **GitHub Actions**.
+from the `main` branch (D-30).
 
 | Item | Purpose | Notes |
 |------|---------|-------|
@@ -29,11 +28,11 @@ repository's Pages source is set to **GitHub Actions**.
 | `requirements-docs.txt` | Reproducible docs toolchain | Pins `mkdocs==1.6.1`; install with `pip install -r requirements-docs.txt` |
 | `.github/workflows/docs.yml` | Build and deploy | `mkdocs build --strict` on docs changes; deploys `main` to Pages |
 
-- Intended URL: <https://pszlbit.github.io/ProszkowskaDrift/>.
+- Published URL: <https://pszlbit.github.io/ProszkowskaDrift/>.
 - `documentation/` remains the source of truth; the published site is a
   read-only copy.
 - `site/` is generated output; do not edit or commit it.
-- Enable Pages with **Source: GitHub Actions** before the first deployment.
+- Pages uses **Source: GitHub Actions**.
 
 ## Formatting and Linting
 

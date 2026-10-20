@@ -75,7 +75,8 @@ instead of leaving them inconsistent.
 ## Documentation Site
 
 - `documentation/` remains the source of truth; `documentation/README.md` is the
-  router. The published site is a read-only copy.
+  router. The published site (<https://pszlbit.github.io/ProszkowskaDrift/>) is
+  a read-only copy.
 - The site is built from root `mkdocs.yml`; `site/` is generated output and must
   not be committed or edited.
 - Run `mkdocs build --strict` after documentation changes. CI builds it on pull

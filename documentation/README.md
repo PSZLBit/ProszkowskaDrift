@@ -6,6 +6,9 @@ Last updated: 2026-10-20
 > All project artifacts are in English. This folder is the source of truth.
 > Code implements what is described here. Chat history does not override this folder.
 
+Published copy: <https://pszlbit.github.io/ProszkowskaDrift/>. The files in this
+folder remain the source of truth.
+
 ## Status Legend
 
 - `Draft` — under discussion, do not implement as final.
