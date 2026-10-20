@@ -21,7 +21,7 @@ One session hosts 1–4 players on the local network. The host opens a lobby on 
 
 ## Technology
 
-To be decided with the team. See `documentation/05-architecture-decisions/decision-log.md` — `TBD` rows block implementation.
+To be decided with the team. See [`05-architecture-decisions/decision-log.md`](documentation/site/05-architecture-decisions/decision-log.md) — `TBD` rows block implementation.
 
 ## Getting Started
 
