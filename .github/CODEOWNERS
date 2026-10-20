@@ -5,7 +5,7 @@
 # Component owners: replace the placeholders with real GitHub usernames or team
 # slugs when roles are assigned, then uncomment. Until then the default applies.
 #
-# TODO
+# TODO: fill in the component owners below and enable code-owner review before M1.
 #
 # /server/              @<backend-github-user>
 # /game/                @<game-github-user>
