@@ -1,7 +1,7 @@
 # Documentation — Source of Truth
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
 > All project artifacts are in English. This folder is the source of truth.
 > Code implements what is described here. Chat history does not override this folder.
@@ -73,5 +73,7 @@ Superseded decisions stay in the log. Do not delete history.
   conventional prefixes, test-first for pure logic (D-28).
 - Commit cadence: commit each coherent step on a task branch; push, merge, and
   PR only on explicit request (D-29).
+- Docs publishing: read-only MkDocs site on GitHub Pages; `documentation/`
+  remains the source of truth (D-30).
 - Open: controller input scheme (D-14), map/tuning details, festival date and
   hardware specs.

@@ -1,7 +1,7 @@
 # Decision Log
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
 Register of all team decisions. Newest entries on top.
 For larger decisions, create an ADR file in this folder using `_templates/adr.md`
@@ -9,6 +9,7 @@ and link it here.
 
 | Date       | ID   | Decision                                                                                                                                  | Status  | Owner |
 | ---------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----- |
+| 2026-10-20 | D-30 | Project documentation is published as a read-only MkDocs site on GitHub Pages through GitHub Actions (first deployment pending Pages enablement); `documentation/` remains the source of truth and the in-repo router stays authoritative. MkDocs is pinned in `requirements-docs.txt` and CI runs `mkdocs build --strict`. | Decided | Team  |
 | 2026-10-19 | D-29 | On a task branch, commit each coherent step without waiting for a separate instruction; pushing, merging, and opening pull requests still require an explicit request. | Decided | Team  |
 | 2026-10-19 | D-28 | Engineering working agreement: English-only artifacts; small, regular commits using feat/fix/docs/test/chore/spike prefixes; test-first for pure logic; tests or documented manual hardware checks for every behavior change; no direct pushes to main and no history rewrites. | Decided | Team  |
 | 2026-10-19 | D-27 | Delivery uses one-week sprints, a weekly demo and retrospective, GitHub Projects issues/milestones, documented DoR/DoD, peer review, CI, and explicit AI-assistance disclosure. | Decided | Team  |
