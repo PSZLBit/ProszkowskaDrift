@@ -1,31 +1,54 @@
 # Glossary
 
 Status: Draft
-Last updated: 2026-10-16
+Last updated: 2026-10-20
 
 Single definition place for domain terms. Use these spellings in code, docs, and UI.
 
 | Term | Definition | Notes |
 |------|------------|-------|
-| System | The local real-time play setup: controllers + server + game + display. | — |
-| Controller | Android tablet app (Kotlin native) used as a game input device. | One per player, 1–4 per session. |
-| Player | Person holding a controller in a session. | No account. |
-| Host | Person operating the server PC. | Opens lobby, manages slots, starts/ends game. |
-| Server | PC program that owns the session, receives inputs, drives the game, renders the display. | Runs on the screen-connected PC; separate from the game. |
-| Game | Swappable module driven by the server through a stable interface. | Concrete game is TBD. |
-| Display / Screen | Big screen connected to the server PC showing game output. | — |
-| Session | One local play instance from lobby open to end. | Holds only transient slot/connection/game state. |
-| Lobby | Joinable session state advertising a join code/QR on the local network. | — |
-| Slot | One of the 1–4 player places in a session. | Assigned by the server. |
-| Input event | Real-time message from a controller to the server. | Exact set is TBD. |
-| Local network | Same-site network (e.g. WiFi) controllers and server share. | No internet play for MVP. |
-| Disconnect | Loss of a controller connection; rejoin behavior is TBD. | See `02-game-domain/domain-overview.md`. |
+| System | The complete local setup: controllers + server + game + display. | — |
+| Controller | Android tablet app used as a game input device. | One per player; input only, no game rendering. |
+| Player | Person holding a controller in a session. | No account, no name. Identified by slot color and `P1`–`P4`. |
+| Host | Person operating the server laptop and the display. | Starts, pauses, resumes, resets, and ends rounds; manages slots. Does not play in MVP. |
+| Spectator | Person watching the big screen without a controller. | No interaction, no data. |
+| Server | Go process that owns the session, slots, input validation, reconnects, and host commands. | Separate from the game process; see D-22. |
+| Game | Godot 4 module that owns simulation, collisions, parking detection, scoring, and rendering. | Trusted local process; swappable behind the protocol. |
+| Display / Screen | TV or monitor connected to the server laptop showing the game. | Whole map visible at once. |
+| Session | One server run from startup to shutdown, containing zero or more rounds. | Holds transient state only; discarded at the end. |
+| Round | One timed parking time attack followed by a results screen. | Initial MVP length: 180 s. |
+| Lobby / Ready | Pre-round state in which tablets connect and receive slots. | Host starts the round from this state. |
+| Slot | One of the four player places in a session. | Assigned by the server; has a color and `P1`–`P4` label. |
+| Device token | Random identifier stored on a tablet and used to reclaim its slot after a reconnect. | Not a name, account, or personal profile. |
+| Input event | Real-time controller message containing steering and throttle values. | Sent at 20–30 Hz while playing; validated by the server. |
+| Parking task | Assignment to park a car in one target spot within the task time window. | Five per player per MVP round. |
+| Target spot | Parking spot currently assigned to one player. | Exclusive among active players; highlighted in the player's color. |
+| Time score | Part of the task score that decreases as the player takes longer. | `max(10, 100 - 3 * seconds)`. |
+| Precision score | Bonus for center alignment and facing angle. | 0–40 points; see game design. |
+| Collision penalty | Point deduction for hitting static environment geometry during a task. | −10 per collision, maximum −30. |
+| Attract mode | Idle display state with title, instructions, and a start prompt. | Used between groups at the festival. |
+| Minimum Festival Demo (MFD) | Smallest playable scope acceptable for the festival stand. | Four tablets, one task type, score, reconnect, runbook. |
+| MVP | First complete playable scope: five tasks, precision, results, attract mode, recovery. | Not implemented yet. |
+| Post-MVP | Work explicitly excluded from the first playable version. | Racing, drift, extra task types, web host panel. |
+| Local network | Same-site network shared by controllers, server, and display. | No internet play for MVP. |
+| Disconnect | Loss of a controller connection. | Car stops; slot is reserved; reconnect resumes control. |
+| Reconnect | Controller reconnects and reclaims its slot using its device token. | Automatic; no QR or manual code in the normal flow. |
+| Spike | Timeboxed technical experiment allowed to resolve a TBD. | Maximum one week; throwaway code; results documented (D-18). |
 
-Archived Flanki tournament terms (competition, bracket, seeding, bye, walkover,
-competitor, organizer, administrator, WCA, GDPR date-of-birth handling) are
-superseded — see `archive/README.md`.
+## Historical Terms (Do Not Use)
+
+These are not active domain terms. They are kept only to explain the project
+history and prevent accidental reuse.
+
+| Term | What it was | Why it is here |
+|------|-------------|----------------|
+| Flanki Organizer | Original tournament-management concept, superseded by D-06 on 2026-10-16. | Historical only; old files were removed from the working tree. Kept for traceability. |
 
 ## Rules
 
 - Add a new term here before using it in other docs or code.
 - Do not redefine a term in another file — link here instead.
+- Do not use the historical terms above in new requirements, specs, code, or UI
+  without a new decision. They are listed only to explain what the project is
+  not.
+- Do not move a historical term into the active table without a new decision.

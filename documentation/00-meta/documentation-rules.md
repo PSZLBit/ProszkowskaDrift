@@ -1,7 +1,7 @@
 # Documentation Rules
 
 Status: Decided
-Last updated: 2026-10-13
+Last updated: 2026-10-19
 
 ## Principles
 
@@ -25,14 +25,20 @@ Last updated: YYYY-MM-DD
 - New idea: `Draft`.
 - Team agreement: change to `Decided`, add entry to `05-architecture-decisions/decision-log.md`.
 - Code merged that reflects the doc: change to `Implemented`.
+- A decision change adds a new dated row or ADR. Superseded rows stay in the
+  log; never delete decision history.
+- A `TBD` row blocks production implementation. A timeboxed spike may explore it
+  under D-18; spike code is throwaway and is not merged as production.
 
 ## Read-First Protocol for Agents
 
 1. Read `documentation/README.md` (router).
 2. Read `00-meta/documentation-rules.md` (this file) and `00-meta/glossary.md`.
-3. Read the module file(s) for the task (see router table).
+3. Read the module file(s) for the task (see router table). Code tasks also
+   need `06-development/architecture.md` and `06-development/protocol.md`.
 4. Check `05-architecture-decisions/decision-log.md` for open `TBD` items.
-5. Only then inspect code.
+5. Only then inspect code. If there is no code yet, check
+   `06-development/roadmap.md` for the current milestone.
 
 ## Update-After Protocol for Agents
 
