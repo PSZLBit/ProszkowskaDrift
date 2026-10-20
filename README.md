@@ -51,6 +51,45 @@ tablets, the Go↔Godot connection, input latency, and display readability.
 
 See [`documentation/06-development/roadmap.md`](documentation/06-development/roadmap.md).
 
+## Getting Started
+
+### Prerequisites
+
+- Git.
+- GNU Make. Linux and macOS usually include it; on Windows use Git Bash or WSL
+  (or install Make separately).
+
+Go, Godot, and the Android SDK are not required yet; their setup steps will be
+added when those components are scaffolded.
+
+### Clone and set up
+
+```sh
+git clone https://github.com/PSZLBit/ProszkowskaDrift.git
+cd ProszkowskaDrift
+make setup
+```
+
+`make setup` is the single entry point for local repository setup. It is
+idempotent, sets the repository-local `core.hooksPath` to `.githooks`, and makes
+the hooks executable. It currently installs the `pre-push` hook that blocks
+direct pushes to `main`. Future hooks will be added to the same target;
+component toolchains will get explicit targets when they exist.
+
+Verify the hook path:
+
+```sh
+git config --local --get core.hooksPath
+# .githooks
+```
+
+The local hook catches accidental direct pushes. It is not a security boundary:
+GitHub rules for `main` must still require a pull request and review. Run `make`
+to list available targets.
+
+For a local documentation preview, follow the pinned toolchain and commands in
+[`documentation/06-development/testing.md`](documentation/06-development/testing.md#documentation-site-checks).
+
 ## Documentation
 
 Published site: <https://pszlbit.github.io/ProszkowskaDrift/>.

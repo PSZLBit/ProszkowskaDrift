@@ -139,6 +139,25 @@ details, triggers, and the "do not add yet" list live in
 Exact commands for the component jobs will be added to this file and `README.md`
 after the Sprint 0 scaffold. Until then, report checks that could not run.
 
+## Developer Setup Check
+
+Run after changing the setup target or Git hooks:
+
+1. `make setup` exits 0.
+2. `git config --local --get core.hooksPath` prints `.githooks`.
+3. `test -x .githooks/pre-push` succeeds.
+4. A synthetic push to `main` is blocked by the hook; a push to another branch
+   is allowed:
+
+   ```sh
+   printf 'refs/heads/topic %s refs/heads/main %s\n' \
+     "$(git rev-parse HEAD)" \
+     "0000000000000000000000000000000000000000" | .githooks/pre-push
+   ```
+
+   The first command must exit 1. Repeat it with `refs/heads/topic` as the
+   remote ref and expect exit 0.
+
 ## Documentation Site Checks
 
 Run before merging a documentation or site-config change:

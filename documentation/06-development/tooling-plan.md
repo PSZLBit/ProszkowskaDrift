@@ -15,7 +15,12 @@ Developer tooling for the project. A tool enters the repository only with a
 | `.gitattributes` | LF normalization and binary-file handling | Protects Windows/Linux collaboration |
 | `.gitignore` | Keep builds, local config, secrets, and generated files out | Update per component after scaffold |
 | `.github/CODEOWNERS` | Default review routing | Component placeholders to fill when roles are assigned |
-| `.githooks/pre-push` | Block direct pushes to `main` | Install with `git config core.hooksPath .githooks` |
+| `Makefile` | Repeatable local developer setup | `make setup` installs hooks; add targets only when their toolchains exist |
+| `.githooks/pre-push` | Block direct pushes to `main` | Installed by `make setup` |
+
+`make setup` is the single local setup entry point. It is owned by the team and
+triggered by repository onboarding. It must not install component toolchains
+implicitly; those get their own targets when their tools are triggered.
 
 ## Documentation Site
 
@@ -51,7 +56,8 @@ Add per component, when the component exists.
 - `.githooks/pre-commit`: run formatters/linters on changed files only, once the
   toolchains exist. It must stay fast (a few seconds). Document an emergency
   bypass; do not make a hook required for correctness.
-- `.githooks/pre-push`: already blocks direct pushes to `main`; keep it.
+- `.githooks/pre-push`: blocks direct pushes to `main`; `make setup` installs
+  it. The hook is a local convenience; GitHub rules remain the enforcement.
 - Do not add a hook before its tool is configured. A missing binary must not
   break commits.
 
