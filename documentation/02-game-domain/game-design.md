@@ -80,8 +80,8 @@ players. Empty slots are allowed. A solo round is a valid time attack.
 ## Movement and Collision Rules
 
 - Input is the latest validated `steer` and `throttle` from the controller.
-- If no input arrives for 500 ms, the car coasts to a stop; it does not keep the
-  last throttle forever.
+- If no input arrives for 500 ms, the car coasts to a stop; it does not keep the 
+  momentum forever.
 - Environment collisions are detected by the game's physics/collision layer.
   Each new collision while a task is active adds one collision count. Continuous
   contact does not count every frame.
