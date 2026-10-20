@@ -1,7 +1,7 @@
 # Glossary
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
 Single definition place for domain terms. Use these spellings in code, docs, and UI.
 
@@ -34,10 +34,21 @@ Single definition place for domain terms. Use these spellings in code, docs, and
 | Disconnect | Loss of a controller connection. | Car stops; slot is reserved; reconnect resumes control. |
 | Reconnect | Controller reconnects and reclaims its slot using its device token. | Automatic; no QR or manual code in the normal flow. |
 | Spike | Timeboxed technical experiment allowed to resolve a TBD. | Maximum one week; throwaway code; results documented (D-18). |
-| Flanki Organizer | Original tournament-management concept, superseded by D-06 on 2026-10-16. | Historical only; old files removed from the working tree. |
+
+## Historical Terms (Do Not Use)
+
+These are not active domain terms. They are kept only to explain the project
+history and prevent accidental reuse.
+
+| Term | What it was | Why it is here |
+|------|-------------|----------------|
+| Flanki Organizer | Original tournament-management concept, superseded by D-06 on 2026-10-16. | Historical only; old files were removed from the working tree. Kept for traceability. |
 
 ## Rules
 
 - Add a new term here before using it in other docs or code.
 - Do not redefine a term in another file — link here instead.
-- Do not reintroduce Flanki tournament terms without a new decision.
+- Do not use the historical terms above in new requirements, specs, code, or UI
+  without a new decision. They are listed only to explain what the project is
+  not.
+- Do not move a historical term into the active table without a new decision.
