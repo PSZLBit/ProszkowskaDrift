@@ -1,7 +1,7 @@
 # Game Design — Proszkowska Drift MVP
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
 This document defines the first playable game. Core rules are agreed in D-19;
 numeric values are initial tuning targets and should be changed only after a
@@ -110,13 +110,13 @@ blocking the festival queue.
 
 ## Scoring (Initial Tuning)
 
-Each task produces a score:
+Each task produces a score (illustrative pseudocode, not executable):
 
-```text
-time_score      = max(10, 100 - 3 * seconds_since_task_assigned)
-precision_score = center_score + angle_score          # 0..40
-collision_penalty = min(30, 10 * collisions)          # 0, 10, 20, 30
-task_score      = max(0, time_score + precision_score - collision_penalty)
+```python
+time_score        = max(10, 100 - 3 * seconds_since_task_assigned)
+precision_score   = center_score + angle_score          # 0..40
+collision_penalty = min(30, 10 * collisions)            # 0, 10, 20, 30
+task_score        = max(0, time_score + precision_score - collision_penalty)
 ```
 
 Precision components:
