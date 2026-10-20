@@ -15,16 +15,15 @@ Developer tooling for the project. A tool enters the repository only with a
 | `.gitattributes` | LF normalization and binary-file handling | Protects Windows/Linux collaboration |
 | `.gitignore` | Keep builds, local config, secrets, and generated files out | Update per component after scaffold |
 | `.github/CODEOWNERS` | Default review routing | Component placeholders to fill when roles are assigned |
-| `Makefile` | Local developer setup on Linux/macOS and Windows | Requires GNU Make; `make setup` installs hooks; add targets only when their toolchains exist |
-| `.githooks/pre-push` | Block direct pushes to `main` | Installed by `make setup` |
+| `setup.sh` | Local developer setup on Linux/macOS and Windows Git Bash | Small, idempotent; installs hooks; no task runner |
+| `.githooks/pre-push` | Block direct pushes to `main` | Installed by `setup.sh` |
 
-`make setup` is the single local setup entry point. It is owned by the team and
-triggered by repository onboarding. It must not install component toolchains
-implicitly; those get their own targets when their tools are triggered.
+`setup.sh` is the local setup entry point. It is owned by the team and triggered
+by repository onboarding. Keep it small and idempotent; add steps only when they
+are needed. It must not install component toolchains implicitly.
 
-Every Makefile target must work on Linux/macOS and Windows, or contain explicit
-OS-specific branches. Keep target names identical and test both paths when
-adding a target.
+Do not add a general task runner (Make, Just, etc.) until repeated commands
+justify it; extend this script or add a focused script first.
 
 ## Documentation Site
 
@@ -60,8 +59,8 @@ Add per component, when the component exists.
 - `.githooks/pre-commit`: run formatters/linters on changed files only, once the
   toolchains exist. It must stay fast (a few seconds). Document an emergency
   bypass; do not make a hook required for correctness.
-- `.githooks/pre-push`: blocks direct pushes to `main`; `make setup` installs
-  it. The hook is a local convenience; GitHub rules remain the enforcement.
+- `.githooks/pre-push`: blocks direct pushes to `main`; `setup.sh` installs it.
+  The hook is a local convenience; GitHub rules remain the enforcement.
 - Do not add a hook before its tool is configured. A missing binary must not
   break commits.
 

@@ -55,14 +55,7 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
 
 ### Prerequisites
 
-- Git.
-- GNU Make 3.81 or newer on Linux, macOS, and Windows.
-  - Linux/macOS: usually already installed.
-  - Windows: `winget install --id ezwinports.make -e`, then open a new
-    terminal. Chocolatey (`choco install make`) and Scoop
-    (`scoop install main/make`) are alternatives.
-
-`nmake` from Visual Studio is not a drop-in replacement for GNU Make.
+- Git. On Windows, use Git Bash, which is included with Git for Windows.
 
 Go, Godot, and the Android SDK are not required yet; their setup steps will be
 added when those components are scaffolded.
@@ -72,15 +65,14 @@ added when those components are scaffolded.
 ```sh
 git clone https://github.com/PSZLBit/ProszkowskaDrift.git
 cd ProszkowskaDrift
-make setup
+./setup.sh
 ```
 
-`make setup` is the single entry point for local repository setup. It is
-idempotent, sets the repository-local `core.hooksPath` to `.githooks`, and
-installs the `pre-push` hook that blocks direct pushes to `main`. The `chmod`
-step is skipped on Windows, where the executable bit is not meaningful. Future
-hooks and component targets will be added to the same Makefile; each target
-must work on both Linux/macOS and Windows.
+`setup.sh` is a small, idempotent script. It sets the repository-local
+`core.hooksPath` to `.githooks`, marks the hooks executable, and installs the
+`pre-push` hook that blocks direct pushes to `main`. On Windows, run it from Git
+Bash (`sh setup.sh` also works). No general task runner is required; extend the
+script only when more setup steps are needed.
 
 Verify the hook path:
 
@@ -90,8 +82,7 @@ git config --local --get core.hooksPath
 ```
 
 The local hook catches accidental direct pushes. It is not a security boundary:
-GitHub rules for `main` must still require a pull request and review. Run `make`
-to list available targets.
+GitHub rules for `main` must still require a pull request and review.
 
 For a local documentation preview, follow the pinned toolchain and commands in
 [`documentation/06-development/testing.md`](documentation/06-development/testing.md#documentation-site-checks).

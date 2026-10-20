@@ -86,17 +86,16 @@ outcome and acceptance criteria. Link every PR to an issue.
 ## Git and Pull Requests
 
 - `main` is protected. No direct pushes.
-- All developers need GNU Make; the Windows installation command is in the
-  README.
 - Install the local hooks from the repository root after cloning:
 
   ```sh
-  make setup
+  ./setup.sh
   ```
 
-  It sets the repository-local `core.hooksPath` to `.githooks`. The current
-  `pre-push` hook blocks direct pushes to `main`; it is a local convenience,
-  not a replacement for GitHub rules.
+  On Windows, run it from Git Bash. It sets the repository-local
+  `core.hooksPath` to `.githooks`. The current `pre-push` hook blocks direct
+  pushes to `main`; it is a local convenience, not a replacement for GitHub
+  rules.
 
 - Enable GitHub branch protection/rules for `main`: require a pull request,
   at least one review, and green CI.

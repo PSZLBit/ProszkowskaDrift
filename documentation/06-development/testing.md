@@ -141,14 +141,13 @@ after the Sprint 0 scaffold. Until then, report checks that could not run.
 
 ## Developer Setup Check
 
-Run after changing the setup target or Git hooks:
+Run after changing `setup.sh` or the Git hooks:
 
-1. `make --version` reports GNU Make 3.81 or newer. On Windows, install it
-   first (see `README.md`).
-2. `make setup` exits 0 on Linux/macOS and Windows.
-3. `git config --local --get core.hooksPath` prints `.githooks`.
-4. On Linux/macOS, `test -x .githooks/pre-push` succeeds.
-5. On Linux/macOS or Git Bash, a synthetic push to `main` is blocked by the
+1. From the repository root, `./setup.sh` exits 0 on Linux/macOS and Windows
+   Git Bash (`sh setup.sh` is equivalent).
+2. `git config --local --get core.hooksPath` prints `.githooks`.
+3. On Linux/macOS, `test -x .githooks/pre-push` succeeds.
+4. On Linux/macOS or Git Bash, a synthetic push to `main` is blocked by the
    hook; a push to another branch is allowed:
 
    ```sh
@@ -160,7 +159,7 @@ Run after changing the setup target or Git hooks:
    The first command must exit 1. Repeat it with `refs/heads/topic` as the
    remote ref and expect exit 0.
 
-6. On Windows, confirm that `make setup` sets the hook path and that Git for
+5. On Windows, confirm that `setup.sh` sets the hook path and that Git for
    Windows executes the `pre-push` hook and rejects a push to `main`. The hook
    is a POSIX shell script and runs through Git's bundled shell. This check
    must be run on a Windows machine before relying on the hook there.
