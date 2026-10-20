@@ -1,35 +1,73 @@
-# Real-Time Play System
+# Proszkowska Drift
 
-Local multiplayer system: Android tablets act as controllers, a PC server receives inputs, drives a swappable game, and renders it on a connected big screen.
+Working title for a local multiplayer arcade parking game. One to four players
+use Android tablets as controllers; a laptop runs the game and shows it on a TV
+or monitor. Each round is a short parking time attack on a stylized map of the
+campus area on Proszkowska Street.
 
-One session hosts 1–4 players on the local network. The host opens a lobby on the server PC, players join via code/QR, and the server routes validated inputs to the active game. No accounts.
+The project is built by a student team for a science-club festival stand. It is
+local-only, account-free, and designed to run without internet access.
+
+## Game in One Paragraph
+
+Players drive around a fixed top-down parking lot, receive a sequence of target
+spots, and score points for completing each parking task quickly, precisely, and
+without hitting the environment. Players compete independently on the same map;
+cars do not collide with each other. Rounds last three minutes. The whole map,
+all players, and the score are visible on the big screen at once.
+
+Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
 
 ## Components
 
-- `server/` — session ownership, input handling, game driving, big-screen display. (Not yet scaffolded; stack TBD.)
-- `game/` — swappable game module behind the server game interface. (Concept TBD.)
-- `controller-android/` — Kotlin native Android tablet controller. (Input set TBD.)
-- `documentation/` — source of truth, including `archive/` for superseded Flanki Organizer docs.
+- `server/` — Go session server: slots, input validation, reconnects, host
+  commands, game process supervision. (Planned; not scaffolded.)
+- `game/` — Godot 4 game and fullscreen display: map, movement, collisions,
+  parking detection, scoring, HUD. (Planned; not scaffolded.)
+- `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
+  (Planned; not scaffolded.)
+- `documentation/` — source of truth: vision, game design, requirements,
+  decisions, architecture, protocol, testing, roadmap, festival runbook.
 
-## Planned Features
+## Technology Direction
 
-- Host opens a lobby with join code/QR on the server screen.
-- 1–4 tablets join over the local network and take player slots.
-- Tablets send real-time inputs; server validates slots and passes inputs to the game.
-- Game output renders on the connected screen.
-- Server/game separation allows swapping games without changing controllers or networking.
+- Go server, Godot 4 game, minimal Kotlin controller.
+- WebSocket + JSON for controller↔server and server↔game.
+- In-memory state only: no database, accounts, or personal data.
+- Android 4.4.2 (API 19) compatibility: no Compose, no OkHttp 4, and no
+  AndroidX unless a library is proven API 19 compatible.
+- Display: fixed full-map view, 1920×1080 reference, 60 FPS target.
+- Input: 20–30 Hz, target ≤100 ms input-to-visible response.
 
-## Technology
-
-To be decided with the team. See `documentation/05-architecture-decisions/decision-log.md` — `TBD` rows block implementation.
-
-## Getting Started
-
-Development is at an early stage. Setup instructions will be added after the team chooses the technology stack per component.
+These choices are recorded in
+[`documentation/05-architecture-decisions/adr-0001-mvp-architecture.md`](documentation/05-architecture-decisions/adr-0001-mvp-architecture.md)
+and [`adr-0002-legacy-android-controller.md`](documentation/05-architecture-decisions/adr-0002-legacy-android-controller.md).
 
 ## Project Status
 
-Project is now in planning stage.
+Planning and Sprint 0 preparation. No production code exists yet. The next
+milestone is a one-week technical spike: prove the Kotlin app on the four
+tablets, the Go↔Godot connection, input latency, and display readability.
+
+See [`documentation/06-development/roadmap.md`](documentation/06-development/roadmap.md).
+
+## Documentation
+
+Start with [`documentation/README.md`](documentation/README.md), then read:
+
+- [`documentation/01-vision-scope/vision-scope.md`](documentation/01-vision-scope/vision-scope.md)
+- [`documentation/02-game-domain/game-design.md`](documentation/02-game-domain/game-design.md)
+- [`documentation/04-product/requirements.md`](documentation/04-product/requirements.md)
+- [`documentation/05-architecture-decisions/decision-log.md`](documentation/05-architecture-decisions/decision-log.md)
+- [`documentation/06-development/architecture.md`](documentation/06-development/architecture.md)
+- [`documentation/06-development/protocol.md`](documentation/06-development/protocol.md)
+- [`documentation/06-development/workflow.md`](documentation/06-development/workflow.md)
+
+## Repository History
+
+The repository started as a Flanki tournament-management web app. On
+2026-10-16 the team pivoted to the local real-time play system (D-06). The old
+concept is superseded; the decision history is kept in the decision log.
 
 ## License
 
