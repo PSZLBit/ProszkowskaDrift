@@ -15,15 +15,16 @@ Developer tooling for the project. A tool enters the repository only with a
 | `.gitattributes` | LF normalization and binary-file handling | Protects Windows/Linux collaboration |
 | `.gitignore` | Keep builds, local config, secrets, and generated files out | Update per component after scaffold |
 | `.github/CODEOWNERS` | Default review routing | Component placeholders to fill when roles are assigned |
-| `Makefile` | Local developer setup on Linux/macOS | `make setup` installs hooks; add targets only when their toolchains exist |
-| `setup.cmd` | Local developer setup on Windows | Sets the same hook path without requiring Make or `chmod` |
-| `.githooks/pre-push` | Block direct pushes to `main` | Installed by `make setup` or `setup.cmd` |
+| `Makefile` | Local developer setup on Linux/macOS and Windows | Requires GNU Make; `make setup` installs hooks; add targets only when their toolchains exist |
+| `.githooks/pre-push` | Block direct pushes to `main` | Installed by `make setup` |
 
-Local setup has two platform entry points: `make setup` on Linux/macOS and
-`setup.cmd` on Windows. They are owned by the team and triggered by repository
-onboarding, and must stay behaviorally aligned. They must not install component
-toolchains implicitly; those get their own targets when their tools are
-triggered.
+`make setup` is the single local setup entry point. It is owned by the team and
+triggered by repository onboarding. It must not install component toolchains
+implicitly; those get their own targets when their tools are triggered.
+
+Every Makefile target must work on Linux/macOS and Windows, or contain explicit
+OS-specific branches. Keep target names identical and test both paths when
+adding a target.
 
 ## Documentation Site
 
@@ -59,9 +60,8 @@ Add per component, when the component exists.
 - `.githooks/pre-commit`: run formatters/linters on changed files only, once the
   toolchains exist. It must stay fast (a few seconds). Document an emergency
   bypass; do not make a hook required for correctness.
-- `.githooks/pre-push`: blocks direct pushes to `main`; `make setup`
-  (Linux/macOS) or `setup.cmd` (Windows) installs it. The hook is a local
-  convenience; GitHub rules remain the enforcement.
+- `.githooks/pre-push`: blocks direct pushes to `main`; `make setup` installs
+  it. The hook is a local convenience; GitHub rules remain the enforcement.
 - Do not add a hook before its tool is configured. A missing binary must not
   break commits.
 

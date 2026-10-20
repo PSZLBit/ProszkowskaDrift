@@ -1,5 +1,7 @@
+# Targets must work on Linux/macOS and Windows. Use OS conditionals for
+# platform-specific commands and test both paths when adding a target.
 ifeq ($(OS),Windows_NT)
-HOOKS_EXECUTABLE := @echo Hooks use the executable mode tracked by Git.
+HOOKS_EXECUTABLE := @echo Skipping chmod on Windows.
 else
 HOOKS_EXECUTABLE := @chmod +x .githooks/*
 endif
@@ -9,16 +11,13 @@ endif
 .PHONY: help setup
 
 help:
-	@echo "Usage: make <target>"
-	@echo ""
-	@echo "Targets:"
-	@echo "  setup  Install the local Git hooks (Linux/macOS)"
-	@echo "  help   Show this help"
-	@echo ""
-	@echo "Windows: run setup.cmd instead."
+	@echo Usage: make TARGET
+	@echo Targets:
+	@echo setup: Install the local Git hooks
+	@echo help: Show this help
 
 setup:
 	@git config --local core.hooksPath .githooks
 	$(HOOKS_EXECUTABLE)
-	@echo "Local Git hooks installed from .githooks."
-	@echo "Verify with: git config --local --get core.hooksPath"
+	@echo Local Git hooks installed from .githooks.
+	@echo Verify with: git config --local --get core.hooksPath
