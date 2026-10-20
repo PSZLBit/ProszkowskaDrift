@@ -1,7 +1,7 @@
 # Tooling and Quality Gate Plan
 
 Status: Draft
-Last updated: 2026-10-20
+Last updated: 2026-10-21
 
 Developer tooling for the project. A tool enters the repository only with a
 **trigger**, an **owner**, and — if it changes the stack or the merge gate — a
@@ -15,15 +15,20 @@ Developer tooling for the project. A tool enters the repository only with a
 | `.gitattributes` | LF normalization and binary-file handling | Protects Windows/Linux collaboration |
 | `.gitignore` | Keep builds, local config, secrets, and generated files out | Update per component after scaffold |
 | `.github/CODEOWNERS` | Default review routing | Component placeholders to fill when roles are assigned |
-| `setup.sh` | Local developer setup on Linux/macOS and Windows Git Bash | Small, idempotent; installs hooks; no task runner |
-| `.githooks/pre-push` | Block direct pushes to `main` | Installed by `setup.sh` |
+| `scripts/setup.sh` | Local developer setup on Linux/macOS and Windows Git Bash | Small, idempotent; installs hooks; no task runner |
+| `scripts/setup.ps1` | Local developer setup on Windows PowerShell | Small, idempotent; installs hooks; no task runner |
+| `.githooks/pre-push` | Block direct pushes to `main` | Installed by both setup scripts |
 
-`setup.sh` is the local setup entry point. It is owned by the team and triggered
-by repository onboarding. Keep it small and idempotent; add steps only when they
-are needed. It must not install component toolchains implicitly.
+`scripts/setup.sh` and `scripts/setup.ps1` are the local setup entry points for
+Linux/macOS and Windows respectively. They are owned by the team and triggered
+by repository onboarding. `setup.ps1` exists because Windows PowerShell shells
+without Git Bash on `PATH` cannot run `setup.sh`; it needs only Windows
+PowerShell 5.1, which ships with Windows. Keep the scripts small and
+idempotent; add steps only when they are needed. They must not install
+component toolchains implicitly.
 
 Do not add a general task runner (Make, Just, etc.) until repeated commands
-justify it; extend this script or add a focused script first.
+justify it; extend these scripts or add a focused script first.
 
 ## Documentation Site
 
@@ -59,8 +64,9 @@ Add per component, when the component exists.
 - `.githooks/pre-commit`: run formatters/linters on changed files only, once the
   toolchains exist. It must stay fast (a few seconds). Document an emergency
   bypass; do not make a hook required for correctness.
-- `.githooks/pre-push`: blocks direct pushes to `main`; `setup.sh` installs it.
-  The hook is a local convenience; GitHub rules remain the enforcement.
+- `.githooks/pre-push`: blocks direct pushes to `main`; the setup scripts
+  install it. The hook is a local convenience; GitHub rules remain the
+  enforcement.
 - Do not add a hook before its tool is configured. A missing binary must not
   break commits.
 

@@ -65,14 +65,26 @@ added when those components are scaffolded.
 ```sh
 git clone https://github.com/PSZLBit/ProszkowskaDrift.git
 cd ProszkowskaDrift
-./setup.sh
 ```
 
-`setup.sh` is a small, idempotent script. It sets the repository-local
-`core.hooksPath` to `.githooks`, marks the hooks executable, and installs the
-`pre-push` hook that blocks direct pushes to `main`. On Windows, run it from Git
-Bash (`sh setup.sh` also works). No general task runner is required; extend the
-script only when more setup steps are needed.
+Then run the small, idempotent setup script for your platform. It sets the
+repository-local `core.hooksPath` to `.githooks`, marks the hooks executable,
+and installs the `pre-push` hook that blocks direct pushes to `main`.
+
+Linux, macOS, or Git Bash:
+
+```sh
+./scripts/setup.sh
+```
+
+Windows PowerShell (this also works under the default execution policy):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+```
+
+Windows Git Bash users can also run `sh scripts/setup.sh`. No general task
+runner is required; extend the scripts only when more setup steps are needed.
 
 Verify the hook path:
 
