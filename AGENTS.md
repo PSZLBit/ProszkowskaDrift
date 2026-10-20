@@ -34,6 +34,8 @@ Monorepo layout (D-07): `server/` (Go), `game/` (Godot 4),
   hardware checks for behavior changes.
 - D-29: on a task branch, commit each coherent step without waiting; pushing,
   merging, and opening a PR still require an explicit request.
+- D-30: project docs are published as a read-only MkDocs site on GitHub Pages;
+  `documentation/` remains the source of truth.
 - D-14 is still TBD: the controller input scheme must be chosen by playtesting
   on the real tablets. Do not hard-code a scheme as final.
 
@@ -69,6 +71,15 @@ entry when a decision changed. A change without a docs update is incomplete.
 Truth hierarchy: `documentation/` (`Decided` / `Implemented`) > code > chat
 discussion. If docs and code disagree, fix one of them with a dated update
 instead of leaving them inconsistent.
+
+## Documentation Site
+
+- `documentation/` remains the source of truth; `documentation/README.md` is the
+  router. The published site is a read-only copy.
+- The site is built from root `mkdocs.yml`; `site/` is generated output and must
+  not be committed or edited.
+- Run `mkdocs build --strict` after documentation changes. CI builds it on pull
+  requests and deploys `main` to GitHub Pages.
 
 ## Collaboration Rules
 

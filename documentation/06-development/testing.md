@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
 ## Goals
 
@@ -123,19 +123,33 @@ Run on all four actual tablets, not only one.
 
 ## CI Plan
 
-Free-tier GitHub Actions, planned after scaffolding. Tooling details, triggers,
-and the "do not add yet" list live in `06-development/tooling-plan.md`.
+Free-tier GitHub Actions; component jobs start after scaffolding. Tooling
+details, triggers, and the "do not add yet" list live in
+`06-development/tooling-plan.md`.
 
 - `server`: `go test -race ./...`, `go vet ./...`, build.
 - `controller-android`: Gradle `assembleDebug`; cache Gradle; upload APK artifact.
 - `game`: Godot headless tests where feasible; export is manual/tagged if CI is
   too slow.
-- Docs: optional Markdown link check; keep it fast.
+- Docs: `mkdocs build --strict` when documentation, `mkdocs.yml`, or
+  `requirements-docs.txt` change.
 - Required for merge: Go tests/vet and Android build. Godot headless tests are
   required once configured.
 
-Exact commands will be added to this file and `README.md` after the Sprint 0
-scaffold. Until then, report checks that could not run.
+Exact commands for the component jobs will be added to this file and `README.md`
+after the Sprint 0 scaffold. Until then, report checks that could not run.
+
+## Documentation Site Checks
+
+Run before merging a documentation or site-config change:
+
+1. Install the pinned toolchain: `pip install -r requirements-docs.txt`.
+2. `mkdocs build --strict` succeeds.
+3. The generated site has the router as its home page, no `_templates/` pages,
+   and no broken relative links reported by `--strict`.
+4. After the first deployment from `main`, open
+   <https://pszlbit.github.io/ProszkowskaDrift/> and check the home page, a deep
+   page, navigation, search, and the 404 page with styles loaded.
 
 ## Festival Rehearsal
 

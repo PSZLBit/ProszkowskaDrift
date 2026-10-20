@@ -1,12 +1,11 @@
 # Tooling and Quality Gate Plan
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
-Planned developer tooling for the project. Nothing here is implemented beyond
-the repository hygiene files under "Available now". A tool enters the repository
-only with a **trigger**, an **owner**, and — if it changes the stack or the merge
-gate — a **decision entry** (D-22, D-27, D-28).
+Developer tooling for the project. A tool enters the repository only with a
+**trigger**, an **owner**, and — if it changes the stack or the merge gate — a
+**decision entry** (D-22, D-27, D-28, D-30).
 
 ## Available Now
 
@@ -17,6 +16,24 @@ gate — a **decision entry** (D-22, D-27, D-28).
 | `.gitignore` | Keep builds, local config, secrets, and generated files out | Update per component after scaffold |
 | `.github/CODEOWNERS` | Default review routing | Component placeholders to fill when roles are assigned |
 | `.githooks/pre-push` | Block direct pushes to `main` | Install with `git config core.hooksPath .githooks` |
+
+## Documentation Site
+
+The project documentation is built with MkDocs and published to GitHub Pages
+from the `main` branch (D-30). The first deployment is pending until the
+repository's Pages source is set to **GitHub Actions**.
+
+| Item | Purpose | Notes |
+|------|---------|-------|
+| `mkdocs.yml` | Site configuration | Root config; `docs_dir: documentation`, `site_url` set for the project Pages path |
+| `requirements-docs.txt` | Reproducible docs toolchain | Pins `mkdocs==1.6.1`; install with `pip install -r requirements-docs.txt` |
+| `.github/workflows/docs.yml` | Build and deploy | `mkdocs build --strict` on docs changes; deploys `main` to Pages |
+
+- Intended URL: <https://pszlbit.github.io/ProszkowskaDrift/>.
+- `documentation/` remains the source of truth; the published site is a
+  read-only copy.
+- `site/` is generated output; do not edit or commit it.
+- Enable Pages with **Source: GitHub Actions** before the first deployment.
 
 ## Formatting and Linting
 
@@ -57,7 +74,8 @@ Planned for the first component scaffold (M1), free tier only:
 2. Android job: Gradle `assembleDebug` with cached dependencies; upload the APK.
 3. Godot job: headless logic tests when the test addon is chosen; export only on
    tags if CI time becomes a problem.
-4. Docs job: optional Markdown link check.
+4. Docs job: `mkdocs build --strict` when documentation, the MkDocs config, or
+   its requirements change.
 5. Cache Go modules, Gradle, and Godot downloads where possible.
 6. Required checks for `main`: Go tests/vet and the Android build. Add Godot
    tests when configured.
@@ -97,11 +115,11 @@ Planned for M3 (festival-ready):
 |------|--------|
 | Coverage threshold as a merge gate | Would force low-value tests in a small team |
 | Docker/containers | No service fleet; the laptop runs two local processes |
-| Cloud CI runners or paid services | Free tier is enough; no cloud dependency (D-22) |
+| Paid cloud services | Free-tier GitHub Actions and Pages are enough; no paid cloud dependency (D-22) |
 | Code-signing infrastructure | Manual APK install on four team-owned tablets |
 | MDM / full kiosk provisioning | API 19 has no screen pinning; the supervised stand is accepted (ADR-0002) |
 | Binary WebSocket protocol | JSON is enough for four players; revisit only if D-23 measurements fail |
-| Auto-deploy or release automation | Manual festival packaging with a checklist is safer |
+| Auto-deploy of game or server releases | Manual festival packaging with a checklist is safer |
 
 ## Adding a New Tool
 
