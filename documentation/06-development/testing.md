@@ -143,9 +143,9 @@ after the Sprint 0 scaffold. Until then, report checks that could not run.
 
 Run after changing the setup target or Git hooks:
 
-1. `make setup` exits 0.
+1. On Linux/macOS, `make setup` exits 0. On Windows, `.\setup.cmd` exits 0.
 2. `git config --local --get core.hooksPath` prints `.githooks`.
-3. `test -x .githooks/pre-push` succeeds.
+3. On Linux/macOS, `test -x .githooks/pre-push` succeeds.
 4. A synthetic push to `main` is blocked by the hook; a push to another branch
    is allowed:
 
@@ -157,6 +157,10 @@ Run after changing the setup target or Git hooks:
 
    The first command must exit 1. Repeat it with `refs/heads/topic` as the
    remote ref and expect exit 0.
+
+5. On Windows, confirm that Git for Windows executes the `pre-push` hook. The
+   hook is a POSIX shell script and must run through Git's bundled shell. This
+   check must be run on a Windows machine before relying on the hook there.
 
 ## Documentation Site Checks
 

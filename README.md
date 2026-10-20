@@ -56,8 +56,8 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
 ### Prerequisites
 
 - Git.
-- GNU Make. Linux and macOS usually include it; on Windows use Git Bash or WSL
-  (or install Make separately).
+- Linux/macOS: GNU Make (usually included).
+- Windows: no additional tooling for setup; use the bundled `setup.cmd`.
 
 Go, Godot, and the Android SDK are not required yet; their setup steps will be
 added when those components are scaffolded.
@@ -67,14 +67,25 @@ added when those components are scaffolded.
 ```sh
 git clone https://github.com/PSZLBit/ProszkowskaDrift.git
 cd ProszkowskaDrift
+```
+
+Linux/macOS:
+
+```sh
 make setup
 ```
 
-`make setup` is the single entry point for local repository setup. It is
-idempotent, sets the repository-local `core.hooksPath` to `.githooks`, and makes
-the hooks executable. It currently installs the `pre-push` hook that blocks
-direct pushes to `main`. Future hooks will be added to the same target;
-component toolchains will get explicit targets when they exist.
+Windows (cmd or PowerShell):
+
+```powershell
+.\setup.cmd
+```
+
+Both commands are idempotent, set the repository-local `core.hooksPath` to
+`.githooks`, and install the `pre-push` hook that blocks direct pushes to
+`main`. The Windows script does not need Make or `chmod`. Future hooks will be
+added to both entry points; component toolchains will get explicit targets when
+they exist.
 
 Verify the hook path:
 
@@ -84,8 +95,8 @@ git config --local --get core.hooksPath
 ```
 
 The local hook catches accidental direct pushes. It is not a security boundary:
-GitHub rules for `main` must still require a pull request and review. Run `make`
-to list available targets.
+GitHub rules for `main` must still require a pull request and review. On
+Linux/macOS, run `make` to list available targets.
 
 For a local documentation preview, follow the pinned toolchain and commands in
 [`documentation/06-development/testing.md`](documentation/06-development/testing.md#documentation-site-checks).

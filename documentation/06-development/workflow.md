@@ -87,14 +87,12 @@ outcome and acceptance criteria. Link every PR to an issue.
 
 - `main` is protected. No direct pushes.
 - Install the local hooks from the repository root after cloning:
+  - Linux/macOS: `make setup`
+  - Windows (cmd or PowerShell): `.\setup.cmd`
 
-  ```sh
-  make setup
-  ```
-
-  `make setup` sets the repository-local `core.hooksPath` to `.githooks` and
-  makes the hooks executable. The current `pre-push` hook blocks direct pushes
-  to `main`; it is a local convenience, not a replacement for GitHub rules.
+  Both set the repository-local `core.hooksPath` to `.githooks`. The current
+  `pre-push` hook blocks direct pushes to `main`; it is a local convenience,
+  not a replacement for GitHub rules.
 
 - Enable GitHub branch protection/rules for `main`: require a pull request,
   at least one review, and green CI.

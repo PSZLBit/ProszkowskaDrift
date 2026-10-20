@@ -5,6 +5,9 @@
 *.sh text eol=lf
 .githooks/* text eol=lf
 
+# Windows command scripts
+*.cmd text eol=crlf
+
 # Documentation
 *.md text eol=lf
 
