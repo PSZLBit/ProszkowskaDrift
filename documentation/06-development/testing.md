@@ -121,6 +121,29 @@ Run on all four actual tablets, not only one.
 - No car-to-car collision; overlapping cars remain visually distinguishable.
 - A finished player's state is clear.
 
+## Component Manual Checks
+
+First checks for single scripts/scenes, outside a full round. Write the check
+here (or in the issue) before running it, run it on the target laptop, and
+record the result. A scratch scene is enough; do not commit scratch edits
+(temporary input map, uncommented fallback) with it.
+
+### Car movement stub (`game/scripts/car.gd`)
+
+Run when the car script, its input handling, or its tuning changes.
+Environment: Godot editor on the target laptop.
+
+| # | Step | Pass condition |
+|---|------|----------------|
+| 1 | Attach `car.gd` to a `CharacterBody2D` (Sprite2D + rectangular collision shape), add a `StaticBody2D` wall on the same collision layer, run the scene. | Car does not move; input stays stubbed (`Vector2.ZERO`). |
+| 2 | Locally and temporarily enable the commented keyboard fallback in `_gather_input()` (add temporary input actions in project.godot if needed). | Throttle accelerates to `max_speed` and holds; brake decelerates to 0 first and only then reverses, capped at `max_reverse_speed`; releasing input coasts to a stop. |
+| 3 | While step 2 is active, test steering at 0 speed / full speed / in reverse. | No turning at 0 speed; turn rate scales with speed; turning inverts in reverse; travel direction matches heading (no sliding). |
+| 4 | Drive into the wall. | Car slides along it, speed visibly reduced, car never destroyed; repeated contact does not tunnel or jitter. |
+| 5 | Revert fallback input and temp input map; re-run step 1 before committing. | Stub-neutral car does not move. |
+
+Record: date, pass/fail per step, Godot version. The keyboard fallback must
+not end up committed unless a decision adds it.
+
 ## CI Plan
 
 Free-tier GitHub Actions; component jobs start after scaffolding. Tooling
