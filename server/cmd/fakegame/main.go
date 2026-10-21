@@ -123,7 +123,12 @@ func run(opts options) error {
 
 	counter := &inputCounter{logger: logger}
 	go readLoop(ctx, conn, logger, counter, cancel)
-	go heartbeatLoop(ctx, send)
+	go func() {
+		// cancel on return so a quit or stdin EOF ends the heartbeat and
+		// closes the connection.
+		defer cancel()
+		heartbeatLoop(ctx, send)
+	}()
 
 	if opts.autoStart {
 		go func() {
@@ -137,7 +142,10 @@ func run(opts options) error {
 			logger.Printf("auto-start host_request sent")
 		}()
 	}
-	go commandLoop(ctx, os.Stdin, logger, send)
+	go func() {
+		defer cancel()
+		commandLoop(ctx, os.Stdin, logger, send)
+	}()
 
 	if opts.duration > 0 {
 		go func() {
