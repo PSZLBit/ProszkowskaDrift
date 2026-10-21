@@ -71,8 +71,8 @@ or simulate the game.
    server.
 8. On game exit or crash, the server restarts Godot and returns to `Attract`.
    The current round is lost.
-9. On server exit, the festival launcher restarts the server and game. Tablets
-   reconnect automatically.
+9. On server exit, the festival launcher restarts the server; the Go supervisor
+   starts the game. Tablets reconnect automatically.
 
 The server baseline implements steps 2–8 with a Go supervisor in `server/`.
 Development mode may run Go and Godot in separate terminals; the festival mode

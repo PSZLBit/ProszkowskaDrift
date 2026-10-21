@@ -131,7 +131,7 @@ not a full kiosk; a team member must supervise the tablets.
 |---------|--------------|----------|
 | One tablet disconnected | Wait 5 s for auto-reconnect | Reopen app; check Wi-Fi; if still broken, host kicks slot and continues with fewer players |
 | Tablet app frozen | Force-stop and reopen the app | Reconnect; if it fails, reboot tablet and reopen |
-| Game window frozen | Check server log; restart the game process | Supervisor should restart; otherwise use the launcher restart action |
+| Game window frozen | Check server log; restart the game process | Supervisor should restart; otherwise restart the server |
 | Server crashed | Check launcher window/log | Restart server; the Go supervisor restarts Godot; tablets reconnect; current round is lost. A server-level auto-restart launcher is still an M3 item. |
 | Router down | Check power and cables | Restart router; if it does not recover, switch to laptop hotspot and reconfigure tablets |
 | TV black/no signal | Check HDMI and input | Switch cable/input; use backup monitor |
