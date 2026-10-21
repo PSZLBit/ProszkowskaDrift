@@ -1,7 +1,7 @@
 # Documentation — Source of Truth
 
 Status: Decided
-Last updated: 2026-10-20
+Last updated: 2026-10-21
 
 > All project artifacts are in English. This folder is the source of truth.
 > Code implements what is described here. Chat history does not override this folder.
@@ -78,5 +78,6 @@ Superseded decisions stay in the log. Do not delete history.
   PR only on explicit request (D-29).
 - Docs publishing: read-only MkDocs site on GitHub Pages; `documentation/`
   remains the source of truth (D-30).
-- Open: controller input scheme (D-14), map/tuning details, festival date and
-  hardware specs.
+- Delivery calendar: festival 2026-11-24; festival-ready target 2026-11-18;
+  MFD committed, MVP stretch (D-31).
+- Open: controller input scheme (D-14), map/tuning details, and hardware specs.

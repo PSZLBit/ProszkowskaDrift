@@ -45,8 +45,10 @@ and [`adr-0002-legacy-android-controller.md`](documentation/05-architecture-deci
 
 ## Project Status
 
-Planning and Sprint 0 preparation. No production code exists yet. The next
-milestone is a one-week technical spike: prove the Kotlin app on the four
+Planning and Sprint 0. No production code exists yet. The festival is
+2026-11-24 and the internal festival-ready target is 2026-11-18. The committed
+scope is the Minimum Festival Demo (MFD); the full MVP is a stretch goal. The
+next milestone is a one-week technical spike: prove the Kotlin app on the four
 tablets, the Go↔Godot connection, input latency, and display readability.
 
 Work board: <https://github.com/orgs/PSZLBit/projects/1>.
