@@ -1,7 +1,7 @@
 # Tooling and Quality Gate Plan
 
 Status: Draft
-Last updated: 2026-10-20
+Last updated: 2026-10-21
 
 Developer tooling for the project. A tool enters the repository only with a
 **trigger**, an **owner**, and — if it changes the stack or the merge gate — a
@@ -15,7 +15,21 @@ Developer tooling for the project. A tool enters the repository only with a
 | `.gitattributes` | LF normalization and binary-file handling | Protects Windows/Linux collaboration |
 | `.gitignore` | Keep builds, local config, secrets, and generated files out | Update per component after scaffold |
 | `.github/CODEOWNERS` | Default review routing | Component placeholders to fill when roles are assigned |
-| `.githooks/pre-push` | Block direct pushes to `main` | Install with `git config core.hooksPath .githooks` |
+| `scripts/setup.sh` | Local developer setup on Linux/macOS and Windows Git Bash | Small, idempotent; installs hooks; no task runner |
+| `scripts/setup.ps1` | Local developer setup on Windows PowerShell | Small, idempotent; installs hooks; no task runner |
+| `.githooks/pre-push` | Block direct pushes to `main` | Installed by both setup scripts |
+
+`scripts/setup.sh` and `scripts/setup.ps1` are the local setup entry points for
+Linux/macOS/Git Bash and Windows PowerShell. They are owned by the team and
+triggered by repository onboarding. `setup.ps1` exists because Windows
+PowerShell shells without Git Bash on `PATH` cannot run `setup.sh`; it needs Git
+for Windows and Windows PowerShell 5.1, but not Git Bash on `PATH`. The
+`pre-push` hook itself is a POSIX shell script and runs through Git's bundled
+shell. Keep the scripts small and idempotent; add steps only when they are
+needed. They must not install component toolchains implicitly.
+
+Do not add a general task runner (Make, Just, etc.) until repeated commands
+justify it; extend these scripts or add a focused script first.
 
 ## Documentation Site
 
@@ -51,7 +65,11 @@ Add per component, when the component exists.
 - `.githooks/pre-commit`: run formatters/linters on changed files only, once the
   toolchains exist. It must stay fast (a few seconds). Document an emergency
   bypass; do not make a hook required for correctness.
-- `.githooks/pre-push`: already blocks direct pushes to `main`; keep it.
+- `.githooks/pre-push`: blocks direct pushes to `main`; the setup scripts
+  install it. The hook is a local convenience; GitHub rules remain the
+  enforcement.
+- Add new hook files with `git add --chmod=+x`; the setup scripts do not
+  rewrite the Git index.
 - Do not add a hook before its tool is configured. A missing binary must not
   break commits.
 

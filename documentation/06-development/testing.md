@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-10-20
+Last updated: 2026-10-21
 
 ## Goals
 
@@ -138,6 +138,37 @@ details, triggers, and the "do not add yet" list live in
 
 Exact commands for the component jobs will be added to this file and `README.md`
 after the Sprint 0 scaffold. Until then, report checks that could not run.
+
+## Developer Setup Check
+
+Run after changing `scripts/setup.sh`, `scripts/setup.ps1`, or the Git hooks:
+
+1. In a fresh clone, `test -x scripts/setup.sh` succeeds on Linux/macOS. From
+   the repository root, `./scripts/setup.sh` exits 0 on Linux/macOS and Windows
+   Git Bash (`sh scripts/setup.sh` is equivalent). On Windows PowerShell, run
+   `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1`
+   and confirm it exits 0.
+2. `git config --local --get core.hooksPath` prints `.githooks`.
+3. On Linux/macOS, `test -x .githooks/pre-push` succeeds. From Windows
+   PowerShell, `git ls-files -s .githooks/pre-push` reports the mode `100755`.
+4. On Linux/macOS or Git Bash, a synthetic push to `main` is blocked by the
+   hook; a push to another branch is allowed:
+
+   ```sh
+   printf 'refs/heads/topic %s refs/heads/main %s\n' \
+     "$(git rev-parse HEAD)" \
+     "0000000000000000000000000000000000000000" | .githooks/pre-push
+   ```
+
+   The first command must exit 1. Repeat it with `refs/heads/topic` as the
+   remote ref and expect exit 0. Run this check in Git Bash on Windows;
+   PowerShell has no POSIX `printf`/`sh`.
+
+5. On Windows, confirm that `setup.ps1` (or `setup.sh` under Git Bash) sets
+   the hook path and that Git for Windows executes the `pre-push` hook and
+   rejects a push to `main`. The hook is a POSIX shell script and runs through
+   Git's bundled shell. This check must be run on a Windows machine before
+   relying on the hook there.
 
 ## Documentation Site Checks
 

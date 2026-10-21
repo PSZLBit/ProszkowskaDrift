@@ -51,6 +51,55 @@ tablets, the Go↔Godot connection, input latency, and display readability.
 
 See [`documentation/06-development/roadmap.md`](documentation/06-development/roadmap.md).
 
+## Getting Started
+
+### Prerequisites
+
+- Git. On Windows, install Git for Windows. Git Bash is optional for setup; the
+  `pre-push` hook runs through Git's bundled shell.
+
+Go, Godot, and the Android SDK are not required yet; their setup steps will be
+added when those components are scaffolded.
+
+### Clone and set up
+
+```sh
+git clone https://github.com/PSZLBit/ProszkowskaDrift.git
+cd ProszkowskaDrift
+```
+
+Then run the small, idempotent setup script for your platform. It sets the
+repository-local `core.hooksPath` to `.githooks` and installs the `pre-push` hook
+that blocks direct pushes to `main`.
+
+Linux, macOS, or Git Bash:
+
+```sh
+./scripts/setup.sh
+```
+
+Windows PowerShell (the command uses a one-off execution-policy bypass):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+```
+
+Windows Git Bash users can also run `sh scripts/setup.sh`. No general task
+runner is required; extend the scripts only when more setup steps are needed.
+
+Verify the hook path:
+
+```sh
+git config --local --get core.hooksPath
+# .githooks
+```
+
+The local hook catches accidental direct pushes. It is not a security boundary:
+GitHub rules for `main` must still require a pull request and review.
+
+For a local documentation preview, follow the pinned toolchain and commands in
+[`documentation/06-development/testing.md`](documentation/06-development/testing.md#documentation-site-checks).
+
 ## Documentation
 
 Published site: <https://pszlbit.github.io/ProszkowskaDrift/>.
