@@ -29,6 +29,8 @@ func run() error {
 	addr := flag.String("addr", ":8080", "HTTP/WebSocket listen address")
 	gameToken := flag.String("game-token", os.Getenv("PD_GAME_TOKEN"), "game endpoint token (default: PD_GAME_TOKEN, or a random token)")
 	controllerTimeout := flag.Duration("controller-timeout", 6*time.Second, "close a silent controller connection after this duration")
+	allDisconnectedGrace := flag.Duration("all-disconnected-grace", 10*time.Second, "pause the round after every controller was disconnected for this duration")
+	gameHeartbeatTimeout := flag.Duration("game-heartbeat-timeout", 3*time.Second, "close the game connection when no game message arrives for this duration")
 	logLevel := flag.String("log-level", "info", "log level: debug, info, warn, error")
 	flag.Parse()
 
@@ -52,6 +54,8 @@ func run() error {
 	cfg.Logger = logger
 	cfg.GameToken = token
 	cfg.ControllerTimeout = *controllerTimeout
+	cfg.AllDisconnectedGrace = *allDisconnectedGrace
+	cfg.GameHeartbeatTimeout = *gameHeartbeatTimeout
 	srv := gameserver.New(cfg)
 
 	listener, err := net.Listen("tcp", *addr)
@@ -82,6 +86,10 @@ func run() error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// The tick loop enforces the controller idle timeout, the
+	// all-disconnected pause, and the game heartbeat timeout.
+	go srv.StartTick(ctx)
 
 	select {
 	case <-ctx.Done():

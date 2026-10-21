@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/PSZLBit/ProszkowskaDrift/server/internal/protocol"
+	"github.com/PSZLBit/ProszkowskaDrift/server/internal/session"
 )
 
 const testGameToken = "test-game-token"
@@ -32,6 +34,8 @@ func newTestEnv(t *testing.T, mutate func(*Config)) *testEnv {
 	cfg := DefaultConfig()
 	cfg.GameToken = testGameToken
 	cfg.ControllerTimeout = 2 * time.Second
+	cfg.GameHeartbeatTimeout = 2 * time.Second
+	cfg.TickInterval = 20 * time.Millisecond
 	cfg.InvalidThreshold = 3
 	cfg.RateThreshold = 3
 	cfg.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -41,7 +45,10 @@ func newTestEnv(t *testing.T, mutate func(*Config)) *testEnv {
 
 	srv := New(cfg)
 	ts := httptest.NewServer(srv.Handler())
+	ctx, cancel := context.WithCancel(context.Background())
+	go srv.StartTick(ctx)
 	t.Cleanup(func() {
+		cancel()
 		ts.CloseClientConnections()
 		ts.Close()
 	})
@@ -332,11 +339,12 @@ func TestFourControllersGetSlotsAndInputFlows(t *testing.T) {
 			t.Fatalf("phase = %+v, want paused", phase)
 		}
 	}
+	// Input outside the playing phase is dropped silently: no error frame,
+	// no abuse counter, and the sequence number stays unconsumed.
 	controllers[0].send(protocol.TypeInput, int64Ptr(3), protocol.InputData{
 		Steer:    float64Ptr(0),
 		Throttle: float64Ptr(0),
 	})
-	controllers[0].expectError(protocol.CodeInvalidInput)
 
 	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "resume"})
 	game.readType(protocol.TypeHostCommand)
@@ -744,6 +752,223 @@ func TestTruncateToken(t *testing.T) {
 	if got := truncateToken("short"); strings.Contains(got, "short") {
 		t.Fatalf("short token must not be logged verbatim: %q", got)
 	}
+}
+
+func TestHealthEndpoint(t *testing.T) {
+	t.Parallel()
+
+	env := newTestEnv(t, nil)
+
+	resp, err := http.Get(env.http.URL + "/healthz")
+	if err != nil {
+		t.Fatalf("health request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("health status = %d", resp.StatusCode)
+	}
+	var health struct {
+		Status      string `json:"status"`
+		Phase       string `json:"phase"`
+		RoundID     int64  `json:"roundId"`
+		Controllers int    `json:"controllers"`
+		GameReady   bool   `json:"gameReady"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&health); err != nil {
+		t.Fatalf("decode health: %v", err)
+	}
+	if health.Status != "ok" || health.Phase != string(protocol.PhaseAttract) ||
+		health.Controllers != 0 || health.GameReady {
+		t.Fatalf("health = %+v", health)
+	}
+
+	controller := env.dialController(t)
+	controller.sendHello("token-health")
+	controller.expectWelcome(1)
+
+	joined := env.dialGame(t, testGameToken)
+	joined.readType(protocol.TypeGameHello)
+	joined.readType(protocol.TypeConfig)
+	joined.readType(protocol.TypePlayerJoined)
+}
+
+func TestAllDisconnectedPause(t *testing.T) {
+	t.Parallel()
+
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.AllDisconnectedGrace = 300 * time.Millisecond
+	})
+
+	controller := env.dialController(t)
+	controller.sendHello("token-fade")
+	controller.expectWelcome(1)
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+	game.readType(protocol.TypePlayerJoined)
+
+	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "start"})
+	game.readType(protocol.TypeHostCommand)
+	controller.readType(protocol.TypePhase)
+
+	controller.close()
+	waitFor(t, func() bool {
+		return env.server.session.Phase() == protocol.PhasePaused
+	})
+
+	left := game.readType(protocol.TypePlayerLeft)
+	leftData, err := protocol.DecodeData[protocol.PlayerLeftData](left)
+	if err != nil {
+		t.Fatalf("decode player_left: %v", err)
+	}
+	if leftData.Slot != 1 || (leftData.Reason != "disconnect" && leftData.Reason != "timeout") {
+		t.Fatalf("player_left = %+v", leftData)
+	}
+
+	pause := game.readType(protocol.TypeHostCommand)
+	pauseData, err := protocol.DecodeData[protocol.HostCommandData](pause)
+	if err != nil {
+		t.Fatalf("decode host_command: %v", err)
+	}
+	if pauseData.Command != string(session.CommandPause) {
+		t.Fatalf("host_command = %+v, want pause", pauseData)
+	}
+}
+
+func TestKickedTokenIsBlockedAndReplacementFreesSlot(t *testing.T) {
+	t.Parallel()
+
+	env := newTestEnv(t, nil)
+
+	kicked := env.dialController(t)
+	kicked.sendHello("token-out")
+	kicked.expectWelcome(1)
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+	game.readType(protocol.TypePlayerJoined)
+
+	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "kick", Slot: 1})
+	game.readType(protocol.TypeHostCommand)
+	game.readType(protocol.TypePlayerLeft)
+
+	kicked.expectError(protocol.CodeKicked)
+	kicked.expectClosed(websocket.StatusPolicyViolation, "kicked")
+
+	rejoined := env.dialController(t)
+	rejoined.sendHello("token-out")
+	rejoined.expectError(protocol.CodeKicked)
+
+	replacement := env.dialController(t)
+	replacement.sendHello("token-replacement")
+	welcome := replacement.expectWelcome(1)
+	if welcome.Label != "P1" {
+		t.Fatalf("replacement welcome = %+v", welcome)
+	}
+}
+
+func TestSessionEndClosesControllersAndRejectsHellos(t *testing.T) {
+	t.Parallel()
+
+	env := newTestEnv(t, nil)
+
+	controller := env.dialController(t)
+	controller.sendHello("token-end")
+	controller.expectWelcome(1)
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+	game.readType(protocol.TypePlayerJoined)
+
+	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "end"})
+	game.readType(protocol.TypeHostCommand)
+	controller.readType(protocol.TypePhase)
+	controller.expectClosed(websocket.StatusNormalClosure, "session_ended")
+
+	waitFor(t, func() bool {
+		for _, slot := range env.server.session.Slots() {
+			if slot.Assigned {
+				return false
+			}
+		}
+		return true
+	})
+
+	newcomer := env.dialController(t)
+	newcomer.sendHello("token-late")
+	newcomer.expectError(protocol.CodeAuthFailed)
+}
+
+func TestGameDropNotifiesControllersAndReturnsToAttract(t *testing.T) {
+	t.Parallel()
+
+	env := newTestEnv(t, nil)
+
+	controller := env.dialController(t)
+	controller.sendHello("token-stay")
+	controller.expectWelcome(1)
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+	game.readType(protocol.TypePlayerJoined)
+
+	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "start"})
+	game.readType(protocol.TypeHostCommand)
+	controller.readType(protocol.TypePhase)
+
+	game.send(protocol.TypePhase, nil, protocol.PhaseData{
+		Phase:      protocol.PhasePlaying,
+		RoundID:    1,
+		TimeLeftMs: 150000,
+	})
+	controller.readType(protocol.TypePhase)
+
+	game.close()
+	waitFor(t, func() bool {
+		return env.server.session.Phase() == protocol.PhaseAttract
+	})
+
+	errEnv := controller.readType(protocol.TypeError)
+	errData, err := protocol.DecodeData[protocol.ErrorData](errEnv)
+	if err != nil {
+		t.Fatalf("decode error: %v", err)
+	}
+	if errData.Code != protocol.CodeGameUnavailable {
+		t.Fatalf("error = %+v", errData)
+	}
+
+	phase := controller.readType(protocol.TypePhase)
+	phaseData, err := protocol.DecodeData[protocol.PhaseData](phase)
+	if err != nil {
+		t.Fatalf("decode phase: %v", err)
+	}
+	if phaseData.Phase != protocol.PhaseAttract {
+		t.Fatalf("phase = %+v", phaseData)
+	}
+
+	// The game may reconnect with the configured token and start over.
+	again := env.dialGame(t, testGameToken)
+	again.readType(protocol.TypeGameHello)
+	again.readType(protocol.TypeConfig)
+}
+
+func TestGameHeartbeatTimeoutClosesGame(t *testing.T) {
+	t.Parallel()
+
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.GameHeartbeatTimeout = 250 * time.Millisecond
+	})
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+	game.send(protocol.TypeGameReady, nil, protocol.GameReadyData{GameVersion: "test", MapVersion: "test"})
+
+	game.expectClosed(websocket.StatusGoingAway, "game_heartbeat_timeout")
 }
 
 func TestUnknownJSONFieldsAreIgnored(t *testing.T) {

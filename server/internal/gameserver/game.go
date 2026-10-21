@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/coder/websocket"
 
@@ -39,7 +40,7 @@ func (s *Server) handleGame(w http.ResponseWriter, r *http.Request) {
 	defer ws.CloseNow()
 
 	conn := &gameConn{
-		wsConn: newWSConn(ws),
+		wsConn: newWSConn(ws, s.cfg.GameQueueSize),
 		log:    s.log.With("component", "game"),
 	}
 
@@ -51,25 +52,25 @@ func (s *Server) handleGame(w http.ResponseWriter, r *http.Request) {
 		subtle.ConstantTimeCompare([]byte(token), []byte(s.cfg.GameToken)) != 1 {
 		conn.log.Warn("game connection rejected: auth failed")
 		conn.sendError(protocol.CodeAuthFailed, "Invalid game token.")
-		conn.close(websocket.StatusPolicyViolation, "auth_failed")
+		conn.enqueueClose(nil, websocket.StatusPolicyViolation, "auth_failed")
 		return
 	}
 
 	// Send the handshake before registering the connection so a controller
 	// cannot make player_joined the first frame the game sees.
-	if err := conn.send(protocol.TypeGameHello, protocol.GameHelloData{
+	if !conn.send(protocol.TypeGameHello, protocol.GameHelloData{
 		Token:           s.cfg.GameToken,
 		ProtocolVersion: protocol.Version,
-	}); err != nil {
-		conn.log.Debug("game_hello write failed", "error", err)
+	}) {
+		conn.log.Debug("game_hello enqueue failed")
 		return
 	}
-	if err := conn.send(protocol.TypeConfig, protocol.ConfigData{
+	if !conn.send(protocol.TypeConfig, protocol.ConfigData{
 		RoundDurationMs: s.cfg.RoundDurationMs,
 		TasksPerPlayer:  s.cfg.TasksPerPlayer,
 		MaxPlayers:      session.MaxPlayers,
-	}); err != nil {
-		conn.log.Debug("config write failed", "error", err)
+	}) {
+		conn.log.Debug("config enqueue failed")
 		return
 	}
 
@@ -78,7 +79,7 @@ func (s *Server) handleGame(w http.ResponseWriter, r *http.Request) {
 	conn.log.Info("game connected")
 
 	if err := s.sendExistingPlayers(conn); err != nil {
-		conn.log.Debug("player_joined write failed", "error", err)
+		conn.log.Debug("player_joined enqueue failed", "error", err)
 		return
 	}
 
@@ -89,7 +90,7 @@ func (s *Server) handleGame(w http.ResponseWriter, r *http.Request) {
 			case errors.Is(err, protocol.ErrUnsupportedVersion):
 				conn.log.Warn("closing game: protocol mismatch", "error", err)
 				conn.sendError(protocol.CodeProtocolMismatch, "Unsupported protocol version.")
-				conn.close(websocket.StatusPolicyViolation, "protocol_mismatch")
+				conn.enqueueClose(nil, websocket.StatusPolicyViolation, "protocol_mismatch")
 				return
 			case errors.Is(err, protocol.ErrMalformed), errors.Is(err, errNonTextFrame):
 				if s.rejectGameInvalid(conn, "Malformed message.") {
@@ -101,6 +102,9 @@ func (s *Server) handleGame(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+
+		// Any valid message refreshes the game heartbeat deadline.
+		s.setGameMessageTime(time.Now())
 
 		switch env.Type {
 		case protocol.TypeGameReady:
@@ -127,7 +131,22 @@ func (s *Server) handleGameReady(conn *gameConn, env protocol.Envelope) {
 		s.rejectGameInvalid(conn, "Malformed game_ready payload.")
 		return
 	}
+	s.setGameReady(true)
 	conn.log.Info("game ready", "game_version", data.GameVersion, "map_version", data.MapVersion)
+}
+
+// denialCode maps a session host-command error to a host_denied code.
+func denialCode(err error) (string, string) {
+	switch {
+	case errors.Is(err, session.ErrNoPlayers):
+		return protocol.DenialNoPlayers, "No controller is connected."
+	case errors.Is(err, session.ErrInvalidTransition):
+		return protocol.DenialInvalidPhase, "Command not allowed in the current phase."
+	case errors.Is(err, session.ErrInvalidCommand), errors.Is(err, session.ErrInvalidSlot):
+		return protocol.DenialNotAuthorized, "Unknown command or slot."
+	default:
+		return protocol.DenialNotAuthorized, "Command rejected by the server."
+	}
 }
 
 func (s *Server) handleHostRequest(conn *gameConn, env protocol.Envelope) bool {
@@ -138,20 +157,24 @@ func (s *Server) handleHostRequest(conn *gameConn, env protocol.Envelope) bool {
 
 	command, err := session.ParseCommand(data.Command)
 	if err != nil {
-		return s.rejectGameInvalid(conn, "Unknown host command.")
+		s.sendHostDenied(conn, data.Command, data.Slot, protocol.DenialNotAuthorized, "Unknown host command.")
+		return false
 	}
 
 	result, err := s.session.HostCommand(command, data.Slot)
 	if err != nil {
-		return s.rejectGameInvalid(conn, "Host command rejected: "+err.Error())
+		code, message := denialCode(err)
+		conn.log.Info("host command denied", "command", command, "slot", data.Slot, "code", code, "error", err)
+		s.sendHostDenied(conn, string(command), data.Slot, code, message)
+		return false
 	}
 
 	reply := protocol.HostCommandData{Command: string(command)}
 	if command == session.CommandKick {
 		reply.Slot = result.Slot
 	}
-	if err := conn.send(protocol.TypeHostCommand, reply); err != nil {
-		conn.log.Debug("host_command write failed", "error", err)
+	if !conn.send(protocol.TypeHostCommand, reply) {
+		conn.log.Debug("host_command enqueue failed")
 		return true
 	}
 
@@ -172,7 +195,21 @@ func (s *Server) handleHostRequest(conn *gameConn, env protocol.Envelope) bool {
 	if result.Kicked {
 		s.kickController(result.Slot)
 	}
+	if command == session.CommandEnd {
+		s.closeAllControllers("session_ended")
+	}
 	return false
+}
+
+func (s *Server) sendHostDenied(conn *gameConn, command string, slot int, code, message string) {
+	if !conn.send(protocol.TypeHostDenied, protocol.HostDeniedData{
+		Command: command,
+		Slot:    slot,
+		Code:    code,
+		Message: message,
+	}) {
+		conn.log.Debug("host_denied enqueue failed")
+	}
 }
 
 func (s *Server) handleGamePhase(conn *gameConn, env protocol.Envelope) bool {
@@ -184,6 +221,12 @@ func (s *Server) handleGamePhase(conn *gameConn, env protocol.Envelope) bool {
 		return s.rejectGameInvalid(conn, "Unknown phase.")
 	}
 	if err := s.session.SetPhase(data.Phase, data.RoundID); err != nil {
+		if errors.Is(err, session.ErrSessionEnded) {
+			// After a session end the server stops forwarding phase
+			// changes. This is not an abuse signal.
+			conn.log.Info("dropping game phase after session end", "phase", data.Phase)
+			return false
+		}
 		return s.rejectGameInvalid(conn, "Phase rejected: "+err.Error())
 	}
 
@@ -213,7 +256,7 @@ func (s *Server) rejectGameInvalid(conn *gameConn, message string) bool {
 
 	if conn.invalid >= s.cfg.InvalidThreshold {
 		conn.log.Warn("closing game after repeated invalid messages", "count", conn.invalid)
-		conn.close(websocket.StatusPolicyViolation, "invalid_input")
+		conn.enqueueClose(nil, websocket.StatusPolicyViolation, "invalid_input")
 		return true
 	}
 	return false

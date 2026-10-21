@@ -228,6 +228,24 @@ type HostRequestData struct {
 	Slot    int    `json:"slot,omitempty"`
 }
 
+// Host denial codes sent in a host_denied message.
+const (
+	DenialNoPlayers     = "no_players"
+	DenialInvalidPhase  = "invalid_phase"
+	DenialNotAuthorized = "not_authorized"
+)
+
+// TypeHostDenied is sent to the game when a host request was rejected.
+const TypeHostDenied = "host_denied"
+
+// HostDeniedData reports a rejected host request and why.
+type HostDeniedData struct {
+	Command string `json:"command"`
+	Slot    int    `json:"slot,omitempty"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 // HeartbeatData is the game's periodic liveness message.
 type HeartbeatData struct {
 	GameTimeMs int64 `json:"gameTimeMs"`

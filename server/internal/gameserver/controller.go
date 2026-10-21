@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -41,7 +40,7 @@ func (s *Server) handleController(w http.ResponseWriter, r *http.Request) {
 
 	id := s.nextConnID.Add(1)
 	conn := &controllerConn{
-		wsConn: newWSConn(ws),
+		wsConn: newWSConn(ws, s.cfg.ControllerQueueSize),
 		id:     id,
 		log:    s.log.With("component", "controller", "connection", id),
 	}
@@ -50,28 +49,17 @@ func (s *Server) handleController(w http.ResponseWriter, r *http.Request) {
 	conn.log.Info("controller connected", "remote", r.RemoteAddr)
 
 	for {
-		// coder/websocket closes the TCP connection when a read context
-		// expires, which skips the close handshake. Use a watchdog that
-		// performs a normal close instead so the controller can observe the
-		// heartbeat_timeout reason.
-		var timedOut atomic.Bool
-		watchdog := time.AfterFunc(s.cfg.ControllerTimeout, func() {
-			timedOut.Store(true)
-			conn.close(websocket.StatusPolicyViolation, "heartbeat_timeout")
-		})
+		// The controller idle timeout is enforced centrally by StartTick: a
+		// timed-out connection is closed from the tick loop with
+		// heartbeat_timeout, which unblocks this read.
 		env, err := readEnvelope(r.Context(), ws, 0)
-		watchdog.Stop()
 
-		if timedOut.Load() {
-			conn.log.Info("closing controller: heartbeat timeout", "timeout", s.cfg.ControllerTimeout)
-			return
-		}
 		if err != nil {
 			switch {
 			case errors.Is(err, protocol.ErrUnsupportedVersion):
 				conn.log.Warn("closing controller: protocol mismatch", "error", err)
 				conn.sendError(protocol.CodeProtocolMismatch, "Unsupported protocol version.")
-				conn.close(websocket.StatusPolicyViolation, "protocol_mismatch")
+				conn.enqueueClose(nil, websocket.StatusPolicyViolation, "protocol_mismatch")
 				return
 			case errors.Is(err, protocol.ErrMalformed), errors.Is(err, errNonTextFrame):
 				if s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "Malformed message.") {
@@ -82,6 +70,10 @@ func (s *Server) handleController(w http.ResponseWriter, r *http.Request) {
 				conn.log.Debug("controller read ended", "error", err)
 				return
 			}
+		}
+
+		if conn.slot != 0 {
+			s.session.Touch(conn.slot, conn.id, time.Now())
 		}
 
 		switch env.Type {
@@ -118,6 +110,12 @@ func (s *Server) handleControllerHello(conn *controllerConn, env protocol.Envelo
 		case errors.Is(err, session.ErrInvalidToken):
 			conn.log.Warn("controller hello rejected: invalid device token", "token", truncateToken(data.DeviceToken))
 			conn.sendError(protocol.CodeAuthFailed, "Invalid device token.")
+		case errors.Is(err, session.ErrKickedToken):
+			conn.log.Warn("controller hello rejected: kicked device token", "token", conn.tokenRef)
+			conn.sendError(protocol.CodeKicked, "This device was disabled by the host.")
+		case errors.Is(err, session.ErrSessionEnded):
+			conn.log.Info("controller hello rejected: session ended", "token", conn.tokenRef)
+			conn.sendError(protocol.CodeAuthFailed, "Session has ended. Restart the server.")
 		case errors.Is(err, session.ErrDuplicateToken):
 			conn.log.Warn("controller hello rejected: token already connected", "token", truncateToken(data.DeviceToken))
 			conn.sendError(protocol.CodeAuthFailed, "This device token is already connected.")
@@ -135,13 +133,13 @@ func (s *Server) handleControllerHello(conn *controllerConn, env protocol.Envelo
 	conn.tokenRef = truncateToken(data.DeviceToken)
 	s.registerController(conn)
 
-	if err := conn.send(protocol.TypeWelcome, protocol.WelcomeData{
+	if !conn.send(protocol.TypeWelcome, protocol.WelcomeData{
 		Slot:  view.Number,
 		Label: view.Label,
 		Color: view.Color,
 		Phase: s.session.Phase(),
-	}); err != nil {
-		conn.log.Debug("welcome write failed", "error", err)
+	}) {
+		conn.log.Debug("welcome enqueue failed")
 		return true
 	}
 
@@ -174,7 +172,11 @@ func (s *Server) handleControllerInput(conn *controllerConn, env protocol.Envelo
 		case errors.Is(err, session.ErrRateLimited):
 			return s.rejectControllerRate(conn)
 		case errors.Is(err, session.ErrNotPlaying):
-			return s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "Input is only accepted while playing.")
+			// Input outside the playing phase is normal traffic during
+			// pauses and phase changes. It is dropped silently and does not
+			// count toward the abuse thresholds.
+			conn.log.Debug("dropping input outside the playing phase", "slot", conn.slot, "phase", s.session.Phase())
+			return false
 		case errors.Is(err, session.ErrStaleSequence):
 			return s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "Input sequence is stale.")
 		case errors.Is(err, session.ErrInvalidInput):
@@ -205,11 +207,11 @@ func (s *Server) handleControllerPing(conn *controllerConn, env protocol.Envelop
 		s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "Malformed ping payload.")
 		return
 	}
-	if err := conn.send(protocol.TypePong, protocol.PongData{
+	if !conn.send(protocol.TypePong, protocol.PongData{
 		ClientTime: data.ClientTime,
 		ServerTime: time.Now().UnixMilli(),
-	}); err != nil {
-		conn.log.Debug("pong write failed", "error", err)
+	}) {
+		conn.log.Debug("pong enqueue failed")
 	}
 }
 
@@ -246,7 +248,7 @@ func (s *Server) rejectControllerInvalid(conn *controllerConn, code, message str
 			"token", conn.tokenRef,
 			"count", conn.invalid,
 		)
-		conn.close(websocket.StatusPolicyViolation, "invalid_input")
+		conn.enqueueClose(nil, websocket.StatusPolicyViolation, "invalid_input")
 		return true
 	}
 	return false
@@ -267,7 +269,7 @@ func (s *Server) rejectControllerRate(conn *controllerConn) bool {
 			"token", conn.tokenRef,
 			"count", conn.rate,
 		)
-		conn.close(websocket.StatusPolicyViolation, "rate_limited")
+		conn.enqueueClose(nil, websocket.StatusPolicyViolation, "rate_limited")
 		return true
 	}
 	return false
