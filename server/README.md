@@ -145,19 +145,20 @@ cd server
 go run ./cmd/server -game-token dev-token -log-level debug
 ```
 
-Terminal 2 — fake game (starts the round after one second):
-
-```sh
-cd server
-go run ./cmd/fakegame -token dev-token -auto-start
-```
-
-Terminal 3 — four fake controllers, one invalid input each, and one
-disconnect/reconnect:
+Terminal 2 — four fake controllers, one invalid input each, and one
+disconnect/reconnect (controllers first: a `start` without any connected
+controller is denied with `host_denied` `no_players`):
 
 ```sh
 cd server
 go run ./cmd/fakecontroller -clients 4 -duration 15s -invalid-after 3s -drop-after 5s
+```
+
+Terminal 3 — fake game (starts the round one second after connecting):
+
+```sh
+cd server
+go run ./cmd/fakegame -token dev-token -auto-start
 ```
 
 Expected:

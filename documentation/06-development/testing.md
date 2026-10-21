@@ -73,6 +73,10 @@ go vet ./...
 go test -race ./...
 ```
 
+CI runs the same commands on pull requests touching `server/`
+(`.github/workflows/server.yml`) and `mkdocs build --strict` on documentation
+pull requests (`.github/workflows/docs.yml`).
+
 Integration tests use `httptest` and fake WebSocket clients; they do not need a
 real game, tablet, or external network. The manual four-client check and the
 heartbeat check are documented in `server/README.md` and summarized in
@@ -121,12 +125,13 @@ These checks use the S0-04 fake clients. Details and expected output are in
 
 1. Start the server with a known token:
    `go run ./cmd/server -game-token dev-token -log-level debug` from `server/`.
-2. Start `go run ./cmd/fakegame -token dev-token -auto-start`; it should receive
-   `game_hello`, reply with `game_ready`, and report `player_joined` as
-   controllers connect.
-3. Start
-   `go run ./cmd/fakecontroller -clients 4 -duration 15s -invalid-after 3s -drop-after 5s`.
-   Expect four `welcome` messages with slots 1–4, labels `P1`–`P4`, and the four
+2. Controllers must exist before the round starts: `start` is denied with
+   `host_denied` `no_players` otherwise. Start
+   `go run ./cmd/fakecontroller -clients 4 -duration 15s -invalid-after 3s -drop-after 5s`
+   first, then `go run ./cmd/fakegame -token dev-token -auto-start`. The fake
+   game should receive `game_hello`, reply with `game_ready`, accept the
+   delayed `start`, and report `player_joined` as controllers connect.
+3. Expect four `welcome` messages with slots 1–4, labels `P1`–`P4`, and the four
    colors; one `invalid_input` error per controller; player 1 drops and
    reconnects into the same slot with a reset sequence.
 4. Send `leave` from the fake controllers and confirm the slots stay reserved.
@@ -136,10 +141,11 @@ These checks use the S0-04 fake clients. Details and expected output are in
 6. Close the fake game with `quit` while controllers are connected. Every
    controller must receive `game_unavailable` and a `phase` back to `attract`;
    a restarted fake game reclaims the connection with the same token.
-7. Pause one fake controller process (`kill -STOP <pid>`) while the server
-   broadcasts, then resume it (`kill -CONT <pid>`). The paused controller stops
-   draining its queue; the server must close it with `slow_client` without
-   delaying the other controllers.
+7. A controller that stops reading (frozen tablet process) is covered by an
+   automated regression test (`TestFrozenControllersDoNotStallTickLoop`): the
+   server tears the connection down after a bounded wait and the tick loop
+   keeps enforcing timers. A manual check with a suspended real tablet is part
+   of the controller hardware checks (S0-02 and later).
 8. `curl http://127.0.0.1:8080/healthz` must report `phase`, the number of
    connected controllers, and `gameReady`.
 6. Use `go run ./cmd/fakegame` interactive commands to check `start`, `pause`,
