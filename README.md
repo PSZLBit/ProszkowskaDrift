@@ -55,7 +55,8 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
 
 ### Prerequisites
 
-- Git. On Windows, use Git Bash, which is included with Git for Windows.
+- Git. On Windows, install Git for Windows. Git Bash is optional for setup; the
+  `pre-push` hook runs through Git's bundled shell.
 
 Go, Godot, and the Android SDK are not required yet; their setup steps will be
 added when those components are scaffolded.
@@ -68,8 +69,8 @@ cd ProszkowskaDrift
 ```
 
 Then run the small, idempotent setup script for your platform. It sets the
-repository-local `core.hooksPath` to `.githooks`, marks the hooks executable,
-and installs the `pre-push` hook that blocks direct pushes to `main`.
+repository-local `core.hooksPath` to `.githooks` and installs the `pre-push` hook
+that blocks direct pushes to `main`.
 
 Linux, macOS, or Git Bash:
 
@@ -77,7 +78,7 @@ Linux, macOS, or Git Bash:
 ./scripts/setup.sh
 ```
 
-Windows PowerShell (this also works under the default execution policy):
+Windows PowerShell (the command uses a one-off execution-policy bypass):
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1

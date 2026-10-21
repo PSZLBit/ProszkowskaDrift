@@ -141,11 +141,13 @@ after the Sprint 0 scaffold. Until then, report checks that could not run.
 
 ## Developer Setup Check
 
-Run after changing `setup.sh`, `setup.ps1`, or the Git hooks:
+Run after changing `scripts/setup.sh`, `scripts/setup.ps1`, or the Git hooks:
 
-1. From the repository root, `./scripts/setup.sh` exits 0 on Linux/macOS and
-   Windows Git Bash (`sh scripts/setup.sh` is equivalent). On Windows
-   PowerShell, `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1` exits 0.
+1. In a fresh clone, `test -x scripts/setup.sh` succeeds on Linux/macOS. From
+   the repository root, `./scripts/setup.sh` exits 0 on Linux/macOS and Windows
+   Git Bash (`sh scripts/setup.sh` is equivalent). On Windows PowerShell, run
+   `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1`
+   and confirm it exits 0.
 2. `git config --local --get core.hooksPath` prints `.githooks`.
 3. On Linux/macOS, `test -x .githooks/pre-push` succeeds. From Windows
    PowerShell, `git ls-files -s .githooks/pre-push` reports the mode `100755`.

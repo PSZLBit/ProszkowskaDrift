@@ -92,9 +92,9 @@ outcome and acceptance criteria. Link every PR to an issue.
   ./scripts/setup.sh
   ```
 
-  On Windows, run it from Git Bash, or use
-  `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1`.
-  It sets the repository-local
+  On Windows, use
+  `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup.ps1`,
+  or run the shell script from Git Bash. It sets the repository-local
   `core.hooksPath` to `.githooks`. The current `pre-push` hook blocks direct
   pushes to `main`; it is a local convenience, not a replacement for GitHub
   rules.

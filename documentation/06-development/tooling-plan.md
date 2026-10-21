@@ -20,12 +20,13 @@ Developer tooling for the project. A tool enters the repository only with a
 | `.githooks/pre-push` | Block direct pushes to `main` | Installed by both setup scripts |
 
 `scripts/setup.sh` and `scripts/setup.ps1` are the local setup entry points for
-Linux/macOS and Windows respectively. They are owned by the team and triggered
-by repository onboarding. `setup.ps1` exists because Windows PowerShell shells
-without Git Bash on `PATH` cannot run `setup.sh`; it needs only Windows
-PowerShell 5.1, which ships with Windows. Keep the scripts small and
-idempotent; add steps only when they are needed. They must not install
-component toolchains implicitly.
+Linux/macOS/Git Bash and Windows PowerShell. They are owned by the team and
+triggered by repository onboarding. `setup.ps1` exists because Windows
+PowerShell shells without Git Bash on `PATH` cannot run `setup.sh`; it needs Git
+for Windows and Windows PowerShell 5.1, but not Git Bash on `PATH`. The
+`pre-push` hook itself is a POSIX shell script and runs through Git's bundled
+shell. Keep the scripts small and idempotent; add steps only when they are
+needed. They must not install component toolchains implicitly.
 
 Do not add a general task runner (Make, Just, etc.) until repeated commands
 justify it; extend these scripts or add a focused script first.
@@ -67,6 +68,8 @@ Add per component, when the component exists.
 - `.githooks/pre-push`: blocks direct pushes to `main`; the setup scripts
   install it. The hook is a local convenience; GitHub rules remain the
   enforcement.
+- Add new hook files with `git add --chmod=+x`; the setup scripts do not
+  rewrite the Git index.
 - Do not add a hook before its tool is configured. A missing binary must not
   break commits.
 
