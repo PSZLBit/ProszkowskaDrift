@@ -345,6 +345,12 @@ func TestFourControllersGetSlotsAndInputFlows(t *testing.T) {
 		Steer:    float64Ptr(0),
 		Throttle: float64Ptr(0),
 	})
+	// The controller and the game use separate connections. Wait until the
+	// paused input has been handled before sending resume, otherwise the
+	// server may process resume first and forward this seq 3 input as
+	// playing input.
+	controllers[0].send(protocol.TypePing, nil, protocol.PingData{ClientTime: 1})
+	controllers[0].readType(protocol.TypePong)
 
 	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "resume"})
 	game.readType(protocol.TypeHostCommand)
@@ -545,6 +551,34 @@ func TestControllerCannotIssueHostCommands(t *testing.T) {
 	}
 	if hostCommand.Command != "start" {
 		t.Fatalf("host_command = %+v", hostCommand)
+	}
+}
+
+func TestHostCommandDenied(t *testing.T) {
+	env := newTestEnv(t, nil)
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+
+	tests := []struct {
+		command string
+		code    string
+	}{
+		{"start", protocol.DenialNoPlayers},
+		{"resume", protocol.DenialInvalidPhase},
+		{"explode", protocol.DenialNotAuthorized},
+	}
+	for _, tt := range tests {
+		game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: tt.command})
+		deniedEnv := game.readType(protocol.TypeHostDenied)
+		denied, err := protocol.DecodeData[protocol.HostDeniedData](deniedEnv)
+		if err != nil {
+			t.Fatalf("decode host_denied for %q: %v", tt.command, err)
+		}
+		if denied.Command != tt.command || denied.Code != tt.code {
+			t.Fatalf("host_denied = %+v, want command %q code %q", denied, tt.command, tt.code)
+		}
 	}
 }
 
