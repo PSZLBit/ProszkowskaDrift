@@ -211,7 +211,7 @@ func TestTickTimeoutsAndAllDisconnectedPause(t *testing.T) {
 	if len(actions) != 1 || actions[0].Kind != ActionControllerTimeout || actions[0].Slot != 1 {
 		t.Fatalf("timeout actions = %+v", actions)
 	}
-	if actions[0].Generation == 0 || actions[0].Generation == first.Generation {
+	if actions[0].Generation != first.Generation {
 		t.Fatalf("timeout generation = %d, attach generation = %d", actions[0].Generation, first.Generation)
 	}
 	if s.ConnectedCount() != 0 {

@@ -566,13 +566,14 @@ func (s *Session) Tick(now time.Time) []Action {
 	for _, id := range s.order {
 		slot := s.slots[id]
 		if slot.connected && now.Sub(slot.lastSeen) > s.timings.ControllerIdleTimeout {
+			timedOutGeneration := slot.generation
 			slot.connected = false
 			slot.generation++
 			slot.lastSeq = 0
 			slot.hasSeq = false
 			slot.limiter.reset()
 			slot.errors.reset()
-			actions = append(actions, Action{Kind: ActionControllerTimeout, Slot: id, Generation: slot.generation})
+			actions = append(actions, Action{Kind: ActionControllerTimeout, Slot: id, Generation: timedOutGeneration})
 		}
 	}
 	if s.connectedCountLocked() == 0 &&

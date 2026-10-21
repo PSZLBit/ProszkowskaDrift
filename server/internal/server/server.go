@@ -167,7 +167,7 @@ func (s *Server) tick(now time.Time) {
 			s.log.Info("controller heartbeat timeout", "slot", int(action.Slot))
 			s.hub.closeSlotIfGeneration(action.Slot, action.Generation, websocket.CloseGoingAway, "heartbeat timeout")
 			snap, ok := s.session.SnapshotForSlot(action.Slot)
-			if !ok || snap.Connected || snap.Generation != action.Generation {
+			if !ok || snap.Connected {
 				continue
 			}
 			s.game.playerLeft(action.Slot, protocol.LeftTimeout)

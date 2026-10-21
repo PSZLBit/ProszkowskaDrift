@@ -161,6 +161,29 @@ func TestControllerSlotsAndSessionFull(t *testing.T) {
 	}
 }
 
+func TestControllerIdleTimeoutClosesSocket(t *testing.T) {
+	s, ts := newTestServer(t, func(cfg *config.Config) {
+		cfg.ControllerIdleTimeoutMs = 50
+	})
+	game := dialGame(t, ts, testGameToken)
+	c, _ := dialController(t, ts, "idle")
+
+	s.tick(time.Now().Add(2 * time.Second))
+
+	left := readType(t, game, protocol.TypePlayerLeft)
+	leftData, _ := protocol.DecodeData[protocol.PlayerLeftData](left)
+	if leftData.Slot != 1 || leftData.Reason != protocol.LeftTimeout {
+		t.Fatalf("player_left = %+v", leftData)
+	}
+
+	_ = c.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
+	if _, _, err := c.ReadMessage(); err == nil {
+		t.Fatal("timed-out controller stayed connected")
+	}
+	_ = c.Close()
+	_ = game.Close()
+}
+
 func TestGameAuthenticationAndHealth(t *testing.T) {
 	_, ts := newTestServer(t, nil)
 	if _, resp, err := websocket.DefaultDialer.Dial(wsURL(ts, "/ws/game?token=wrong"), nil); err == nil {
