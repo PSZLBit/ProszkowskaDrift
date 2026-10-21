@@ -52,13 +52,18 @@ and a fake game. Packages:
   sliding-window rate limit, per-connection limiter state.
 - `internal/protocol`: envelope parsing and version rejection, payload decoding,
   encoding, unknown fields, phase values.
-- `internal/session`: slot assignment, invalid and duplicate tokens, reconnect,
-  leave, kick, host-command transitions, input gating, per-slot rate limit,
-  sequence reset on reconnect.
-- `internal/gameserver`: four controllers, input forwarding, reconnect, heartbeat
-  timeout, ping/pong, leave, invalid/rate closure, protocol mismatch, malformed
-  messages, controller host-command rejection, kick, game auth, game-driven
-  phase, loopback checks, token truncation.
+- `internal/session`: slot assignment, invalid and duplicate tokens, kicked
+  token blocklist, reconnect, leave, kick, host-command transitions and
+  rejections (no players, phase guards), hard session end, input gating,
+  per-slot rate limit, sequence reset on reconnect, idle-timeout and
+  all-disconnected-pause timers with an injectable clock.
+- `internal/gameserver`: four controllers, input forwarding, reconnect,
+  heartbeat timeout, ping/pong, leave, invalid/rate closure, slow-client
+  close, protocol mismatch, malformed messages, controller host-command
+  rejection, kick with blocked token, host `end` with graceful controller
+  close, `host_denied`, all-disconnected pause, game drop notification,
+  game heartbeat timeout, game auth, game-driven phase, loopback checks,
+  token truncation, and `/healthz`.
 
 Commands, from `server/`:
 
@@ -128,6 +133,15 @@ These checks use the S0-04 fake clients. Details and expected output are in
 5. Run `go run ./cmd/fakecontroller -clients 1 -duration 12s -silent-after 2s`
    while the game is in `playing`. The server must close the controller after
    about 6 s with `heartbeat_timeout`.
+6. Close the fake game with `quit` while controllers are connected. Every
+   controller must receive `game_unavailable` and a `phase` back to `attract`;
+   a restarted fake game reclaims the connection with the same token.
+7. Pause one fake controller process (`kill -STOP <pid>`) while the server
+   broadcasts, then resume it (`kill -CONT <pid>`). The paused controller stops
+   draining its queue; the server must close it with `slow_client` without
+   delaying the other controllers.
+8. `curl http://127.0.0.1:8080/healthz` must report `phase`, the number of
+   connected controllers, and `gameReady`.
 6. Use `go run ./cmd/fakegame` interactive commands to check `start`, `pause`,
    `resume`, `reset`, `end`, and `kick 2`; a kicked controller receives `error`
    `kicked`, the slot is freed, and the game receives `player_left` with reason

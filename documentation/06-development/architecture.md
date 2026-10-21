@@ -57,13 +57,23 @@ the Sprint 0 spikes finish.
 - The server owns slots, colors, device-token reconnect, input range/sequence/
   rate validation, controller heartbeats, and a minimal phase path for
   `start`, `pause`, `resume`, `reset`, `end`, and `kick`.
+- A server tick loop (250 ms) enforces the controller idle timeout, the
+  all-disconnected pause (10 s grace), and game heartbeat monitoring. Writing
+  is serialized per connection through a bounded queue; a connection that
+  stops draining its queue is closed as `slow_client` instead of blocking
+  broadcasts.
+- Session boundaries are enforced server-side: `host_denied` answers rejected
+  host requests, a kicked device token is blocked for the session, host `end`
+  clears slots and closes controllers gracefully, and `/healthz` reports
+  phase, slot count, and game readiness.
 - Session state is in memory. Device tokens are never forwarded to the game.
 - `cmd/fakecontroller` and `cmd/fakegame` provide manual end-to-end checks. The
   protocol details and current deviations are in `06-development/protocol.md`.
 
-This slice does not launch or supervise Godot, own the round timer or
-countdown, assign tasks, score, implement late join or the all-disconnected
-pause, or provide a production controller UI. Those remain later sprint items.
+This slice does not launch or supervise Godot (the game heartbeat closes a
+silent game connection already; launching, token rotation per launch, and
+restarts are S0-07), assign tasks, score, implement late join, or provide a
+production controller UI. Those remain later sprint items.
 
 ## Authority and Trust Boundary
 

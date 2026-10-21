@@ -21,9 +21,10 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
 ## Components
 
 - `server/` — Go session server: slots, input validation, reconnects, host
-  commands, game process supervision. Sprint 0 scaffold: controller and game
-  WebSocket endpoints, in-memory slots, validation, and fake clients.
-  Supervision is not implemented yet. See [`server/README.md`](server/README.md).
+  commands, session timers, and recovery signals. Sprint 0 slice: controller
+  and game WebSocket endpoints, in-memory slots, validation, all-disconnected
+  pause, `/healthz`, and fake clients. Game process supervision is not
+  implemented yet. See [`server/README.md`](server/README.md).
 - `game/` — Godot 4 game and fullscreen display: map, movement, collisions,
   parking detection, scoring, HUD. (Planned; not scaffolded.)
 - `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.

@@ -318,13 +318,15 @@ Implemented now:
 - Controller `hello`, `input`, `ping`, and `leave`; server `welcome`, `phase`,
   `error`, and `pong`.
 - Game `game_hello`, `config`, `player_joined`, `player_left`, forwarded
-  `input`, and `host_command`; game `game_ready`, `host_request`, `phase`, and
-  `heartbeat`.
+  `input`, and `host_command`; game `game_ready`, `host_request`, `phase`,
+  `heartbeat`, and server `host_denied`.
 - Range, finite-number, phase, slot, sequence, and 60-messages-per-second
   validation. Invalid values are dropped and reported; repeated abuse closes
   the connection.
 - Device-token slot assignment and reconnect, with the slot reserved for the
   session.
+- Server-side timers on a 250 ms tick: controller idle timeout, all-disconnected
+  pause, and game heartbeat monitoring.
 
 Implementation choices:
 
@@ -332,15 +334,51 @@ Implementation choices:
   this document is illustrative, not a color mapping.
 - Controller heartbeat timeout is 6 s. Any controller message resets it; the
   controller is expected to ping every 2 s. Close reason: `heartbeat_timeout`.
+  Out-of-phase controllers are closed with `player_left.reason` `timeout`.
 - A connection closes with `invalid_input` after 10 consecutive invalid
   messages and with `rate_limited` after 20 consecutive rate violations. A
-  valid input resets both counters.
+  valid input resets both counters. Input that arrives outside the `playing`
+  phase is dropped silently: no error, no counter, and the sequence number
+  stays unconsumed, so a controller that keeps sending during a pause does not
+  lose its sequence position.
+- A connection whose outbound queue stays full is closed with the
+  `slow_client` close reason; broadcasts never block on it.
 - A malformed device token, or a token whose slot is still connected, receives
   `auth_failed`. A syntactically valid unknown token gets a free slot. A full
   session receives `session_full`; the connection stays open and may retry.
 - The game token is presented as `?token=<value>` on `/ws/game` (the
   `X-Game-Token` header is also accepted). The endpoint rejects non-loopback
   connections before the WebSocket handshake.
+
+Session-boundary choices (this sprint, additive):
+
+- `host_request` that the server rejects is answered with `host_denied`
+  carrying `command`, `slot`, `code`, and `message`. Codes:
+  `no_players` (start with no connected controller), `invalid_phase` (command
+  not allowed in the current phase), and `not_authorized` (unknown command or
+  slot). `reset` is only valid from `countdown`, `playing`, `paused`, and
+  `results`.
+- Kick blocks the kicked device token for the rest of the session: a reconnect
+  with the same token receives `error` `kicked`. A replacement token can claim
+  the freed slot immediately. There is no cross-session ban list.
+- Host `end` clears slots, tokens, and the round identifier. New `hello`s and
+  `phase` changes are rejected until the server restarts; connected
+  controllers receive `phase` `ended` and a graceful close with reason
+  `session_ended`.
+- If every controller disconnects during `countdown` or `playing`, the server
+  waits 10 s (configurable) and then pauses the round: it sends
+  `host_command` `pause` to the game and broadcasts `phase` `paused`. A
+  reconnecting controller stops the grace timer. This is the only case where
+  the server changes the phase without a host request.
+- The game heartbeat is live: any valid game message resets it. After 3 s
+  without a game message on a ready connection, the server closes it with
+  reason `game_heartbeat_timeout`, broadcasts `error` `game_unavailable`,
+  resets the session to `attract` (slots stay reserved), and waits for the
+  game to reconnect with the configured token. One-time token rotation per
+  launch arrives with S0-07 game supervision.
+- `/healthz` (plain HTTP, not WebSocket) returns
+  `{status, phase, roundId, controllers, gameReady}` for the launcher and
+  manual checks.
 
 Deviations and open points:
 
@@ -354,18 +392,13 @@ Deviations and open points:
   `timeLeftMs` because the server does not own a round timer. The game may send
   `phase` (including `timeLeftMs` and `roundId`); the server stores it and
   broadcasts it to controllers. Full countdown and timer ownership remain game
-  work.
+  work. The all-disconnected pause is the exception: the server sets `paused`.
 - The server sends `phase` only to controllers. The game learns the accepted
   host command from `host_command`; there is no server-to-game phase message.
-- `player_left.reason` may be `disconnect`, `leave`, or `kicked`. The extra
-  values are additive.
+- `player_left.reason` may be `disconnect`, `leave`, `kicked`, or `timeout`
+  (idle timeout). The extra values are additive.
 - On reconnect the server sends `welcome` with the current phase, but not the
   current task, because task data is not implemented yet.
-- Kick clears the slot, sends `error` with `kicked`, closes the controller, and
-  sends `player_left` with reason `kicked`. There is no kicked-token ban list
-  yet; an immediate reconnect with the same token can claim a free slot.
-- Game heartbeats are accepted and logged, but the server does not monitor them
-  or restart the game yet. That is S0-07 game supervision.
 - Server-to-client messages omit `seq`; it is optional in the envelope.
 - A controller's `host_request` is an unknown type on the controller endpoint,
   so it is logged and dropped by design. There is no host request message for
