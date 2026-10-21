@@ -1,0 +1,48 @@
+{
+  "listen": "0.0.0.0:8080",
+  "gamePath": "C:/Godot/ProszkowskaDrift.exe",
+  "gameArgs": [
+    "--fullscreen"
+  ],
+  "gameWorkingDir": "C:/Godot",
+  "logPath": "logs/server.log",
+  "logLevel": "info",
+  "roundDurationMs": 180000,
+  "tasksPerPlayer": 5,
+  "maxPlayers": 4,
+  "slots": [
+    {
+      "id": 1,
+      "label": "P1",
+      "color": "blue"
+    },
+    {
+      "id": 2,
+      "label": "P2",
+      "color": "red"
+    },
+    {
+      "id": 3,
+      "label": "P3",
+      "color": "green"
+    },
+    {
+      "id": 4,
+      "label": "P4",
+      "color": "yellow"
+    }
+  ],
+  "controllerIdleTimeoutMs": 6000,
+  "allDisconnectedGraceMs": 10000,
+  "gameHeartbeatTimeoutMs": 3000,
+  "handshakeTimeoutMs": 5000,
+  "writeTimeoutMs": 2000,
+  "maxMessageBytes": 4096,
+  "invalidErrorLimit": 10,
+  "rateErrorLimit": 3,
+  "errorWindowMs": 10000,
+  "inputRatePerSecond": 60,
+  "inputBurst": 60,
+  "devNoGame": false,
+  "healthPath": "/healthz"
+}

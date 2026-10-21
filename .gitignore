@@ -28,6 +28,9 @@ tmp/
 # Go
 /server/bin/
 /server/ops/bin/
+/server/config.json
+/server/server
+/server/server.exe
 *.test
 *.out
 coverage.out
