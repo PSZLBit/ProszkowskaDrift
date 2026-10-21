@@ -164,6 +164,7 @@ func TestControllerSlotsAndSessionFull(t *testing.T) {
 func TestControllerIdleTimeoutClosesSocket(t *testing.T) {
 	s, ts := newTestServer(t, func(cfg *config.Config) {
 		cfg.ControllerIdleTimeoutMs = 50
+		cfg.GameHeartbeatTimeoutMs = 60000
 	})
 	game := dialGame(t, ts, testGameToken)
 	c, _ := dialController(t, ts, "idle")
