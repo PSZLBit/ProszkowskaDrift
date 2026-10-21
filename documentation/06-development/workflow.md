@@ -9,8 +9,8 @@ Last updated: 2026-10-21
   and launcher scripts. (Not yet scaffolded.)
 - `game/` — Godot 4 project: map, simulation, scoring, HUD, display. (Not yet
   scaffolded.)
-- `controller-android/` — minimal Kotlin Android controller for API 19. (Not yet
-  scaffolded.)
+- `controller-android/` — minimal Kotlin Android controller for API 19. Scaffold
+  exists; WebSocket, token, reconnect, and input are pending.
 - `documentation/` — source of truth and decision history.
 - Tests live next to the code they test; no separate top-level test tree.
 

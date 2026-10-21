@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
 This document describes the MVP runtime. Decisions are recorded in D-22,
 ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
@@ -42,6 +42,13 @@ or simulate the game.
 | Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
+
+Controller implementation status (2026-10-21): `controller-android/` builds a
+minimal API 19 app — `minSdk 19` / `targetSdk 19`, landscape, one plain-Views
+`Activity`, keep-screen-on, platform Holo theme — with AGP 9.4.1 and AGP
+built-in Kotlin. Per D-20/ADR-0002 it has no Compose and no AndroidX; the only
+dependency is JUnit for local unit tests. WebSocket connection, device token,
+reconnect, and input sending are not implemented yet.
 
 ## Authority and Trust Boundary
 
@@ -157,7 +164,7 @@ engine, or architecture. Do not silently add prediction, UDP, or a new runtime.
 
 ## Open Architecture Items
 
-- Final Go WebSocket library and Android WebSocket library after the spike.
+- Android WebSocket library after the controller spike.
 - Exact process supervisor implementation (Go or shell script).
 - Windows vs Linux festival laptop.
 - Router model and static-IP plan.

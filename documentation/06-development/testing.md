@@ -90,6 +90,30 @@ map/spawn/target nodes exist. Visual quality is a manual test.
 - Host test: a controller cannot start/pause/reset; the server rejects it.
 - Latency test: timestamp a round trip on the local network; record p50/p95.
 
+## Android Controller Build Checks
+
+The controller scaffold is in `controller-android/`. It is a minimal API 19
+app with no Compose and no AndroidX (D-20, ADR-0002).
+
+Commands:
+
+```sh
+cd controller-android
+./gradlew :app:assembleDebug        # APK under app/build/outputs/apk/debug/
+./gradlew :app:testDebugUnitTest
+```
+
+Manual check, written down before implementing any controller change:
+
+1. `app-debug.apk` installs on an API 19 tablet.
+2. The app launches into landscape, shows the status text, and keeps the
+   screen on.
+3. No crash within one minute of idle.
+
+Status 2026-10-21: the plain-Views scaffold replaced the Compose template; the
+Gradle build and unit tests pass locally. The install/launch check on a real
+tablet is pending (Sprint 0 gate in ADR-0002).
+
 ## Android 4.4.2 Hardware Matrix
 
 Run on all four actual tablets, not only one.
@@ -136,8 +160,10 @@ details, triggers, and the "do not add yet" list live in
 - Required for merge: Go tests/vet and Android build. Godot headless tests are
   required once configured.
 
-Exact commands for the component jobs will be added to this file and `README.md`
-after the Sprint 0 scaffold. Until then, report checks that could not run.
+The controller job is not enabled yet, but `controller-android/` now builds
+locally (`assembleDebug` + `testDebugUnitTest`), so it can be added. Other
+component jobs start when those components are scaffolded. Report checks that
+could not run locally in the PR.
 
 ## Developer Setup Check
 

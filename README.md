@@ -24,8 +24,8 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
   commands, game process supervision. (Planned; not scaffolded.)
 - `game/` — Godot 4 game and fullscreen display: map, movement, collisions,
   parking detection, scoring, HUD. (Planned; not scaffolded.)
-- `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
-  (Planned; not scaffolded.)
+- `controller-android/` — minimal Kotlin Android controller scaffold for Android
+  4.4.2; WebSocket, device token, reconnect, and input are in progress.
 - `documentation/` — source of truth: vision, game design, requirements,
   decisions, architecture, protocol, testing, roadmap, festival runbook.
 
@@ -45,7 +45,8 @@ and [`adr-0002-legacy-android-controller.md`](documentation/05-architecture-deci
 
 ## Project Status
 
-Planning and Sprint 0. No production code exists yet. The festival is
+Planning and Sprint 0. The Android controller scaffold exists with a local build
+and unit test check; the server and game are pending. The festival is
 2026-11-24 and the internal festival-ready target is 2026-11-18. The committed
 scope is the Minimum Festival Demo (MFD); the full MVP is a stretch goal. The
 next milestone is a one-week technical spike: prove the Kotlin app on the four

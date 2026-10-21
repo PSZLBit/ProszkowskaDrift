@@ -34,8 +34,8 @@ supersedes the affected part; do not silently change the stack.
 - No accounts, transient session state only (slots, connection handles,
   game state), discarded at session end (D-12, D-25).
 - English only (D-05).
-- `server/`, `game/` are not scaffolded yet; no test runner configured
-  (`06-development/workflow.md`).
+- `controller-android/` is scaffolded; Android network/input work is still
+  pending (`06-development/workflow.md`).
 
 ## 1. Server language / runtime (D-17, D-01 — resolved by D-22)
 
