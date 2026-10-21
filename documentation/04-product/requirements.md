@@ -1,7 +1,7 @@
 # Product Requirements
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
 All items below are planned and not implemented unless marked otherwise. Game
 rules and tuning values are in `02-game-domain/game-design.md`; architecture and
@@ -43,7 +43,7 @@ protocol are in `06-development/architecture.md` and `06-development/protocol.md
 - `FR-S05` Host commands: start, pause, resume, reset, end, and kick. Enforce
   every command server-side and reflect it on the display and controllers.
 - `FR-S06` Game supervision: launch and restart the Godot process, pass a
-  one-time game token, log exits, and return to `Attract` after a crash.
+  per-launch game token, log exits, and return to `Attract` after a crash.
 - `FR-S07` Session end: discard slots, connection handles, game state, and
   scores. Do not write personal data or persistent profiles.
 - `FR-S08` Diagnostics: structured logs without personal data; configurable

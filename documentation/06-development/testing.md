@@ -58,8 +58,8 @@ and a fake game. Packages:
   per-slot rate limit, sequence reset on reconnect, idle-timeout and
   all-disconnected-pause timers with an injectable clock.
 - `internal/gameserver`: four controllers, input forwarding, reconnect,
-  heartbeat timeout, ping/pong, leave, invalid/rate closure, slow-client
-  close, protocol mismatch, malformed messages, controller host-command
+  heartbeat timeout, ping/pong, leave, invalid/rate closure, frozen-controller
+  timeout, protocol mismatch, malformed messages, controller host-command
   rejection, kick with blocked token, host `end` with graceful controller
   close, `host_denied`, all-disconnected pause, game drop notification,
   game heartbeat timeout, game auth, game-driven phase, loopback checks,
@@ -115,8 +115,7 @@ Automated in S0-04:
   configured threshold; a protocol version mismatch closes it immediately.
 
 Still future: the latency test (timestamp a round trip on the local network and
-record p50/p95), the all-disconnected pause, late join, game supervision, and
-real Godot integration.
+record p50/p95), late join, game supervision, and real Godot integration.
 
 ## Manual Server Checks
 
@@ -141,14 +140,14 @@ These checks use the S0-04 fake clients. Details and expected output are in
 6. Close the fake game with `quit` while controllers are connected. Every
    controller must receive `game_unavailable` and a `phase` back to `attract`;
    a restarted fake game reclaims the connection with the same token.
-7. A controller that stops reading (frozen tablet process) is covered by an
+7. A controller that stops responding (frozen tablet process) is covered by an
    automated regression test (`TestFrozenControllersDoNotStallTickLoop`): the
    server tears the connection down after a bounded wait and the tick loop
    keeps enforcing timers. A manual check with a suspended real tablet is part
    of the controller hardware checks (S0-02 and later).
 8. `curl http://127.0.0.1:8080/healthz` must report `phase`, the number of
    connected controllers, and `gameReady`.
-6. Use `go run ./cmd/fakegame` interactive commands to check `start`, `pause`,
+9. Use `go run ./cmd/fakegame` interactive commands to check `start`, `pause`,
    `resume`, `reset`, `end`, and `kick 2`; a kicked controller receives `error`
    `kicked`, the slot is freed, and the game receives `player_left` with reason
    `kicked`.

@@ -52,7 +52,7 @@ the Sprint 0 spikes finish.
 
 - `/ws/controller` accepts controller connections on the configured listen
   address (default `:8080`).
-- `/ws/game` accepts only loopback connections and requires the one-time game
+- `/ws/game` accepts only loopback connections and requires the per-launch game
   token as `?token=<value>` or the `X-Game-Token` header.
 - The server owns slots, colors, device-token reconnect, input range/sequence/
   rate validation, controller heartbeats, and a minimal phase path for
@@ -92,7 +92,7 @@ production controller UI. Those remain later sprint items.
 1. The host starts the server (Go binary or festival launcher).
 2. The server loads configuration: port, bind address, Godot executable path,
    round defaults, log path.
-3. The server starts Godot with a one-time game token and the local WebSocket
+3. The server starts Godot with a per-launch game token and the local WebSocket
    URL.
 4. Godot connects to `/ws/game`, sends `game_ready`, and enters `Attract`.
 5. Tablets connect to `/ws/controller`, send `hello`, and receive slots.

@@ -147,10 +147,10 @@ Codes: `auth_failed`, `session_full`, `invalid_input`, `rate_limited`,
 ### `game_hello`
 
 First message from the server after the game WebSocket opens. The game is
-authenticated by a one-time token passed at launch.
+authenticated by a per-launch token passed at startup.
 
 ```json
-{"v":1,"type":"game_hello","data":{"token":"<one-time-token>","protocolVersion":1}}
+{"v":1,"type":"game_hello","data":{"token":"<per-launch-token>","protocolVersion":1}}
 ```
 
 ### `config`
@@ -293,7 +293,7 @@ Controller            Server                         Game
    still running.
 6. Controller resumes sending input. The game applies the latest input.
 
-Slots remain reserved for the session. The host can reset a slot to clear a lost
+Slots remain reserved for the session. The host can kick a slot to clear a lost
 or replaced tablet.
 
 ## Versioning
@@ -374,8 +374,8 @@ Session-boundary choices (this sprint, additive):
   without a game message on a ready connection, the server closes it with
   reason `game_heartbeat_timeout`, broadcasts `error` `game_unavailable`,
   resets the session to `attract` (slots stay reserved), and waits for the
-  game to reconnect with the configured token. One-time token rotation per
-  launch arrives with S0-07 game supervision.
+  game to reconnect with the configured token. Token rotation per game launch
+  arrives with S0-07 game supervision.
 - `/healthz` (plain HTTP, not WebSocket) returns
   `{status, phase, roundId, controllers, gameReady}` for the launcher and
   manual checks.

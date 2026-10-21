@@ -41,7 +41,7 @@ it to Godot or the fake game.
 | Flag | Default | Purpose |
 |------|---------|---------|
 | `-addr` | `:8080` | HTTP/WebSocket listen address. |
-| `-game-token` | `PD_GAME_TOKEN` | One-time token for the game endpoint. Generated when empty. |
+| `-game-token` | `PD_GAME_TOKEN` | Per-launch token for the game endpoint. Generated when empty. |
 | `-controller-timeout` | `6s` | Close a controller after this long without any message. |
 | `-all-disconnected-grace` | `10s` | Pause the round after every controller has been disconnected for this long during a round. |
 | `-game-heartbeat-timeout` | `3s` | Close the game connection when no game message arrives for this long after `game_ready`. |
@@ -73,9 +73,9 @@ This slice implements a subset and records the following choices:
   heartbeat. A silent connection closes with `heartbeat_timeout`, and the game
   receives `player_left` with reason `timeout`.
 - `leave` keeps the slot reserved for the session.
-- Writes are queued per connection (controller queue 64, game queue 256). A
-  connection that does not drain its queue is closed with `slow_client`; a slow
-  client never delays other connections.
+- Writes are queued per connection (controller queue 64, game queue 256). If a
+  broadcast cannot be queued, the connection is closed with `slow_client`; a
+  slow client never delays other connections.
 - Rejected host commands are answered to the game with `host_denied`
   (`no_players`, `invalid_phase`, or `not_authorized`). `start` needs at least
   one connected controller; `reset` only works from an active round phase.
