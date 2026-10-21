@@ -1,10 +1,17 @@
 # Festival Operations Runbook
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
 This is the operational plan for running Proszkowska Drift at a science-club
 festival stand. The game must work without a developer at the keyboard.
+
+## Schedule
+
+- Festival: Tuesday 2026-11-24.
+- Internal festival-ready target: Wednesday 2026-11-18.
+- 2026-11-19 – 2026-11-23: fixes, venue setup, and final rehearsal; no new
+  features.
 
 ## Operating Goal
 
@@ -172,7 +179,7 @@ With four team members, rotate roles every 30–45 minutes to avoid fatigue.
 
 ## Open Operational Items
 
-- Festival date, venue, and available setup time.
+- Venue and available setup time (date confirmed: 2026-11-24).
 - Laptop ownership and specifications.
 - TV/monitor model, resolution, and input lag.
 - Router model/budget and backup hotspot plan.

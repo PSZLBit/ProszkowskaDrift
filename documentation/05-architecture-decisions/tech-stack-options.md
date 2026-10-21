@@ -1,7 +1,7 @@
 # Tech Stack Options — Analysis and Outcome
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
 This file preserves the analysis that led to D-22 and ADR-0001. The decision is
 recorded there; the options below are context, not open choices.
@@ -132,5 +132,5 @@ Local-only MVP: no cloud host, no container orchestrator.
   playtesting buttons, slider, and virtual joystick on the real tablets.
 - Exact map layout and tuning values — `02-game-domain/game-design.md` is
   `Draft` and will be updated after playtests.
-- Festival date, laptop/TV specifications, and budget — needed for the delivery
-  roadmap and operations plan.
+- Laptop/TV specifications and budget — needed for the operations plan. The
+  festival date is confirmed: 2026-11-24.

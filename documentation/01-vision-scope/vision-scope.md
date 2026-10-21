@@ -1,7 +1,7 @@
 # Vision and Scope
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
 ## Vision
 
@@ -81,7 +81,7 @@ spectators, and independent of internet access or accounts.
 
 - Controller input scheme (D-14) — decide by playtesting on the real tablets.
 - Exact map layout, number of spots, and obstacle placement.
-- Festival date, expected attendance, and available setup time.
+- Festival attendance and available setup time (date confirmed: 2026-11-24).
 - Laptop and TV/monitor specifications.
 - Final scoring and round-length tuning after playtests.
 - Whether to show anonymous best scores for the event (D-25 allows only
