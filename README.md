@@ -49,6 +49,8 @@ Planning and Sprint 0 preparation. No production code exists yet. The next
 milestone is a one-week technical spike: prove the Kotlin app on the four
 tablets, the Go↔Godot connection, input latency, and display readability.
 
+Work board: <https://github.com/orgs/PSZLBit/projects/1>.
+
 See [`documentation/06-development/roadmap.md`](documentation/06-development/roadmap.md).
 
 ## Getting Started

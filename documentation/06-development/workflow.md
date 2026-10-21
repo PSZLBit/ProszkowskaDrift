@@ -54,6 +54,8 @@ coordinate testing; code review requires a developer.
 
 Use GitHub Projects as the single work board, with issues and milestones.
 
+Board: <https://github.com/orgs/PSZLBit/projects/1>.
+
 **Fields:**
 
 - `Status`: Backlog, Ready, In Progress, Review, Test, Done.
@@ -63,6 +65,10 @@ Use GitHub Projects as the single work board, with issues and milestones.
 - `Sprint`: one-week iteration.
 - `Owner`: one person accountable.
 - `Risk`: optional flag for items with hardware/network uncertainty.
+
+Implementation note: GitHub has no custom people field, so `Owner` is the
+single assignee on an item. `Risk` is a `Yes`/`No` flag; leave it blank when
+the item is not flagged.
 
 **Views:**
 
