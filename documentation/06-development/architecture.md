@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
 This document describes the MVP runtime. Decisions are recorded in D-22,
 ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
@@ -38,7 +38,7 @@ or simulate the game.
 | Component | Process | Responsibilities |
 |-----------|---------|------------------|
 | Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect |
-| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs |
+| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs (baseline implemented in `server/`, see `06-development/server.md`) |
 | Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
@@ -74,6 +74,7 @@ or simulate the game.
 9. On server exit, the festival launcher restarts the server and game. Tablets
    reconnect automatically.
 
+The server baseline implements steps 2–8 with a Go supervisor in `server/`.
 Development mode may run Go and Godot in separate terminals; the festival mode
 must use the supervisor/launcher so a crash does not require a developer.
 
@@ -92,7 +93,10 @@ Host keyboard --> Game --host_request--> Server --host_command--> Game
 - The game applies the latest input per player each physics frame.
 - No client-side prediction in MVP.
 - The game sends feedback on change (task assigned, task result, phase change),
-  not a full state snapshot every frame. This keeps the protocol small.
+  not a full state snapshot every frame. It sends `phase` at least once per
+  second while playing or paused so controller timers stay authoritative.
+- Per-player feedback is routed only to the owning controller; round results are
+  public and broadcast to all.
 - The server does not need to understand map geometry or scoring; it routes and
   validates.
 
@@ -125,19 +129,22 @@ Host keyboard --> Game --host_request--> Server --host_command--> Game
 | Tablet disconnects | Car stops; slot reserved; controller reconnects and resumes if the round is still running |
 | All tablets disconnect | Round pauses after 10 s; host resumes, resets, or ends |
 | Game crashes | Server restarts Godot; returns to `Attract`; current round lost |
-| Server crashes | Launcher restarts server and game; tablets reconnect; current round lost |
+| Server crashes | Launcher restarts server; Go supervisor restarts game; tablets reconnect; current round lost |
 | Router/Wi-Fi fails | No play until network returns; use the runbook's hotspot fallback |
 | TV/monitor fails | Switch to the backup monitor; game keeps running |
 | Tablet battery dies | Keep tablets plugged in; replace with spare if available |
 
 ## Packaging and Deployment
 
-- `server/`: Go binary, config file, logs directory.
+- `server/`: Go binary, config example, optional logs directory. The Go
+  supervisor launches and restarts Godot; a separate festival launcher is still
+  planned to restart the server itself.
 - `game/`: Godot export (Windows and/or Linux, decided by the laptop OS).
-- `server/ops/`: launch script or small supervisor that starts the server,
-  waits for health, starts/stops the game, and restarts on failure. It stays
-  inside `server/` to respect the D-07 layout.
-- Development: separate commands for Go and Godot, documented after scaffolding.
+- `server/ops/`: optional launch script or small wrapper that starts the server,
+  waits for health, and restarts it on failure. It stays inside `server/` to
+  respect the D-07 layout.
+- Development: run the server with `-no-game` and a static token, or point it at
+  the Godot executable. Commands are in `server/README.md`.
 - Festival: one folder, one launch action, fullscreen, no developer tools.
 - Version and build info visible in a diagnostics screen/log, not in the player
   UI.
@@ -157,9 +164,12 @@ engine, or architecture. Do not silently add prediction, UDP, or a new runtime.
 
 ## Open Architecture Items
 
-- Final Go WebSocket library and Android WebSocket library after the spike.
-- Exact process supervisor implementation (Go or shell script).
-- Windows vs Linux festival laptop.
+- Windows vs Linux festival laptop; process-tree handling for the supervisor on
+  the chosen OS.
 - Router model and static-IP plan.
 - Map data format and Godot scene structure.
 - Whether the host has a second control device; web host panel is post-MVP.
+
+Resolved for the server baseline: `github.com/gorilla/websocket` v1.5.3 with
+Go 1.27, stdlib `net/http`, `encoding/json`, and `log/slog`; the supervisor is a
+Go process loop (D-32).

@@ -1,7 +1,7 @@
 # Game Domain Overview
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
 ## Concept
 
@@ -38,8 +38,8 @@ and scoring module. The boundary is a WebSocket JSON protocol documented in
 
 ## Session Lifecycle (Decided)
 
-1. `Server starting` — the server loads configuration and starts the game
-   process.
+1. `Server starting` — the server loads configuration and, when supervision is
+   configured, starts the game process.
 2. `Attract` — display shows the title, instructions, and a prompt to start.
 3. `Ready` — tablets connect automatically, register their device tokens, and
    receive slots and colors. The host sees the connected player count.
@@ -61,8 +61,9 @@ State transitions must be explicit in code. No silent transitions.
 - Late join: allowed between rounds; not in the middle of a running round.
 - Game process crash: the server restarts it, returns to `Attract`, and the
   current round is lost. Tablets reconnect automatically.
-- Server crash: the supervisor restarts the server and game; tablets reconnect;
-  the current round is lost.
+- Server crash: the festival launcher (M3) restarts the server; the Go
+  supervisor restarts the game. Tablets reconnect and the current round is
+  lost.
 - Host pause/resume/reset is always explicit and shown on the display.
 - A player who finishes all tasks waits for the round to end; the display shows
   a finished state.

@@ -1,11 +1,14 @@
 # Product Requirements
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
-All items below are planned and not implemented unless marked otherwise. Game
-rules and tuning values are in `02-game-domain/game-design.md`; architecture and
-protocol are in `06-development/architecture.md` and `06-development/protocol.md`.
+All items below are planned and not implemented unless marked otherwise. The
+server baseline (`FR-S01`–`FR-S09`) is implemented in `server/`; game and
+controller items remain planned. The product requirements stay `Draft` until the
+full MVP is accepted. Game rules and tuning values are in
+`02-game-domain/game-design.md`; architecture and protocol are in
+`06-development/architecture.md` and `06-development/protocol.md`.
 
 ## Controller (`controller-android/`, minimal Kotlin, Android 4.4.2)
 
@@ -34,7 +37,8 @@ protocol are in `06-development/architecture.md` and `06-development/protocol.md
 - `FR-S01` Session startup: load configuration, start the Godot game process,
   expose controller and game WebSocket endpoints, and enter `Attract`.
 - `FR-S02` Slots: assign one of four slots and a color to each connected device
-  token, reject duplicate active tokens, and let the host reset or kick a slot.
+  token, reject duplicate active tokens, and let the host kick a slot so a
+  replacement tablet can claim it.
 - `FR-S03` Input validation and routing: verify the sender slot, numeric ranges,
   rate, and sequence; drop invalid or stale input; forward valid input to the
   game. Never trust controller UI.
@@ -50,6 +54,12 @@ protocol are in `06-development/architecture.md` and `06-development/protocol.md
   port, game executable, and allowed network interface.
 - `FR-S09` Offline operation: work entirely on the local network with no
   internet access, cloud service, or database.
+
+Server implementation notes (2026-10-21): the baseline and automated tests are
+in `server/`; configuration defaults and operational limits are in
+`06-development/server.md`. Game supervision is implemented but still needs the
+target-laptop crash-recovery check. `end` clears session state and closes
+controllers; the server process is restarted between event sessions.
 
 ## Game (`game/`, Godot 4)
 

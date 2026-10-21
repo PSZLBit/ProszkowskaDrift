@@ -1,7 +1,7 @@
 # Players, Sessions, and Permissions
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
 There are no accounts. A play session is local and short-lived. Players are
 identified by slot color and `P1`–`P4`; no names or personal profiles are stored.
@@ -38,7 +38,8 @@ never used as authorization.
 - Each tablet stores a random device token in app storage. The server maps the
   token to a slot. The token is not a name, account, or personal profile.
 - On reconnect, the tablet sends the same token and reclaims its slot. The host
-  can reset a slot if a tablet is replaced or the token is lost.
+  can kick a slot if a tablet is replaced or the token is lost; the old token is
+  blocked for the rest of the server run and a new tablet can claim the slot.
 - QR scanning or manual address entry exists only as a setup fallback. It is not
   part of the normal player flow.
 - A tablet that connects for the first time while no slot is free is rejected
@@ -69,8 +70,9 @@ never used as authorization.
   with zero score.
 - If the game process crashes, the server restarts it and returns to `Attract`.
   The current round is lost. Tablets reconnect automatically.
-- If the server crashes, the supervisor restarts server and game. The current
-  round is lost. Tablets reconnect automatically.
+- If the server crashes, the festival launcher (M3) restarts the server; the Go
+  supervisor restarts the game. The current round is lost. Tablets reconnect
+  automatically.
 - Host pause freezes the timer, input, and scoring. Resume uses a short
   countdown. Host reset abandons the round and returns to `Ready`.
 
@@ -97,6 +99,9 @@ A web host panel is post-MVP. The host operates the same laptop as the display.
 
 ## Session End
 
-The host ends the session or closes the server. The server stops the game,
-closes all controller connections, clears in-memory state, and writes only
-non-personal diagnostic logs. Tablets return to the disconnected/ready state.
+The host ends the session or closes the server. The server clears slots, device
+tokens, feedback, and round state, closes all controller connections, and writes
+only non-personal diagnostic logs. The supervisor stops the game when the server
+process exits. Tablets return to the disconnected/ready state; new controller
+handshakes are rejected until the server restarts. For a new event session,
+restart the server process.

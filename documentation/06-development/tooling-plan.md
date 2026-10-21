@@ -15,6 +15,7 @@ Developer tooling for the project. A tool enters the repository only with a
 | `.gitattributes` | LF normalization and binary-file handling | Protects Windows/Linux collaboration |
 | `.gitignore` | Keep builds, local config, secrets, and generated files out | Update per component after scaffold |
 | `.github/CODEOWNERS` | Default review routing | Component placeholders to fill when roles are assigned |
+| `.github/workflows/server.yml` | Go server CI | `gofmt`, `go vet`, `go test -race`, and build from `server/` |
 | `scripts/setup.sh` | Local developer setup on Linux/macOS and Windows Git Bash | Small, idempotent; installs hooks; no task runner |
 | `scripts/setup.ps1` | Local developer setup on Windows PowerShell | Small, idempotent; installs hooks; no task runner |
 | `.githooks/pre-push` | Block direct pushes to `main` | Installed by both setup scripts |
@@ -85,9 +86,10 @@ Add per component, when the component exists.
 
 ## CI Quality Gates
 
-Planned for the first component scaffold (M1), free tier only:
+The Go server job is active for `server/` changes (2026-10-21); other component
+jobs start when those scaffolds exist. Free tier only:
 
-1. Go job: `go test -race ./...`, `go vet ./...`, build.
+1. Go job: `gofmt` check, `go vet ./...`, `go test -race ./...`, build.
 2. Android job: Gradle `assembleDebug` with cached dependencies; upload the APK.
 3. Godot job: headless logic tests when the test addon is chosen; export only on
    tags if CI time becomes a problem.
@@ -111,7 +113,8 @@ must say so (Definition of Done in `workflow.md`).
 ## Dependency and Security Checks
 
 - Dependabot for Go modules, Gradle, and GitHub Actions (free for the repo).
-- `go vuln check ./...` in the Go CI job once `server/` exists.
+- `govulncheck ./...` is the next security addition to the Go CI job; it is not
+  wired yet, so the current PR must report that check as not run.
 - Review every Android dependency against API 19 before adding it (ADR-0002).
 - Never commit secrets, tokens, personal data, or local configuration.
 

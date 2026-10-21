@@ -21,9 +21,10 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
 ## Components
 
 - `server/` — Go session server: slots, input validation, reconnects, host
-  commands, game process supervision. (Planned; not scaffolded.)
-- `game/` — Godot 4 game and fullscreen display: map, movement, collisions,
-  parking detection, scoring, HUD. (Planned; not scaffolded.)
+  commands, game process supervision. (Baseline implemented; see
+  [`server/README.md`](server/README.md).)
+- `game/` — Godot 4 project scaffold; map, movement, collisions, parking
+  detection, scoring, and HUD are still in progress.
 - `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
   (Planned; not scaffolded.)
 - `documentation/` — source of truth: vision, game design, requirements,
@@ -45,11 +46,13 @@ and [`adr-0002-legacy-android-controller.md`](documentation/05-architecture-deci
 
 ## Project Status
 
-Planning and Sprint 0. No production code exists yet. The festival is
-2026-11-24 and the internal festival-ready target is 2026-11-18. The committed
-scope is the Minimum Festival Demo (MFD); the full MVP is a stretch goal. The
-next milestone is a one-week technical spike: prove the Kotlin app on the four
-tablets, the Go↔Godot connection, input latency, and display readability.
+Sprint 0. The Go server baseline is implemented with automated protocol,
+session, supervisor, and fake-client integration tests. The Godot game and
+Android controller are still in progress. The festival is 2026-11-24 and the
+internal festival-ready target is 2026-11-18. The committed scope is the Minimum
+Festival Demo (MFD); the full MVP is a stretch goal. The next milestone is the
+one-week technical spike: prove the Kotlin app on the four tablets, the
+Go↔Godot connection, input latency, and display readability.
 
 Work board: <https://github.com/orgs/PSZLBit/projects/1>.
 
@@ -62,8 +65,22 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
 - Git. On Windows, install Git for Windows. Git Bash is optional for setup; the
   `pre-push` hook runs through Git's bundled shell.
 
-Go, Godot, and the Android SDK are not required yet; their setup steps will be
-added when those components are scaffolded.
+Go 1.27 or newer is required for the server. Godot 4 is required for the game
+project, and the Android SDK will be needed for the controller. Setup steps for
+the game and controller will be expanded as they are implemented.
+
+Server quick start:
+
+```sh
+cd server
+go test ./...
+go vet ./...
+go run ./cmd/server -no-game -game-token dev-token
+```
+
+The server listens on `0.0.0.0:8080` by default and exposes `/healthz`. See
+[`server/README.md`](server/README.md) and
+[`documentation/06-development/server.md`](documentation/06-development/server.md).
 
 ### Clone and set up
 

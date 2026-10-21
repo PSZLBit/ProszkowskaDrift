@@ -36,6 +36,7 @@ Always read this file plus `00-meta/documentation-rules.md` and
 | Players, slots, permissions, reconnect, privacy | `03-players-sessions/roles-sessions.md` |
 | Tech stack, transport, engine, hosting | `05-architecture-decisions/decision-log.md`, ADRs, `06-development/architecture.md` |
 | Protocol messages | `06-development/protocol.md` |
+| Server implementation and operations | `06-development/server.md`, `06-development/protocol.md` |
 | Git, tests, Agile, AI workflow | `06-development/workflow.md`, `06-development/testing.md`, `06-development/roadmap.md` |
 | Tooling, hooks, CI quality gates | `06-development/tooling-plan.md` |
 | Festival setup and recovery | `06-development/festival-operations.md` |
@@ -80,4 +81,7 @@ Superseded decisions stay in the log. Do not delete history.
   remains the source of truth (D-30).
 - Delivery calendar: festival 2026-11-24; festival-ready target 2026-11-18;
   MFD committed, MVP stretch (D-31).
-- Open: controller input scheme (D-14), map/tuning details, and hardware specs.
+- Server baseline: Go + gorilla/websocket, in-memory session, in-process game
+  supervisor, protocol v1 clarified (D-32).
+- Open: controller input scheme (D-14), Windows/Linux festival laptop, map/tuning
+  details, and hardware specs.

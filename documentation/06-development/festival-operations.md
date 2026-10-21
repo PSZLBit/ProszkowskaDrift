@@ -89,7 +89,9 @@ not a full kiosk; a team member must supervise the tablets.
 2. Connect power: laptop, TV, router, tablet chargers. Tape cables down.
 3. Connect HDMI; set the display input and resolution.
 4. Power the router; confirm the SSID and that the laptop has its fixed address.
-5. Power the laptop; start the festival launcher (server + game).
+5. Power the laptop; start the server (the Go supervisor starts Godot when a
+   game path is configured). The one-click festival launcher that also restarts
+   the server is an M3 item.
 6. Confirm the game enters `Attract` on the TV.
 7. Power the tablets; confirm each connects and receives its slot color/label.
 8. Run a one-player smoke test: countdown, movement, one task, score.
@@ -130,7 +132,7 @@ not a full kiosk; a team member must supervise the tablets.
 | One tablet disconnected | Wait 5 s for auto-reconnect | Reopen app; check Wi-Fi; if still broken, host kicks slot and continues with fewer players |
 | Tablet app frozen | Force-stop and reopen the app | Reconnect; if it fails, reboot tablet and reopen |
 | Game window frozen | Check server log; restart the game process | Supervisor should restart; otherwise use the launcher restart action |
-| Server crashed | Check launcher window/log | Restart server; tablets reconnect; current round is lost |
+| Server crashed | Check launcher window/log | Restart server; the Go supervisor restarts Godot; tablets reconnect; current round is lost. A server-level auto-restart launcher is still an M3 item. |
 | Router down | Check power and cables | Restart router; if it does not recover, switch to laptop hotspot and reconfigure tablets |
 | TV black/no signal | Check HDMI and input | Switch cable/input; use backup monitor |
 | Laptop overheating/throttling | Improve ventilation; reduce brightness | Move to backup laptop with the same build |

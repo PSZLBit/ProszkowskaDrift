@@ -150,6 +150,12 @@ before the festival:
 
 Do not start M1 until S0-03, S0-04, S0-05, and S0-06 have a clear result.
 
+Baseline status (2026-10-21): S0-04 is implemented in `server/` with fake-game and
+fake-controller integration tests. S0-07 supervisor code is implemented with
+automated restart/token tests; the real-laptop Godot crash-recovery check is
+still pending. S0-03, S0-05, and S0-06 require the tablets, Godot integration, and
+hardware measurements.
+
 ## Epic Backlog
 
 ### E1 — Session and Network (Go)

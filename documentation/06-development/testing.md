@@ -44,22 +44,37 @@ Last updated: 2026-10-21
 
 ## Go Server Tests
 
-Planned packages and coverage:
+The server baseline is in `server/` and has these automated layers:
 
-- Session: create session, assign 1–4 slots, reject a full session, duplicate
-  device token, kick/reset, session end clears state.
+- Protocol: envelope version, malformed JSON, data shape, unknown fields, error
+  codes, host denial codes, and `task_result` decoding.
+- Session: assign 1–4 slots, reject a full session, duplicate token, kick and
+  blocked token, reconnect sequence reset, stale attach generations cannot
+  detach or feed a newer connection, session end clears slots, feedback caching
+  across reconnect, feedback cleared on a new round.
 - Input validation: ranges, NaN/Infinity, rate limit, stale sequence, wrong slot,
-  wrong round phase, kicked slot.
-- Reconnect: heartbeat timeout, same token reclaims slot, unknown token
-  rejected, all-disconnected pause trigger.
-- Host commands: start/pause/resume/reset/end/kick authorization and
-  broadcast behavior.
-- Protocol: envelope version, unknown type, malformed JSON, error codes.
-- Game supervision: start, crash/restart, missing heartbeat, game token
-  mismatch.
+  wrong round phase, per-connection error counters.
+- Timers: controller idle timeout and all-disconnected pause trigger/cancel.
+- Host commands: start/pause/resume/reset/end/kick authorization.
+- Game supervision: token generation/rotation, environment override, restart on
+  request, backoff.
+- Integration: in-process `httptest` WebSocket with a fake game and fake
+  controllers; slots, input forwarding, feedback privacy, host denial/kick,
+  reconnect, session end, health, and game authentication.
 
-Use table-driven tests and `go test -race ./...`. Do not require a real network
-for unit tests; use an in-memory transport or `httptest` where practical.
+Commands:
+
+```sh
+cd server
+go test ./...
+CGO_ENABLED=1 go test -race ./...   # requires a C compiler
+go vet ./...
+go build ./cmd/server
+```
+
+The project Windows machine has Go but no `CGO_ENABLED=1` C compiler by default;
+`clang` from LLVM works when `CC=clang`. CI runs the race suite on Ubuntu. Do not
+require a real network for unit tests; use `httptest` and fakes.
 
 ## Godot Tests
 
@@ -127,7 +142,8 @@ Free-tier GitHub Actions; component jobs start after scaffolding. Tooling
 details, triggers, and the "do not add yet" list live in
 `06-development/tooling-plan.md`.
 
-- `server`: `go test -race ./...`, `go vet ./...`, build.
+- `server`: `.github/workflows/server.yml` runs `gofmt -l`, `go vet ./...`,
+  `go test -race ./...`, and `go build ./cmd/server` from `server/`.
 - `controller-android`: Gradle `assembleDebug`; cache Gradle; upload APK artifact.
 - `game`: Godot headless tests where feasible; export is manual/tagged if CI is
   too slow.
@@ -136,8 +152,8 @@ details, triggers, and the "do not add yet" list live in
 - Required for merge: Go tests/vet and Android build. Godot headless tests are
   required once configured.
 
-Exact commands for the component jobs will be added to this file and `README.md`
-after the Sprint 0 scaffold. Until then, report checks that could not run.
+The Go server job exists; the Godot job starts when headless tests are
+configured. Report checks that could not run locally in the PR.
 
 ## Developer Setup Check
 
