@@ -17,8 +17,10 @@ const (
 	MinPlayers = 1
 	MaxPlayers = 4
 
-	defaultRateLimit  = 60
-	defaultRateWindow = time.Second
+	defaultRateLimit            = 60
+	defaultRateWindow           = time.Second
+	defaultIdleTimeout          = 6 * time.Second
+	defaultAllDisconnectedGrace = 10 * time.Second
 )
 
 // Command is a host command accepted by the server.
@@ -46,6 +48,8 @@ func ParseCommand(value string) (Command, error) {
 var (
 	ErrSessionFull       = errors.New("session full")
 	ErrInvalidToken      = errors.New("invalid device token")
+	ErrKickedToken       = errors.New("device token was kicked")
+	ErrSessionEnded      = errors.New("session ended")
 	ErrDuplicateToken    = errors.New("device token already connected")
 	ErrNotAssigned       = errors.New("slot not assigned")
 	ErrWrongConnection   = errors.New("input not from the slot's connection")
@@ -56,14 +60,37 @@ var (
 	ErrInvalidCommand    = errors.New("invalid host command")
 	ErrInvalidTransition = errors.New("host command not allowed in the current phase")
 	ErrInvalidSlot       = errors.New("invalid slot")
+	ErrNoPlayers         = errors.New("no controllers connected")
 	ErrInvalidPhase      = errors.New("invalid phase")
 )
 
 // Options configures a Session. Zero values use production defaults.
 type Options struct {
-	Clock      func() time.Time
-	RateLimit  int
-	RateWindow time.Duration
+	Clock                func() time.Time
+	RateLimit            int
+	RateWindow           time.Duration
+	IdleTimeout          time.Duration
+	AllDisconnectedGrace time.Duration
+}
+
+// ActionKind identifies a timer-driven session action.
+type ActionKind string
+
+const (
+	// ActionControllerTimeout marks a slot whose connection went silent for
+	// longer than IdleTimeout. The slot is already disconnected; ConnID lets
+	// the caller close the exact connection that owned it.
+	ActionControllerTimeout ActionKind = "controller_timeout"
+	// ActionPauseAllDisconnected marks a round paused because every controller
+	// disconnected during countdown or playing.
+	ActionPauseAllDisconnected ActionKind = "pause_all_disconnected"
+)
+
+// Action is returned by Tick when a timer crosses a threshold.
+type Action struct {
+	Kind   ActionKind
+	Slot   int
+	ConnID uint64
 }
 
 // SlotView is a snapshot of one slot for callers outside the session.
@@ -101,19 +128,24 @@ type slotState struct {
 	token        string
 	connected    bool
 	connectionID uint64
+	lastSeen     time.Time
 	sequence     validation.Sequence
 	limiter      *validation.RateLimiter
 }
 
 // Session is the concurrency-safe in-memory session state.
 type Session struct {
-	mu         sync.Mutex
-	slots      [MaxPlayers]slotState
-	phase      protocol.Phase
-	roundID    int64
-	clock      func() time.Time
-	rateLimit  int
-	rateWindow time.Duration
+	mu                   sync.Mutex
+	slots                [MaxPlayers]slotState
+	phase                protocol.Phase
+	roundID              int64
+	clock                func() time.Time
+	rateLimit            int
+	rateWindow           time.Duration
+	idleTimeout          time.Duration
+	allDisconnectedGrace time.Duration
+	allDisconnectedSince time.Time
+	blockedTokens        map[string]struct{}
 }
 
 var slotColors = [MaxPlayers]string{"red", "blue", "green", "yellow"}
@@ -132,12 +164,23 @@ func New(opts Options) *Session {
 	if rateWindow <= 0 {
 		rateWindow = defaultRateWindow
 	}
+	idleTimeout := opts.IdleTimeout
+	if idleTimeout <= 0 {
+		idleTimeout = defaultIdleTimeout
+	}
+	grace := opts.AllDisconnectedGrace
+	if grace <= 0 {
+		grace = defaultAllDisconnectedGrace
+	}
 
 	s := &Session{
-		phase:      protocol.PhaseAttract,
-		clock:      clock,
-		rateLimit:  rateLimit,
-		rateWindow: rateWindow,
+		phase:                protocol.PhaseAttract,
+		clock:                clock,
+		rateLimit:            rateLimit,
+		rateWindow:           rateWindow,
+		idleTimeout:          idleTimeout,
+		allDisconnectedGrace: grace,
+		blockedTokens:        make(map[string]struct{}),
 	}
 	for i := range s.slots {
 		s.slots[i] = slotState{
@@ -178,6 +221,7 @@ func (s *Session) Slots() []SlotView {
 
 // Hello assigns a slot to token. A token that was assigned before and is not
 // currently connected reclaims its slot. The returned bool reports a reconnect.
+// A kicked token and an ended session are rejected.
 func (s *Session) Hello(token string, connectionID uint64) (SlotView, bool, error) {
 	if !validToken(token) {
 		return SlotView{}, false, ErrInvalidToken
@@ -185,6 +229,13 @@ func (s *Session) Hello(token string, connectionID uint64) (SlotView, bool, erro
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.phase == protocol.PhaseEnded {
+		return SlotView{}, false, ErrSessionEnded
+	}
+	if _, blocked := s.blockedTokens[token]; blocked {
+		return SlotView{}, false, ErrKickedToken
+	}
 
 	reserved := -1
 	for i := range s.slots {
@@ -197,7 +248,9 @@ func (s *Session) Hello(token string, connectionID uint64) (SlotView, bool, erro
 		}
 		slot.connected = true
 		slot.connectionID = connectionID
+		slot.lastSeen = s.clock()
 		slot.sequence.Reset()
+		s.resetAllDisconnectedLocked()
 		return slot.view(), true, nil
 	}
 
@@ -215,9 +268,26 @@ func (s *Session) Hello(token string, connectionID uint64) (SlotView, bool, erro
 	slot.token = token
 	slot.connected = true
 	slot.connectionID = connectionID
+	slot.lastSeen = s.clock()
 	slot.sequence.Reset()
 	slot.limiter.Reset()
+	s.resetAllDisconnectedLocked()
 	return slot.view(), false, nil
+}
+
+// Touch records controller liveness for the given connection. It has no
+// effect for stale connections.
+func (s *Session) Touch(slotNumber int, connectionID uint64, now time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if slotNumber < 1 || slotNumber > MaxPlayers {
+		return
+	}
+	slot := &s.slots[slotNumber-1]
+	if slot.connected && slot.connectionID == connectionID {
+		slot.lastSeen = now
+	}
 }
 
 // Disconnect marks the slot disconnected if connectionID still owns it. It
@@ -246,7 +316,9 @@ func (s *Session) release(slotNumber int, connectionID uint64) (SlotView, bool) 
 	}
 	slot.connected = false
 	slot.connectionID = 0
+	slot.lastSeen = time.Time{}
 	view.Connected = false
+	s.updateAllDisconnectedLocked(s.clock())
 	return view, true
 }
 
@@ -264,7 +336,9 @@ func (s *Session) ValidateInput(slotNumber int, connectionID uint64, seq int64, 
 	if s.phase != protocol.PhasePlaying {
 		return InputEvent{}, ErrNotPlaying
 	}
-	if !slot.limiter.Allow(s.clock()) {
+	now := s.clock()
+	slot.lastSeen = now
+	if !slot.limiter.Allow(now) {
 		return InputEvent{}, ErrRateLimited
 	}
 	if err := validation.ValidInput(steer, throttle); err != nil {
@@ -283,7 +357,8 @@ func (s *Session) ValidateInput(slotNumber int, connectionID uint64, seq int64, 
 }
 
 // SetPhase applies a phase reported by the trusted game. A positive roundID
-// updates the round identifier.
+// updates the round identifier. Phase changes after a session end are
+// rejected.
 func (s *Session) SetPhase(phase protocol.Phase, roundID int64) error {
 	if !phase.Valid() {
 		return fmt.Errorf("%w: %q", ErrInvalidPhase, phase)
@@ -292,14 +367,34 @@ func (s *Session) SetPhase(phase protocol.Phase, roundID int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.phase == protocol.PhaseEnded {
+		return ErrSessionEnded
+	}
 	s.phase = phase
 	if roundID > 0 {
 		s.roundID = roundID
 	}
+	s.updateAllDisconnectedLocked(s.clock())
 	return nil
 }
 
+// ResetForGame returns the session to attract state after the game connection
+// was lost. Slots and tokens stay reserved so controllers can keep playing
+// when the game reconnects.
+func (s *Session) ResetForGame() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.phase == protocol.PhaseEnded {
+		return
+	}
+	s.phase = protocol.PhaseAttract
+	s.roundID = 0
+	s.allDisconnectedSince = time.Time{}
+}
+
 // HostCommand applies a validated host command. Kick uses the slot argument.
+// Commands are rejected after the session ended except a repeated end check.
 func (s *Session) HostCommand(command Command, slotNumber int) (CommandResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -312,6 +407,10 @@ func (s *Session) HostCommand(command Command, slotNumber int) (CommandResult, e
 		RoundID:       s.roundID,
 	}
 
+	if s.phase == protocol.PhaseEnded {
+		return CommandResult{}, fmt.Errorf("%w: session has ended", ErrInvalidTransition)
+	}
+
 	switch command {
 	case CommandKick:
 		if slotNumber < 1 || slotNumber > MaxPlayers {
@@ -319,11 +418,13 @@ func (s *Session) HostCommand(command Command, slotNumber int) (CommandResult, e
 		}
 		slot := &s.slots[slotNumber-1]
 		if slot.token == "" {
-			return result, nil
+			return CommandResult{}, fmt.Errorf("%w: slot %d is not assigned", ErrInvalidSlot, slotNumber)
 		}
+		s.blockedTokens[slot.token] = struct{}{}
 		slot.token = ""
 		slot.connected = false
 		slot.connectionID = 0
+		slot.lastSeen = time.Time{}
 		slot.sequence.Reset()
 		slot.limiter.Reset()
 		result.Kicked = true
@@ -331,6 +432,9 @@ func (s *Session) HostCommand(command Command, slotNumber int) (CommandResult, e
 		return result, nil
 
 	case CommandStart:
+		if s.connectedCountLocked() == 0 {
+			return CommandResult{}, ErrNoPlayers
+		}
 		if !startable(s.phase) {
 			return CommandResult{}, fmt.Errorf("%w: cannot start from %q", ErrInvalidTransition, s.phase)
 		}
@@ -347,9 +451,27 @@ func (s *Session) HostCommand(command Command, slotNumber int) (CommandResult, e
 		}
 		s.phase = protocol.PhasePlaying
 	case CommandReset:
-		s.phase = protocol.PhaseReady
+		switch s.phase {
+		case protocol.PhaseCountdown, protocol.PhasePlaying, protocol.PhasePaused, protocol.PhaseResults:
+			s.phase = protocol.PhaseReady
+			s.roundID = 0
+		default:
+			return CommandResult{}, fmt.Errorf("%w: cannot reset from %q", ErrInvalidTransition, s.phase)
+		}
 	case CommandEnd:
 		s.phase = protocol.PhaseEnded
+		s.roundID = 0
+		s.blockedTokens = make(map[string]struct{})
+		for i := range s.slots {
+			slot := &s.slots[i]
+			slot.token = ""
+			slot.connected = false
+			slot.connectionID = 0
+			slot.lastSeen = time.Time{}
+			slot.sequence.Reset()
+			slot.limiter.Reset()
+		}
+		s.allDisconnectedSince = time.Time{}
 	default:
 		return CommandResult{}, fmt.Errorf("%w: %q", ErrInvalidCommand, command)
 	}
@@ -386,11 +508,76 @@ func (s *slotState) view() SlotView {
 
 func startable(phase protocol.Phase) bool {
 	switch phase {
-	case protocol.PhaseAttract, protocol.PhaseReady, protocol.PhaseResults, protocol.PhaseEnded:
+	case protocol.PhaseAttract, protocol.PhaseReady, protocol.PhaseResults:
 		return true
 	default:
 		return false
 	}
+}
+
+// Tick enforces controller idle timeouts and the all-disconnected grace. It
+// must be called regularly; caller frequency sets the timer resolution.
+func (s *Session) Tick(now time.Time) []Action {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var actions []Action
+	for i := range s.slots {
+		slot := &s.slots[i]
+		if !slot.connected || slot.lastSeen.IsZero() {
+			continue
+		}
+		if now.Sub(slot.lastSeen) <= s.idleTimeout {
+			continue
+		}
+		actions = append(actions, Action{
+			Kind:   ActionControllerTimeout,
+			Slot:   slot.number,
+			ConnID: slot.connectionID,
+		})
+		slot.connected = false
+		slot.connectionID = 0
+		slot.lastSeen = time.Time{}
+	}
+
+	if s.updateAllDisconnectedLocked(now) {
+		actions = append(actions, Action{Kind: ActionPauseAllDisconnected})
+	}
+	return actions
+}
+
+// updateAllDisconnectedLocked tracks the all-disconnected grace during a
+// countdown or playing round and reports whether the round should pause now.
+func (s *Session) updateAllDisconnectedLocked(now time.Time) bool {
+	if s.connectedCountLocked() == 0 &&
+		(s.phase == protocol.PhaseCountdown || s.phase == protocol.PhasePlaying) {
+		if s.allDisconnectedSince.IsZero() {
+			s.allDisconnectedSince = now
+			return false
+		}
+		if now.Sub(s.allDisconnectedSince) >= s.allDisconnectedGrace {
+			s.phase = protocol.PhasePaused
+			s.allDisconnectedSince = time.Time{}
+			return true
+		}
+		return false
+	}
+	s.allDisconnectedSince = time.Time{}
+	return false
+}
+
+func (s *Session) resetAllDisconnectedLocked() {
+	s.allDisconnectedSince = time.Time{}
+}
+
+func (s *Session) connectedCountLocked() int {
+	count := 0
+	for i := range s.slots {
+		if s.slots[i].connected {
+			count++
+		}
+	}
+	return count
 }
 
 func validToken(token string) bool {
