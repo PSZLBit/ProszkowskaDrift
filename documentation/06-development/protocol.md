@@ -1,11 +1,12 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
-Protocol version: `1` (MVP). This is a design contract, not implemented yet.
-Changing a field or message requires updating this file and, for breaking
-changes, bumping the protocol version.
+Protocol version: `1` (MVP). The S0-04 server slice implements a subset of this
+contract; see "Sprint 0 Implementation Notes" at the end. Changing a field or
+message requires updating this file and, for breaking changes, bumping the
+protocol version.
 
 ## Transport and Endpoints
 
@@ -302,3 +303,70 @@ or replaced tablet.
 - Breaking changes bump the version and require a new decision/ADR.
 - The server logs a protocol mismatch and rejects the connection with
   `protocol_mismatch`.
+
+## Sprint 0 Implementation Notes (2026-10-21)
+
+The `server/` slice for S0-04 implements the envelope and a subset of this
+contract, using `github.com/coder/websocket` v1.8.15. This section records the
+choices and deviations. The document stays `Draft`; these are not final protocol
+decisions.
+
+Implemented now:
+
+- Controller endpoint, game endpoint, envelope validation, unknown-field
+  tolerance, and unknown-type dropping.
+- Controller `hello`, `input`, `ping`, and `leave`; server `welcome`, `phase`,
+  `error`, and `pong`.
+- Game `game_hello`, `config`, `player_joined`, `player_left`, forwarded
+  `input`, and `host_command`; game `game_ready`, `host_request`, `phase`, and
+  `heartbeat`.
+- Range, finite-number, phase, slot, sequence, and 60-messages-per-second
+  validation. Invalid values are dropped and reported; repeated abuse closes
+  the connection.
+- Device-token slot assignment and reconnect, with the slot reserved for the
+  session.
+
+Implementation choices:
+
+- Slot colors are `P1` red, `P2` blue, `P3` green, `P4` yellow. The example in
+  this document is illustrative, not a color mapping.
+- Controller heartbeat timeout is 6 s. Any controller message resets it; the
+  controller is expected to ping every 2 s. Close reason: `heartbeat_timeout`.
+- A connection closes with `invalid_input` after 10 consecutive invalid
+  messages and with `rate_limited` after 20 consecutive rate violations. A
+  valid input resets both counters.
+- A malformed device token, or a token whose slot is still connected, receives
+  `auth_failed`. A syntactically valid unknown token gets a free slot. A full
+  session receives `session_full`; the connection stays open and may retry.
+- The game token is presented as `?token=<value>` on `/ws/game` (the
+  `X-Game-Token` header is also accepted). The endpoint rejects non-loopback
+  connections before the WebSocket handshake.
+
+Deviations and open points:
+
+- This document does not say how the game presents its token. The query
+  parameter is the Sprint 0 choice. `game_hello` still carries the token as
+  documented, but there is no game-to-server authentication message.
+- The server owns a minimal phase for S0-04 so input gating can be tested
+  without a full Godot round: `start` moves directly to `playing` (no
+  `countdown`), `pause`/`resume` toggle `playing`/`paused`, `reset` moves to
+  `ready`, and `end` moves to `ended`. Server-generated `phase` messages omit
+  `timeLeftMs` because the server does not own a round timer. The game may send
+  `phase` (including `timeLeftMs` and `roundId`); the server stores it and
+  broadcasts it to controllers. Full countdown and timer ownership remain game
+  work.
+- The server sends `phase` only to controllers. The game learns the accepted
+  host command from `host_command`; there is no server-to-game phase message.
+- `player_left.reason` may be `disconnect`, `leave`, or `kicked`. The extra
+  values are additive.
+- On reconnect the server sends `welcome` with the current phase, but not the
+  current task, because task data is not implemented yet.
+- Kick clears the slot, sends `error` with `kicked`, closes the controller, and
+  sends `player_left` with reason `kicked`. There is no kicked-token ban list
+  yet; an immediate reconnect with the same token can claim a free slot.
+- Game heartbeats are accepted and logged, but the server does not monitor them
+  or restart the game yet. That is S0-07 game supervision.
+- Server-to-client messages omit `seq`; it is optional in the envelope.
+- A controller's `host_request` is an unknown type on the controller endpoint,
+  so it is logged and dropped by design. There is no host request message for
+  controllers.

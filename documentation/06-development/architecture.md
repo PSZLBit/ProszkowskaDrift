@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-10-21
 
 This document describes the MVP runtime. Decisions are recorded in D-22,
 ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
@@ -38,10 +38,32 @@ or simulate the game.
 | Component | Process | Responsibilities |
 |-----------|---------|------------------|
 | Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect |
-| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs |
+| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; supervision is later work |
 | Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
+
+## Sprint 0 Server Slice
+
+Issue #12 scaffolded the server on 2026-10-21. It is a Go 1.23 module,
+`github.com/PSZLBit/ProszkowskaDrift/server`, using
+`github.com/coder/websocket` v1.8.15. The library choice is provisional until
+the Sprint 0 spikes finish.
+
+- `/ws/controller` accepts controller connections on the configured listen
+  address (default `:8080`).
+- `/ws/game` accepts only loopback connections and requires the one-time game
+  token as `?token=<value>` or the `X-Game-Token` header.
+- The server owns slots, colors, device-token reconnect, input range/sequence/
+  rate validation, controller heartbeats, and a minimal phase path for
+  `start`, `pause`, `resume`, `reset`, `end`, and `kick`.
+- Session state is in memory. Device tokens are never forwarded to the game.
+- `cmd/fakecontroller` and `cmd/fakegame` provide manual end-to-end checks. The
+  protocol details and current deviations are in `06-development/protocol.md`.
+
+This slice does not launch or supervise Godot, own the round timer or
+countdown, assign tasks, score, implement late join or the all-disconnected
+pause, or provide a production controller UI. Those remain later sprint items.
 
 ## Authority and Trust Boundary
 
@@ -75,7 +97,9 @@ or simulate the game.
    reconnect automatically.
 
 Development mode may run Go and Godot in separate terminals; the festival mode
-must use the supervisor/launcher so a crash does not require a developer.
+must use the supervisor/launcher so a crash does not require a developer. The
+Sprint 0 server slice implements the server side of steps 4–7 with fake clients;
+launching and supervising Godot (steps 2–3 and 8–9) is not implemented yet.
 
 ## Data Flow
 
@@ -157,7 +181,9 @@ engine, or architecture. Do not silently add prediction, UDP, or a new runtime.
 
 ## Open Architecture Items
 
-- Final Go WebSocket library and Android WebSocket library after the spike.
+- Final confirmation of the Go WebSocket library after the Sprint 0 spikes.
+  The S0-04 slice uses `github.com/coder/websocket` v1.8.15; the Android
+  WebSocket library is still open.
 - Exact process supervisor implementation (Go or shell script).
 - Windows vs Linux festival laptop.
 - Router model and static-IP plan.

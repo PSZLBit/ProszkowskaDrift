@@ -44,22 +44,34 @@ Last updated: 2026-10-21
 
 ## Go Server Tests
 
-Planned packages and coverage:
+The Sprint 0 server slice (S0-04) lives in `server/` and is covered by
+table-driven unit tests and `httptest` integration tests with fake controllers
+and a fake game. Packages:
 
-- Session: create session, assign 1–4 slots, reject a full session, duplicate
-  device token, kick/reset, session end clears state.
-- Input validation: ranges, NaN/Infinity, rate limit, stale sequence, wrong slot,
-  wrong round phase, kicked slot.
-- Reconnect: heartbeat timeout, same token reclaims slot, unknown token
-  rejected, all-disconnected pause trigger.
-- Host commands: start/pause/resume/reset/end/kick authorization and
-  broadcast behavior.
-- Protocol: envelope version, unknown type, malformed JSON, error codes.
-- Game supervision: start, crash/restart, missing heartbeat, game token
-  mismatch.
+- `internal/validation`: finite and range-checked input, strict sequence,
+  sliding-window rate limit, per-connection limiter state.
+- `internal/protocol`: envelope parsing and version rejection, payload decoding,
+  encoding, unknown fields, phase values.
+- `internal/session`: slot assignment, invalid and duplicate tokens, reconnect,
+  leave, kick, host-command transitions, input gating, per-slot rate limit,
+  sequence reset on reconnect.
+- `internal/gameserver`: four controllers, input forwarding, reconnect, heartbeat
+  timeout, ping/pong, leave, invalid/rate closure, protocol mismatch, malformed
+  messages, controller host-command rejection, kick, game auth, game-driven
+  phase, loopback checks, token truncation.
 
-Use table-driven tests and `go test -race ./...`. Do not require a real network
-for unit tests; use an in-memory transport or `httptest` where practical.
+Commands, from `server/`:
+
+```sh
+gofmt -l .          # must print nothing
+go vet ./...
+go test -race ./...
+```
+
+Integration tests use `httptest` and fake WebSocket clients; they do not need a
+real game, tablet, or external network. The manual four-client check and the
+heartbeat check are documented in `server/README.md` and summarized in
+[Manual Server Checks](#manual-server-checks).
 
 ## Godot Tests
 
@@ -81,14 +93,49 @@ map/spawn/target nodes exist. Visual quality is a manual test.
 
 ## Contract and Integration Tests
 
-- A fake game client connects to the Go server, receives `config`, sends
-  `game_ready`, and exchanges `host_command`/`phase` messages.
-- Four fake controllers connect, receive slots, send input at 30 Hz, and verify
-  that the server forwards only validated input.
+Automated in S0-04:
+
+- A fake game client connects to the Go server, receives `game_hello` and
+  `config`, sends `game_ready`, and exchanges `host_command`/`phase` messages.
+- Four fake controllers connect, receive slots, send input, and verify that the
+  server forwards only validated input.
 - Reconnect test: drop one controller, reconnect with the same token, verify the
   same slot and resumed input.
 - Host test: a controller cannot start/pause/reset; the server rejects it.
-- Latency test: timestamp a round trip on the local network; record p50/p95.
+- Abuse tests: invalid input and rate violations close the connection after the
+  configured threshold; a protocol version mismatch closes it immediately.
+
+Still future: the latency test (timestamp a round trip on the local network and
+record p50/p95), the all-disconnected pause, late join, game supervision, and
+real Godot integration.
+
+## Manual Server Checks
+
+These checks use the S0-04 fake clients. Details and expected output are in
+`server/README.md`.
+
+1. Start the server with a known token:
+   `go run ./cmd/server -game-token dev-token -log-level debug` from `server/`.
+2. Start `go run ./cmd/fakegame -token dev-token -auto-start`; it should receive
+   `game_hello`, reply with `game_ready`, and report `player_joined` as
+   controllers connect.
+3. Start
+   `go run ./cmd/fakecontroller -clients 4 -duration 15s -invalid-after 3s -drop-after 5s`.
+   Expect four `welcome` messages with slots 1–4, labels `P1`–`P4`, and the four
+   colors; one `invalid_input` error per controller; player 1 drops and
+   reconnects into the same slot with a reset sequence.
+4. Send `leave` from the fake controllers and confirm the slots stay reserved.
+5. Run `go run ./cmd/fakecontroller -clients 1 -duration 12s -silent-after 2s`
+   while the game is in `playing`. The server must close the controller after
+   about 6 s with `heartbeat_timeout`.
+6. Use `go run ./cmd/fakegame` interactive commands to check `start`, `pause`,
+   `resume`, `reset`, `end`, and `kick 2`; a kicked controller receives `error`
+   `kicked`, the slot is freed, and the game receives `player_left` with reason
+   `kicked`.
+
+Record the date, commit, commands, and observed result for these checks. A real
+Android controller and the real Godot client are not available yet; those
+hardware checks remain open.
 
 ## Android 4.4.2 Hardware Matrix
 
@@ -136,8 +183,9 @@ details, triggers, and the "do not add yet" list live in
 - Required for merge: Go tests/vet and Android build. Godot headless tests are
   required once configured.
 
-Exact commands for the component jobs will be added to this file and `README.md`
-after the Sprint 0 scaffold. Until then, report checks that could not run.
+Server commands are documented above and in `server/README.md`. Android and
+Godot commands will be added here and in `README.md` when those components are
+scaffolded. Until then, report checks that could not run.
 
 ## Developer Setup Check
 
