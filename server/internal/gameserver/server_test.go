@@ -971,6 +971,57 @@ func TestGameHeartbeatTimeoutClosesGame(t *testing.T) {
 	game.expectClosed(websocket.StatusGoingAway, "game_heartbeat_timeout")
 }
 
+// readTerminated asserts that the client side of the connection ends with an
+// error (a close frame reply or an abrupt teardown) within the deadline.
+func readTerminated(t *testing.T, c *testClient, deadline time.Duration) {
+	t.Helper()
+
+	deadlineAt := time.Now().Add(deadline)
+	for time.Now().Before(deadlineAt) {
+		ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
+		_, _, err := c.conn.Read(ctx)
+		cancel()
+		if err != nil {
+			return
+		}
+	}
+	t.Fatal("client connection never terminated")
+}
+
+func TestFrozenControllersDoNotStallTickLoop(t *testing.T) {
+	t.Parallel()
+
+	// A controller that stops reading is the tablet-failure case: the TCP
+	// stack still acks, but the application never answers a close
+	// handshake. The tick loop must keep enforcing timers while the
+	// connection is being torn down.
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.ControllerTimeout = 300 * time.Millisecond
+	})
+
+	first := env.dialController(t)
+	first.sendHello("token-frozen-1")
+	first.expectWelcome(1)
+
+	waitFor(t, func() bool {
+		return !env.server.session.Slots()[0].Connected
+	})
+
+	// While the first connection's close handshake is still pending, the
+	// second one must get its timeout close too. Limited reads here would
+	// never happen if the tick loop was stuck on the first handshake.
+	second := env.dialController(t)
+	second.sendHello("token-frozen-2")
+	second.expectWelcome(2)
+
+	waitFor(t, func() bool {
+		return !env.server.session.Slots()[1].Connected
+	})
+
+	readTerminated(t, first, 12*time.Second)
+	readTerminated(t, second, 12*time.Second)
+}
+
 func TestUnknownJSONFieldsAreIgnored(t *testing.T) {
 	env := newTestEnv(t, nil)
 

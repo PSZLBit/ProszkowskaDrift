@@ -26,6 +26,10 @@ const wsWriteTimeout = 2 * time.Second
 // timeout, the all-disconnected pause, and the game heartbeat.
 const defaultTickInterval = 250 * time.Millisecond
 
+// closeHandshakeTimeout bounds the server-side wait for a peer close
+// acknowledgement before the connection is torn down abruptly.
+const closeHandshakeTimeout = 3 * time.Second
+
 var errNonTextFrame = errors.New("non-text websocket frame")
 
 // Config configures the WebSocket server. Zero values are replaced by
@@ -195,7 +199,7 @@ func (s *Server) tick(now time.Time) {
 		game := s.game
 		s.mu.Unlock()
 		if game != nil {
-			game.enqueueClose(nil, websocket.StatusGoingAway, "game_heartbeat_timeout")
+			game.closeGraceful(websocket.StatusGoingAway, "game_heartbeat_timeout")
 		}
 	}
 }
@@ -231,7 +235,7 @@ func (s *Server) closeIdleController(slot int, connID uint64) {
 	}
 	conn.log.Info("closing controller: heartbeat timeout", "slot", slot)
 	s.sendToGame(protocol.TypePlayerLeft, protocol.PlayerLeftData{Slot: slot, Reason: "timeout"})
-	conn.enqueueClose(nil, websocket.StatusPolicyViolation, "heartbeat_timeout")
+	conn.closeGraceful(websocket.StatusPolicyViolation, "heartbeat_timeout")
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -264,6 +268,7 @@ type wsConn struct {
 	done  chan struct{}
 
 	closeOnce sync.Once
+	doneOnce  sync.Once
 	closing   atomic.Bool
 }
 
@@ -302,8 +307,9 @@ func (c *wsConn) enqueue(raw []byte) bool {
 
 // enqueueClose queues a last optional frame, flushes earlier frames, and then
 // performs the close handshake before returning. Call it with raw == nil to
-// close after draining. When the queue is full the connection is closed
-// immediately instead, because waiting would never drain it.
+// close after draining. It must only be used from the connection's own handler
+// goroutine. Shared goroutines (tick loop, broadcasts, the game handler) use
+// closeGraceful instead.
 func (c *wsConn) enqueueClose(raw []byte, code websocket.StatusCode, reason string) bool {
 	c.closing.Store(true)
 	select {
@@ -316,6 +322,41 @@ func (c *wsConn) enqueueClose(raw []byte, code websocket.StatusCode, reason stri
 	}
 	<-c.done
 	return true
+}
+
+// closeGraceful starts the close handshake in a dedicated goroutine and
+// returns immediately. Shared goroutines call this so a peer that never
+// answers the handshake cannot stall the tick loop or another connection's
+// broadcast. The handshake is aborted after a bounded wait.
+func (c *wsConn) closeGraceful(code websocket.StatusCode, reason string) {
+	if c.closing.Swap(true) {
+		return
+	}
+	go func() {
+		select {
+		case c.queue <- outbound{data: nil, closeAfter: true, code: code, reason: reason}:
+		default:
+			c.killNow()
+			return
+		}
+		select {
+		case <-c.done:
+		case <-time.After(closeHandshakeTimeout):
+			c.killNow()
+		}
+	}()
+}
+
+// killNow tears the connection down without a close handshake.
+func (c *wsConn) killNow() {
+	_ = c.ws.CloseNow()
+	c.closeDoneOnce()
+}
+
+func (c *wsConn) closeDoneOnce() {
+	c.doneOnce.Do(func() {
+		close(c.done)
+	})
 }
 
 func (c *wsConn) writeLoop() {
@@ -338,13 +379,14 @@ func (c *wsConn) writeLoop() {
 	}
 }
 
-// closeNow performs a synchronous close handshake. It is safe to call more
-// than once.
+// closeNow performs a synchronous close handshake and marks the connection
+// done. It is safe to call more than once. Only the connection's own writer
+// and handler goroutines may use it.
 func (c *wsConn) closeNow(code websocket.StatusCode, reason string) {
 	c.closing.Store(true)
 	c.closeOnce.Do(func() {
 		_ = c.ws.Close(code, reason)
-		close(c.done)
+		c.closeDoneOnce()
 	})
 }
 
@@ -424,7 +466,7 @@ func (s *Server) broadcastRaw(raw []byte) {
 	for _, conn := range s.controllerConnections() {
 		if !conn.enqueue(raw) {
 			conn.log.Debug("slow controller closed", "slot", conn.slot)
-			conn.closeNow(websocket.StatusPolicyViolation, "slow_client")
+			conn.closeGraceful(websocket.StatusPolicyViolation, "slow_client")
 		}
 	}
 }
@@ -477,7 +519,7 @@ func (s *Server) dropController(conn *controllerConn) {
 func (s *Server) closeAllControllers(reason string) {
 	s.log.Info("closing controllers gracefully", "reason", reason)
 	for _, conn := range s.controllerConnections() {
-		conn.enqueueClose(nil, websocket.StatusNormalClosure, reason)
+		conn.closeGraceful(websocket.StatusNormalClosure, reason)
 	}
 }
 
@@ -496,7 +538,7 @@ func (s *Server) kickController(slot int) {
 	// Notify the game before the close handshake. Close waits for the
 	// controller to acknowledge, and the game should not wait on that.
 	s.sendPlayerLeft(slot, "kicked")
-	conn.enqueueClose(nil, websocket.StatusPolicyViolation, "kicked")
+	conn.closeGraceful(websocket.StatusPolicyViolation, "kicked")
 }
 
 func (s *Server) registerGame(conn *gameConn) {
@@ -507,7 +549,7 @@ func (s *Server) registerGame(conn *gameConn) {
 
 	if old != nil {
 		old.log.Info("game connection replaced")
-		old.enqueueClose(nil, websocket.StatusGoingAway, "replaced")
+		old.closeGraceful(websocket.StatusGoingAway, "replaced")
 	}
 }
 
