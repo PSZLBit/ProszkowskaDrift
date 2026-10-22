@@ -195,7 +195,8 @@ Server-timer checks:
 - Game drop and recovery: stop the fake game (`Ctrl+C` or `quit`) while
   controllers are connected. Every controller receives `game_unavailable` and
   a `phase` back to `attract`; a restarted fake game reclaims the connection
-  with the same token.
+  with the same token. Until the replacement sends `game_ready`, `/healthz`
+  reports `gameReady:false` and host requests are denied with `invalid_phase`.
 - Health: `curl http://127.0.0.1:8080/healthz` prints the phase, connected
   controller count, and game readiness.
 
