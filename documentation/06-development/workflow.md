@@ -1,14 +1,14 @@
 # Development Workflow
 
 Status: Decided
-Last updated: 2026-10-21
+Last updated: 2026-10-22
 
 ## Monorepo Layout
 
 - `server/` — Go session server, WebSocket endpoints, validation, supervisor,
   and launcher scripts. (Not yet scaffolded.)
-- `game/` — Godot 4 project: map, simulation, scoring, HUD, display. (Not yet
-  scaffolded.)
+- `game/` — Godot 4 project: map, simulation, scoring, HUD, display.
+  (Scaffolded.)
 - `controller-android/` — minimal Kotlin Android controller for API 19. (Not yet
   scaffolded.)
 - `documentation/` — source of truth and decision history.

@@ -23,7 +23,7 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
 - `server/` — Go session server: slots, input validation, reconnects, host
   commands, game process supervision. (Planned; not scaffolded.)
 - `game/` — Godot 4 game and fullscreen display: map, movement, collisions,
-  parking detection, scoring, HUD. (Planned; not scaffolded.)
+  parking detection, scoring, HUD. (Scaffolded.)
 - `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
   (Planned; not scaffolded.)
 - `documentation/` — source of truth: vision, game design, requirements,
@@ -45,11 +45,12 @@ and [`adr-0002-legacy-android-controller.md`](documentation/05-architecture-deci
 
 ## Project Status
 
-Planning and Sprint 0. No production code exists yet. The festival is
-2026-11-24 and the internal festival-ready target is 2026-11-18. The committed
-scope is the Minimum Festival Demo (MFD); the full MVP is a stretch goal. The
-next milestone is a one-week technical spike: prove the Kotlin app on the four
-tablets, the Go↔Godot connection, input latency, and display readability.
+Planning and Sprint 0. The game project is scaffolded; no production gameplay
+exists yet. The festival is 2026-11-24 and the internal festival-ready target
+is 2026-11-18. The committed scope is the Minimum Festival Demo (MFD); the full
+MVP is a stretch goal. The next milestone is a one-week technical spike: prove
+the Kotlin app on the four tablets, the Go↔Godot connection, input latency, and
+display readability.
 
 Work board: <https://github.com/orgs/PSZLBit/projects/1>.
 
@@ -62,8 +63,8 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
 - Git. On Windows, install Git for Windows. Git Bash is optional for setup; the
   `pre-push` hook runs through Git's bundled shell.
 
-Go, Godot, and the Android SDK are not required yet; their setup steps will be
-added when those components are scaffolded.
+Godot 4.7 is required for the scaffolded game project. Go and the Android SDK
+setup steps will be added when those components are scaffolded.
 
 ### Clone and set up
 
