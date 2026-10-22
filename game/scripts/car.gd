@@ -63,11 +63,11 @@ func _physics_process(delta: float) -> void:
 ## staleness watchdog (input stops -> car coasts to stop) is added here too.
 func _gather_input() -> Vector2:
 	# Keyboard example for manual testing; uncomment when trying movement:
-	# return Vector2(
-	# 	Input.get_axis("steer_left", "steer_right"),
-	# 	Input.get_axis("brake", "throttle"),
-	# )
-	return Vector2.ZERO
+	return Vector2(
+	 	Input.get_axis("ui_left", "ui_right"),
+	 	Input.get_axis("ui_down", "ui_up"),
+	 )
+	# return Vector2.ZERO
 
 
 ## Adjusts the signed forward speed from the throttle value.
