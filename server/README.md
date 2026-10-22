@@ -5,8 +5,9 @@ between the Android controllers and the Godot game: slots, device-token
 reconnect, input validation, rate limiting, heartbeats, and the minimal host
 command path.
 
-This is the Sprint 0 slice (issue #12). It is intentionally small: session
-management, game supervision, scoring, and round timing are later milestones.
+This is the Sprint 0 slice (issue #12). It is intentionally small: the full
+cross-round session lifecycle, late join, game process supervision, scoring, and
+round timing are later milestones.
 
 ## Requirements
 
@@ -61,9 +62,11 @@ This slice implements a subset and records the following choices:
 - Reconnect with the same token reclaims the slot after the old connection has
   dropped. The input sequence counter restarts on reconnect; the per-slot rate
   window does not.
-- Input limits: 60 messages per sliding second per slot. After 10 consecutive
-  invalid messages the connection closes with `invalid_input`; after 20
-  consecutive rate violations it closes with `rate_limited`.
+- Input limits: 60 messages per sliding second per slot. After 10 rejected
+  input messages without an accepted input between them the connection closes
+  with `invalid_input`; after 20 rate violations without an accepted input
+  between them it closes with `rate_limited`. Only an accepted input resets
+  both counters; pings and other message types do not.
 - Input is accepted only for an assigned, connected slot while the phase is
   `playing`. Values must be finite and in `[-1, 1]`; sequence numbers must
   strictly increase after the first input on a connection. Input outside the
@@ -77,8 +80,10 @@ This slice implements a subset and records the following choices:
   broadcast cannot be queued, the connection is closed with `slow_client`; a
   slow client never delays other connections.
 - Rejected host commands are answered to the game with `host_denied`
-  (`no_players`, `invalid_phase`, or `not_authorized`). `start` needs at least
-  one connected controller; `reset` only works from an active round phase.
+  (`no_players`, `invalid_phase`, or `not_authorized`). `host_request` is only
+  accepted after the current game connection sends `game_ready`; `start` needs
+  at least one connected controller; `reset` only works from an active round
+  phase.
 - A kicked device token is blocked for the rest of the session: reconnecting
   with it returns `error` `kicked`, and a replacement token takes the freed
   slot immediately.

@@ -1,7 +1,7 @@
 # Product Requirements
 
 Status: Draft
-Last updated: 2026-10-21
+Last updated: 2026-10-22
 
 All items below are planned and not implemented unless marked otherwise. Game
 rules and tuning values are in `02-game-domain/game-design.md`; architecture and
@@ -34,7 +34,7 @@ protocol are in `06-development/architecture.md` and `06-development/protocol.md
 - `FR-S01` Session startup: load configuration, start the Godot game process,
   expose controller and game WebSocket endpoints, and enter `Attract`.
 - `FR-S02` Slots: assign one of four slots and a color to each connected device
-  token, reject duplicate active tokens, and let the host reset or kick a slot.
+  token, reject duplicate active tokens, and let the host kick a slot.
 - `FR-S03` Input validation and routing: verify the sender slot, numeric ranges,
   rate, and sequence; drop invalid or stale input; forward valid input to the
   game. Never trust controller UI.

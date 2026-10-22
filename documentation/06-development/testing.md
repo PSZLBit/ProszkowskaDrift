@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-10-21
+Last updated: 2026-10-22
 
 ## Goals
 
@@ -63,7 +63,12 @@ and a fake game. Packages:
   rejection, kick with blocked token, host `end` with graceful controller
   close, `host_denied`, all-disconnected pause, game drop notification,
   game heartbeat timeout, game auth, game-driven phase, loopback checks,
-  token truncation, and `/healthz`.
+  token truncation, `/healthz`, writer-goroutine shutdown, welcome ordering
+  against phase broadcasts, timeout close after reconnect or leave, heartbeat
+  expiry targeting the captured game connection, replacement-game readiness,
+  stale-game message rejection, game-ready gating of `host_request`, ordered
+  player notifications during game registration, kick identity, and atomic
+  controller-slot access.
 
 Commands, from `server/`:
 
