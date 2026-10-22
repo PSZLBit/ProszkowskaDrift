@@ -7,10 +7,9 @@ extends CharacterBody2D
 ## throttle and brake/reverse, steering that becomes less effective at very
 ## low speed, friction, and a maximum speed. No drift mechanic in MVP.
 ##
-## Control scheme is a stub for now (D-14 is still TBD). Real input will be
-## the latest validated `steer` and `throttle` forwarded by the server
-## (game-design.md, "Movement and Collision Rules"); until then the car only
-## coasts to a stop.
+## Input comes from an injected source that provides normalized `steer` and
+## `throttle` values through `get_input()`. The controller input scheme is still
+## TBD (D-14); the Sprint 0 spike uses `ServerInput`.
 
 ## Turn rate at full forward speed, in degrees per second.
 @export var max_turn_speed_deg := 220.0
@@ -26,6 +25,10 @@ extends CharacterBody2D
 
 ## Deceleration when neither accelerating nor braking, px/s^2.
 @export var coast_friction := 250.0
+
+## Node that provides (steer, throttle) through get_input(). Leave empty for
+## neutral input.
+@export var input_source: Node
 
 ## Steering input: -1 (left) to 1 (right).
 var steer := 0.0
@@ -57,17 +60,15 @@ func _physics_process(delta: float) -> void:
 
 
 ## Returns the current input as (steer, throttle), each in [-1, 1].
-## Stub: neutral input only. Do not hard-code a final control scheme here;
-## the scheme is not chosen yet (D-14). A keyboard fallback may live here for
-## manual testing only. Once real input arrives from the server, a 500 ms
-## staleness watchdog (input stops -> car coasts to stop) is added here too.
+## A missing source or a source without get_input() means neutral input.
 func _gather_input() -> Vector2:
-	# Keyboard example for manual testing; uncomment when trying movement:
-	return Vector2(
-	 	Input.get_axis("ui_left", "ui_right"),
-	 	Input.get_axis("ui_down", "ui_up"),
-	 )
-	# return Vector2.ZERO
+	if input_source == null or not input_source.has_method("get_input"):
+		return Vector2.ZERO
+
+	var value: Variant = input_source.call("get_input")
+	if value is Vector2:
+		return value
+	return Vector2.ZERO
 
 
 ## Adjusts the signed forward speed from the throttle value.
