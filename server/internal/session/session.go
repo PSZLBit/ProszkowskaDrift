@@ -323,8 +323,9 @@ func (s *Session) release(slotNumber int, connectionID uint64) (SlotView, bool) 
 }
 
 // ValidateInput checks slot ownership, phase, rate, sequence, and ranges, in
-// that order. It records the rate event and sequence number only when the
-// whole message is accepted.
+// that order. The rate limiter consumes a token for every input message,
+// including messages later rejected for range or sequence. The sequence number
+// advances only when the whole message is accepted.
 func (s *Session) ValidateInput(slotNumber int, connectionID uint64, seq int64, steer, throttle float64) (InputEvent, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

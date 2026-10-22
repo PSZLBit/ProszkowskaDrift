@@ -124,6 +124,11 @@ func (c *testClient) sendHello(token string) {
 	c.send(protocol.TypeHello, nil, protocol.HelloData{DeviceToken: token, AppVersion: "test"})
 }
 
+func (c *testClient) sendGameReady() {
+	c.t.Helper()
+	c.send(protocol.TypeGameReady, nil, protocol.GameReadyData{GameVersion: "test", MapVersion: "test"})
+}
+
 func (c *testClient) read() protocol.Envelope {
 	c.t.Helper()
 	return c.readWithTimeout(5 * time.Second)
@@ -146,6 +151,30 @@ func (c *testClient) readWithTimeout(timeout time.Duration) protocol.Envelope {
 		c.t.Fatalf("parse %q: %v", raw, err)
 	}
 	return env
+}
+
+// drain reads queued messages until the connection is idle for timeout or the
+// peer closes. It is used after a race to inspect the messages the server
+// actually enqueued without failing when no message arrives.
+func (c *testClient) drain(timeout time.Duration) []protocol.Envelope {
+	var events []protocol.Envelope
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		typ, raw, err := c.conn.Read(ctx)
+		cancel()
+		if err != nil {
+			return events
+		}
+		if typ != websocket.MessageText {
+			c.t.Fatalf("message type = %v, want text", typ)
+		}
+		env, err := protocol.ParseEnvelope(raw)
+		if err != nil {
+			c.t.Fatalf("parse %q: %v", raw, err)
+		}
+		events = append(events, env)
+		timeout = 20 * time.Millisecond
+	}
 }
 
 func (c *testClient) readType(want string) protocol.Envelope {
@@ -529,6 +558,7 @@ func TestControllerCannotIssueHostCommands(t *testing.T) {
 	game := env.dialGame(t, testGameToken)
 	game.readType(protocol.TypeGameHello)
 	game.readType(protocol.TypeConfig)
+	game.sendGameReady()
 
 	c := env.dialController(t)
 	c.sendHello("token-not-host")
@@ -560,6 +590,7 @@ func TestHostCommandDenied(t *testing.T) {
 	game := env.dialGame(t, testGameToken)
 	game.readType(protocol.TypeGameHello)
 	game.readType(protocol.TypeConfig)
+	game.sendGameReady()
 
 	tests := []struct {
 		command string
@@ -582,6 +613,34 @@ func TestHostCommandDenied(t *testing.T) {
 	}
 }
 
+func TestHostRequestRequiresGameReady(t *testing.T) {
+	env := newTestEnv(t, nil)
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+
+	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "start"})
+	deniedEnv := game.readType(protocol.TypeHostDenied)
+	denied, err := protocol.DecodeData[protocol.HostDeniedData](deniedEnv)
+	if err != nil {
+		t.Fatalf("decode host_denied: %v", err)
+	}
+	if denied.Code != protocol.DenialInvalidPhase {
+		t.Fatalf("host_denied code = %q, want %q", denied.Code, protocol.DenialInvalidPhase)
+	}
+
+	controller := env.dialController(t)
+	controller.sendHello("token-ready-gate")
+	controller.expectWelcome(1)
+	game.readType(protocol.TypePlayerJoined)
+
+	game.sendGameReady()
+	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "start"})
+	game.readType(protocol.TypeHostCommand)
+	controller.readType(protocol.TypePhase)
+}
+
 func TestProtocolMismatchClosesConnection(t *testing.T) {
 	env := newTestEnv(t, nil)
 
@@ -597,6 +656,7 @@ func TestKickClosesControllerAndFreesSlot(t *testing.T) {
 	game := env.dialGame(t, testGameToken)
 	game.readType(protocol.TypeGameHello)
 	game.readType(protocol.TypeConfig)
+	game.sendGameReady()
 
 	first := env.dialController(t)
 	first.sendHello("token-kick-one")
@@ -840,6 +900,7 @@ func TestAllDisconnectedPause(t *testing.T) {
 	game := env.dialGame(t, testGameToken)
 	game.readType(protocol.TypeGameHello)
 	game.readType(protocol.TypeConfig)
+	game.sendGameReady()
 	game.readType(protocol.TypePlayerJoined)
 
 	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "start"})
@@ -882,6 +943,7 @@ func TestKickedTokenIsBlockedAndReplacementFreesSlot(t *testing.T) {
 	game := env.dialGame(t, testGameToken)
 	game.readType(protocol.TypeGameHello)
 	game.readType(protocol.TypeConfig)
+	game.sendGameReady()
 	game.readType(protocol.TypePlayerJoined)
 
 	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "kick", Slot: 1})
@@ -915,6 +977,7 @@ func TestSessionEndClosesControllersAndRejectsHellos(t *testing.T) {
 	game := env.dialGame(t, testGameToken)
 	game.readType(protocol.TypeGameHello)
 	game.readType(protocol.TypeConfig)
+	game.sendGameReady()
 	game.readType(protocol.TypePlayerJoined)
 
 	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "end"})
@@ -948,6 +1011,7 @@ func TestGameDropNotifiesControllersAndReturnsToAttract(t *testing.T) {
 	game := env.dialGame(t, testGameToken)
 	game.readType(protocol.TypeGameHello)
 	game.readType(protocol.TypeConfig)
+	game.sendGameReady()
 	game.readType(protocol.TypePlayerJoined)
 
 	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "start"})

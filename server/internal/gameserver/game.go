@@ -37,12 +37,12 @@ func (s *Server) handleGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ws.SetReadLimit(maxGameMessageSize)
-	defer ws.CloseNow()
 
 	conn := &gameConn{
 		wsConn: newWSConn(ws, s.cfg.GameQueueSize),
 		log:    s.log.With("component", "game"),
 	}
+	defer conn.killNow()
 
 	token := r.URL.Query().Get("token")
 	if token == "" {
@@ -74,14 +74,19 @@ func (s *Server) handleGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.gameActionMu.Lock()
+	s.gameNotifyMu.Lock()
 	s.registerGame(conn)
 	defer s.dropGame(conn)
-	conn.log.Info("game connected")
-
 	if err := s.sendExistingPlayers(conn); err != nil {
+		s.gameNotifyMu.Unlock()
+		s.gameActionMu.Unlock()
 		conn.log.Debug("player_joined enqueue failed", "error", err)
 		return
 	}
+	s.gameNotifyMu.Unlock()
+	s.gameActionMu.Unlock()
+	conn.log.Info("game connected")
 
 	for {
 		env, err := readEnvelope(r.Context(), ws, 0)
@@ -103,26 +108,39 @@ func (s *Server) handleGame(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Any valid message refreshes the game heartbeat deadline.
-		s.setGameMessageTime(time.Now())
-
-		switch env.Type {
-		case protocol.TypeGameReady:
-			s.handleGameReady(conn, env)
-		case protocol.TypeHostRequest:
-			if s.handleHostRequest(conn, env) {
-				return
-			}
-		case protocol.TypePhase:
-			if s.handleGamePhase(conn, env) {
-				return
-			}
-		case protocol.TypeHeartbeat:
-			s.handleGameHeartbeat(conn, env)
-		default:
-			conn.log.Debug("dropping unknown game message type", "type", env.Type)
+		// Any valid message from the current game refreshes its heartbeat
+		// deadline. Messages from a replaced connection are dropped.
+		if s.handleGameMessage(conn, env) {
+			return
 		}
 	}
+}
+
+// handleGameMessage applies one game message while holding gameActionMu. It
+// returns true when the connection should stop handling messages.
+func (s *Server) handleGameMessage(conn *gameConn, env protocol.Envelope) bool {
+	s.gameActionMu.Lock()
+	defer s.gameActionMu.Unlock()
+
+	if !s.gameIsCurrent(conn) {
+		conn.log.Info("dropping message from replaced game", "type", env.Type)
+		return true
+	}
+	s.setGameMessageTime(time.Now())
+
+	switch env.Type {
+	case protocol.TypeGameReady:
+		s.handleGameReady(conn, env)
+	case protocol.TypeHostRequest:
+		return s.handleHostRequest(conn, env)
+	case protocol.TypePhase:
+		return s.handleGamePhase(conn, env)
+	case protocol.TypeHeartbeat:
+		s.handleGameHeartbeat(conn, env)
+	default:
+		conn.log.Debug("dropping unknown game message type", "type", env.Type)
+	}
+	return false
 }
 
 func (s *Server) handleGameReady(conn *gameConn, env protocol.Envelope) {
@@ -160,6 +178,19 @@ func (s *Server) handleHostRequest(conn *gameConn, env protocol.Envelope) bool {
 		s.sendHostDenied(conn, data.Command, data.Slot, protocol.DenialNotAuthorized, "Unknown host command.")
 		return false
 	}
+	if !s.gameIsReady() {
+		s.sendHostDenied(conn, string(command), data.Slot, protocol.DenialInvalidPhase, "Game is not ready.")
+		return false
+	}
+
+	// Serialize a kick with controller slot transitions so a reconnect cannot
+	// claim the freed slot before the old controller is notified and closed.
+	var kickConn *controllerConn
+	if command == session.CommandKick {
+		s.gameNotifyMu.Lock()
+		defer s.gameNotifyMu.Unlock()
+		kickConn = s.controllerForSlot(data.Slot)
+	}
 
 	result, err := s.session.HostCommand(command, data.Slot)
 	if err != nil {
@@ -193,7 +224,7 @@ func (s *Server) handleHostRequest(conn *gameConn, env protocol.Envelope) bool {
 		})
 	}
 	if result.Kicked {
-		s.kickController(result.Slot)
+		s.kickController(kickConn, result.Slot)
 	}
 	if command == session.CommandEnd {
 		s.closeAllControllers("session_ended")

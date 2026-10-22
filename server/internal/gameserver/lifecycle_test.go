@@ -1,0 +1,433 @@
+package gameserver
+
+import (
+	"bytes"
+	"runtime/pprof"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/coder/websocket"
+
+	"github.com/PSZLBit/ProszkowskaDrift/server/internal/protocol"
+	"github.com/PSZLBit/ProszkowskaDrift/server/internal/session"
+)
+
+func countWriteLoops() int {
+	var buf bytes.Buffer
+	_ = pprof.Lookup("goroutine").WriteTo(&buf, 1)
+	return strings.Count(buf.String(), "(*wsConn).writeLoop")
+}
+
+func TestDisconnectStopsWriterGoroutines(t *testing.T) {
+	env := newTestEnv(t, nil)
+	baseline := countWriteLoops()
+
+	for i := 0; i < 5; i++ {
+		controller := env.dialController(t)
+		controller.sendHello("token-writer-leak")
+		controller.expectWelcome(1)
+		controller.close()
+
+		waitFor(t, func() bool {
+			return !env.server.session.Slots()[0].Connected
+		})
+		waitFor(t, func() bool {
+			return countWriteLoops() <= baseline
+		})
+	}
+
+	for i := 0; i < 3; i++ {
+		game := env.dialGame(t, testGameToken)
+		game.readType(protocol.TypeGameHello)
+		game.readType(protocol.TypeConfig)
+		game.close()
+
+		waitFor(t, func() bool {
+			env.server.mu.Lock()
+			defer env.server.mu.Unlock()
+			return env.server.game == nil
+		})
+		waitFor(t, func() bool {
+			return countWriteLoops() <= baseline
+		})
+	}
+}
+
+func TestWelcomeIsQueuedBeforeConcurrentPhase(t *testing.T) {
+	s := New(DefaultConfig())
+	conn := &controllerConn{
+		wsConn: &wsConn{
+			queue: make(chan outbound, 8),
+			done:  make(chan struct{}),
+		},
+		id: 1,
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	start := make(chan struct{})
+	go func() {
+		defer wg.Done()
+		<-start
+		s.broadcastPhase(protocol.PhaseData{Phase: protocol.PhasePlaying, RoundID: 1})
+	}()
+	close(start)
+
+	if !s.registerControllerAndWelcome(conn, session.SlotView{
+		Number: 1,
+		Label:  "P1",
+		Color:  "red",
+	}) {
+		t.Fatal("welcome enqueue failed")
+	}
+	wg.Wait()
+
+	first := <-conn.queue
+	env, err := protocol.ParseEnvelope(first.data)
+	if err != nil {
+		t.Fatalf("parse first frame: %v", err)
+	}
+	if env.Type != protocol.TypeWelcome {
+		t.Fatalf("first frame type = %q, want %q", env.Type, protocol.TypeWelcome)
+	}
+	if len(conn.queue) > 0 {
+		second := <-conn.queue
+		env, err = protocol.ParseEnvelope(second.data)
+		if err != nil {
+			t.Fatalf("parse second frame: %v", err)
+		}
+		if env.Type != protocol.TypePhase {
+			t.Fatalf("second frame type = %q, want %q", env.Type, protocol.TypePhase)
+		}
+	}
+}
+
+func TestLeaveDuringGameRegistrationPreservesEventOrder(t *testing.T) {
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.TickInterval = time.Hour
+	})
+
+	controller := env.dialController(t)
+	controller.sendHello("token-registration-race")
+	controller.expectWelcome(1)
+
+	for i := 0; i < 10; i++ {
+		game := env.dialGame(t, testGameToken)
+		controller.send(protocol.TypeLeave, nil, struct{}{})
+
+		game.readType(protocol.TypeGameHello)
+		game.readType(protocol.TypeConfig)
+		waitFor(t, func() bool {
+			return !env.server.session.Slots()[0].Connected
+		})
+
+		joined := false
+		for _, event := range game.drain(50 * time.Millisecond) {
+			switch event.Type {
+			case protocol.TypePlayerJoined:
+				if joined {
+					t.Fatal("game received duplicate player_joined")
+				}
+				joined = true
+			case protocol.TypePlayerLeft:
+				if !joined {
+					t.Fatal("game received player_left before player_joined")
+				}
+				joined = false
+			}
+		}
+		if joined {
+			t.Fatalf("game retained player_joined without a matching player_left (iteration %d)", i)
+		}
+
+		game.close()
+		waitFor(t, func() bool {
+			env.server.mu.Lock()
+			defer env.server.mu.Unlock()
+			return env.server.game == nil
+		})
+
+		controller.sendHello("token-registration-race")
+		controller.expectWelcome(1)
+	}
+}
+
+func TestKickTargetsCapturedConnection(t *testing.T) {
+	s := New(DefaultConfig())
+	old := &controllerConn{
+		wsConn: &wsConn{
+			queue: make(chan outbound, 8),
+			done:  make(chan struct{}),
+		},
+		log: s.log,
+		id:  1,
+	}
+	old.setSlot(1)
+
+	replacement := &controllerConn{
+		wsConn: &wsConn{
+			queue: make(chan outbound, 8),
+			done:  make(chan struct{}),
+		},
+		log: s.log,
+		id:  2,
+	}
+	replacement.setSlot(1)
+
+	s.controllers[1] = old
+	captured := s.controllerForSlot(1)
+	// Simulate a replacement registering between the host command and the
+	// kick notification.
+	s.controllers[1] = replacement
+
+	s.kickController(captured, 1)
+
+	if s.controllers[1] != replacement {
+		t.Fatal("kick removed the replacement controller")
+	}
+	select {
+	case raw := <-replacement.wsConn.queue:
+		t.Fatalf("replacement received message type %q", raw.data)
+	default:
+	}
+
+	select {
+	case out := <-old.wsConn.queue:
+		env, err := protocol.ParseEnvelope(out.data)
+		if err != nil {
+			t.Fatalf("parse kicked error: %v", err)
+		}
+		if env.Type != protocol.TypeError {
+			t.Fatalf("captured connection got %q, want %q", env.Type, protocol.TypeError)
+		}
+	default:
+		t.Fatal("captured connection did not receive the kick error")
+	}
+
+	// Let closeGraceful's goroutine exit without a real WebSocket writer.
+	old.closeDoneOnce()
+}
+
+func TestSlowControllerLogReadsSlotAtomically(t *testing.T) {
+	s := New(DefaultConfig())
+	conn := &controllerConn{
+		wsConn: &wsConn{
+			queue: make(chan outbound, 1),
+			done:  make(chan struct{}),
+		},
+		log: s.log,
+		id:  1,
+	}
+	conn.setSlot(1)
+	conn.closing.Store(true)
+	s.controllers[1] = conn
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 2000; i++ {
+			conn.setSlot(1 + i%4)
+		}
+	}()
+	for i := 0; i < 2000; i++ {
+		s.broadcastRaw([]byte(`{"v":1,"type":"ping"}`))
+	}
+	wg.Wait()
+}
+
+func TestTimedOutControllerClosedAfterReconnect(t *testing.T) {
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.ControllerTimeout = 30 * time.Millisecond
+		cfg.TickInterval = time.Hour
+	})
+
+	first := env.dialController(t)
+	first.sendHello("token-timeout-race")
+	first.expectWelcome(1)
+
+	env.server.mu.Lock()
+	oldID := env.server.controllers[1].id
+	env.server.mu.Unlock()
+
+	time.Sleep(60 * time.Millisecond)
+	actions := env.server.session.Tick(time.Now())
+	found := false
+	for _, action := range actions {
+		if action.Kind == session.ActionControllerTimeout && action.ConnID == oldID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("session.Tick actions = %+v, want timeout for connection %d", actions, oldID)
+	}
+
+	second := env.dialController(t)
+	second.sendHello("token-timeout-race")
+	second.expectWelcome(1)
+
+	env.server.closeIdleController(1, oldID)
+	first.expectClosed(websocket.StatusPolicyViolation, "heartbeat_timeout")
+
+	second.send(protocol.TypePing, nil, protocol.PingData{ClientTime: 1})
+	second.readType(protocol.TypePong)
+}
+
+func TestTimedOutControllerClosedAfterLeave(t *testing.T) {
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.TickInterval = time.Hour
+	})
+
+	controller := env.dialController(t)
+	controller.sendHello("token-timeout-leave")
+	controller.expectWelcome(1)
+
+	env.server.mu.Lock()
+	oldID := env.server.controllers[1].id
+	env.server.mu.Unlock()
+
+	controller.send(protocol.TypeLeave, nil, struct{}{})
+	waitFor(t, func() bool {
+		return !env.server.session.Slots()[0].Connected
+	})
+
+	env.server.closeIdleController(1, oldID)
+	controller.expectClosed(websocket.StatusPolicyViolation, "heartbeat_timeout")
+}
+
+func TestGameHeartbeatExpiryClosesCapturedConnection(t *testing.T) {
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.GameHeartbeatTimeout = 100 * time.Millisecond
+		cfg.TickInterval = time.Hour
+	})
+
+	first := env.dialGame(t, testGameToken)
+	first.readType(protocol.TypeGameHello)
+	first.readType(protocol.TypeConfig)
+	first.send(protocol.TypeGameReady, nil, protocol.GameReadyData{GameVersion: "test", MapVersion: "test"})
+	waitFor(t, func() bool {
+		return env.server.gameIsReady()
+	})
+
+	env.server.mu.Lock()
+	old := env.server.game
+	env.server.lastGameMessage = time.Now().Add(-time.Second)
+	env.server.mu.Unlock()
+	if old == nil {
+		t.Fatal("game connection was not registered")
+	}
+
+	expired := env.server.expiredGame(time.Now())
+	if expired != old {
+		t.Fatalf("expiredGame = %p, want old connection %p", expired, old)
+	}
+
+	second := env.dialGame(t, testGameToken)
+	second.readType(protocol.TypeGameHello)
+	second.readType(protocol.TypeConfig)
+	waitFor(t, func() bool {
+		env.server.mu.Lock()
+		defer env.server.mu.Unlock()
+		return env.server.game != nil && env.server.game != old
+	})
+
+	// Simulate the tick closing the connection it captured before the
+	// replacement registered. The replacement must stay connected.
+	expired.closeGraceful(websocket.StatusGoingAway, "game_heartbeat_timeout")
+
+	second.send(protocol.TypeGameReady, nil, protocol.GameReadyData{GameVersion: "test", MapVersion: "test"})
+	waitFor(t, func() bool {
+		return env.server.gameIsReady()
+	})
+	second.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "start"})
+	denied := second.readType(protocol.TypeHostDenied)
+	data, err := protocol.DecodeData[protocol.HostDeniedData](denied)
+	if err != nil {
+		t.Fatalf("decode host_denied: %v", err)
+	}
+	if data.Code != protocol.DenialNoPlayers {
+		t.Fatalf("host_denied code = %q, want %q", data.Code, protocol.DenialNoPlayers)
+	}
+}
+
+func TestReplacedGameMessageIsIgnored(t *testing.T) {
+	s := New(DefaultConfig())
+	replaced := &gameConn{log: s.log}
+	current := &gameConn{log: s.log}
+
+	s.mu.Lock()
+	s.game = current
+	s.gameReady = false
+	s.lastGameMessage = time.Time{}
+	s.mu.Unlock()
+
+	raw, err := protocol.Encode(protocol.TypeGameReady, nil, protocol.GameReadyData{
+		GameVersion: "test",
+		MapVersion:  "test",
+	})
+	if err != nil {
+		t.Fatalf("encode game_ready: %v", err)
+	}
+	env, err := protocol.ParseEnvelope(raw)
+	if err != nil {
+		t.Fatalf("parse game_ready: %v", err)
+	}
+
+	if !s.handleGameMessage(replaced, env) {
+		t.Fatal("replaced game message was not rejected")
+	}
+	if s.gameIsReady() {
+		t.Fatal("replaced game message changed readiness")
+	}
+	s.mu.Lock()
+	untouched := s.lastGameMessage.IsZero()
+	s.mu.Unlock()
+	if !untouched {
+		t.Fatal("replaced game message refreshed the heartbeat deadline")
+	}
+
+	if s.handleGameMessage(current, env) {
+		t.Fatal("current game message closed the connection")
+	}
+	if !s.gameIsReady() {
+		t.Fatal("current game message did not set readiness")
+	}
+}
+
+func TestGameReplacementRequiresReady(t *testing.T) {
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.TickInterval = time.Hour
+	})
+
+	first := env.dialGame(t, testGameToken)
+	first.readType(protocol.TypeGameHello)
+	first.readType(protocol.TypeConfig)
+	first.send(protocol.TypeGameReady, nil, protocol.GameReadyData{GameVersion: "test", MapVersion: "test"})
+	waitFor(t, func() bool {
+		return env.server.gameIsReady()
+	})
+
+	env.server.mu.Lock()
+	old := env.server.game
+	env.server.mu.Unlock()
+
+	second := env.dialGame(t, testGameToken)
+	second.readType(protocol.TypeGameHello)
+	second.readType(protocol.TypeConfig)
+	waitFor(t, func() bool {
+		env.server.mu.Lock()
+		defer env.server.mu.Unlock()
+		return env.server.game != nil && env.server.game != old
+	})
+
+	if env.server.gameIsReady() {
+		t.Fatal("replacement game inherited readiness from the previous game")
+	}
+
+	second.send(protocol.TypeGameReady, nil, protocol.GameReadyData{GameVersion: "test", MapVersion: "test"})
+	waitFor(t, func() bool {
+		return env.server.gameIsReady()
+	})
+}

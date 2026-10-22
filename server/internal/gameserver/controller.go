@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -18,10 +19,18 @@ type controllerConn struct {
 	*wsConn
 	id       uint64
 	log      *slog.Logger
-	slot     int
+	slot     atomic.Int32
 	tokenRef string
 	invalid  int
 	rate     int
+}
+
+func (c *controllerConn) slotNumber() int {
+	return int(c.slot.Load())
+}
+
+func (c *controllerConn) setSlot(slot int) {
+	c.slot.Store(int32(slot))
 }
 
 func (s *Server) handleController(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +45,6 @@ func (s *Server) handleController(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ws.SetReadLimit(maxControllerMessageSize)
-	defer ws.CloseNow()
 
 	id := s.nextConnID.Add(1)
 	conn := &controllerConn{
@@ -44,7 +52,10 @@ func (s *Server) handleController(w http.ResponseWriter, r *http.Request) {
 		id:     id,
 		log:    s.log.With("component", "controller", "connection", id),
 	}
+	defer conn.killNow()
+	defer s.removeControllerConn(conn)
 	defer s.dropController(conn)
+	s.addControllerConn(conn)
 
 	conn.log.Info("controller connected", "remote", r.RemoteAddr)
 
@@ -72,8 +83,8 @@ func (s *Server) handleController(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if conn.slot != 0 {
-			s.session.Touch(conn.slot, conn.id, time.Now())
+		if slot := conn.slotNumber(); slot != 0 {
+			s.session.Touch(slot, conn.id, time.Now())
 		}
 
 		switch env.Type {
@@ -100,12 +111,14 @@ func (s *Server) handleControllerHello(conn *controllerConn, env protocol.Envelo
 	if err != nil {
 		return s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "Malformed hello payload.")
 	}
-	if conn.slot != 0 {
+	if conn.slotNumber() != 0 {
 		return s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "Controller is already assigned to a slot.")
 	}
 
+	s.gameNotifyMu.Lock()
 	view, reconnected, err := s.session.Hello(data.DeviceToken, conn.id)
 	if err != nil {
+		s.gameNotifyMu.Unlock()
 		switch {
 		case errors.Is(err, session.ErrInvalidToken):
 			conn.log.Warn("controller hello rejected: invalid device token", "token", truncateToken(data.DeviceToken))
@@ -129,21 +142,16 @@ func (s *Server) handleControllerHello(conn *controllerConn, env protocol.Envelo
 		return false
 	}
 
-	conn.slot = view.Number
+	conn.setSlot(view.Number)
 	conn.tokenRef = truncateToken(data.DeviceToken)
-	s.registerController(conn)
-
-	if !conn.send(protocol.TypeWelcome, protocol.WelcomeData{
-		Slot:  view.Number,
-		Label: view.Label,
-		Color: view.Color,
-		Phase: s.session.Phase(),
-	}) {
+	if !s.registerControllerAndWelcome(conn, view) {
+		s.gameNotifyMu.Unlock()
 		conn.log.Debug("welcome enqueue failed")
 		return true
 	}
-
 	s.sendPlayerJoined(view)
+	s.gameNotifyMu.Unlock()
+
 	conn.log.Info("controller joined",
 		"slot", view.Number,
 		"label", view.Label,
@@ -154,7 +162,8 @@ func (s *Server) handleControllerHello(conn *controllerConn, env protocol.Envelo
 }
 
 func (s *Server) handleControllerInput(conn *controllerConn, env protocol.Envelope) bool {
-	if conn.slot == 0 {
+	slot := conn.slotNumber()
+	if slot == 0 {
 		return s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "hello is required before input.")
 	}
 	if env.Seq == nil {
@@ -166,7 +175,7 @@ func (s *Server) handleControllerInput(conn *controllerConn, env protocol.Envelo
 		return s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "Malformed input payload.")
 	}
 
-	event, err := s.session.ValidateInput(conn.slot, conn.id, *env.Seq, *data.Steer, *data.Throttle)
+	event, err := s.session.ValidateInput(slot, conn.id, *env.Seq, *data.Steer, *data.Throttle)
 	if err != nil {
 		switch {
 		case errors.Is(err, session.ErrRateLimited):
@@ -175,7 +184,7 @@ func (s *Server) handleControllerInput(conn *controllerConn, env protocol.Envelo
 			// Input outside the playing phase is normal traffic during
 			// pauses and phase changes. It is dropped silently and does not
 			// count toward the abuse thresholds.
-			conn.log.Debug("dropping input outside the playing phase", "slot", conn.slot, "phase", s.session.Phase())
+			conn.log.Debug("dropping input outside the playing phase", "slot", slot, "phase", s.session.Phase())
 			return false
 		case errors.Is(err, session.ErrStaleSequence):
 			return s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "Input sequence is stale.")
@@ -216,18 +225,23 @@ func (s *Server) handleControllerPing(conn *controllerConn, env protocol.Envelop
 }
 
 func (s *Server) handleControllerLeave(conn *controllerConn) {
-	if conn.slot == 0 {
+	slot := conn.slotNumber()
+	if slot == 0 {
 		s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "leave received before hello.")
 		return
 	}
 
-	slot := conn.slot
+	s.gameNotifyMu.Lock()
 	view, changed := s.session.Leave(slot, conn.id)
 	s.removeController(slot, conn)
-	conn.slot = 0
+	conn.setSlot(0)
 	conn.tokenRef = ""
 	if changed {
 		s.sendPlayerLeft(view.Number, "leave")
+	}
+	s.gameNotifyMu.Unlock()
+
+	if changed {
 		conn.log.Info("controller left; slot reserved", "slot", slot)
 	}
 }
@@ -235,7 +249,7 @@ func (s *Server) handleControllerLeave(conn *controllerConn) {
 func (s *Server) rejectControllerInvalid(conn *controllerConn, code, message string) bool {
 	conn.invalid++
 	conn.log.Warn("invalid controller message",
-		"slot", conn.slot,
+		"slot", conn.slotNumber(),
 		"token", conn.tokenRef,
 		"reason", message,
 		"count", conn.invalid,
@@ -244,7 +258,7 @@ func (s *Server) rejectControllerInvalid(conn *controllerConn, code, message str
 
 	if conn.invalid >= s.cfg.InvalidThreshold {
 		conn.log.Warn("closing controller after repeated invalid messages",
-			"slot", conn.slot,
+			"slot", conn.slotNumber(),
 			"token", conn.tokenRef,
 			"count", conn.invalid,
 		)
@@ -257,7 +271,7 @@ func (s *Server) rejectControllerInvalid(conn *controllerConn, code, message str
 func (s *Server) rejectControllerRate(conn *controllerConn) bool {
 	conn.rate++
 	conn.log.Warn("controller input rate limited",
-		"slot", conn.slot,
+		"slot", conn.slotNumber(),
 		"token", conn.tokenRef,
 		"count", conn.rate,
 	)
@@ -265,7 +279,7 @@ func (s *Server) rejectControllerRate(conn *controllerConn) bool {
 
 	if conn.rate >= s.cfg.RateThreshold {
 		conn.log.Warn("closing controller after repeated rate violations",
-			"slot", conn.slot,
+			"slot", conn.slotNumber(),
 			"token", conn.tokenRef,
 			"count", conn.rate,
 		)

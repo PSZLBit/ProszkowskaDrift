@@ -123,13 +123,26 @@ type Server struct {
 
 	mu          sync.Mutex
 	controllers map[int]*controllerConn
-	game        *gameConn
+	// controllerConns tracks every live controller handler by connection ID.
+	// A timed-out connection must be closed even if its slot was reclaimed by
+	// a reconnect before the tick loop handles the timeout action.
+	controllerConns map[uint64]*controllerConn
+	game            *gameConn
 
 	// gameReady and lastGameMessage track the game handshake and liveness so
 	// the tick loop can close a silent game connection without racing the
 	// handshake.
 	gameReady       bool
 	lastGameMessage time.Time
+
+	// gameNotifyMu serializes controller slot transitions with the game
+	// snapshot, so player_joined/player_left events reach the game in the same
+	// order as the session state they describe.
+	gameNotifyMu sync.Mutex
+
+	// gameActionMu serializes game message handling with game replacement. A
+	// message from a replaced connection must not mutate the new game's state.
+	gameActionMu sync.Mutex
 
 	nextConnID atomic.Uint64
 }
@@ -147,7 +160,8 @@ func New(cfg Config) *Server {
 			IdleTimeout:          cfg.ControllerTimeout,
 			AllDisconnectedGrace: cfg.AllDisconnectedGrace,
 		}),
-		controllers: make(map[int]*controllerConn),
+		controllers:     make(map[int]*controllerConn),
+		controllerConns: make(map[uint64]*controllerConn),
 	}
 	return s
 }
@@ -179,6 +193,7 @@ func (s *Server) StartTick(ctx context.Context) {
 }
 
 func (s *Server) tick(now time.Time) {
+	s.gameNotifyMu.Lock()
 	for _, action := range s.session.Tick(now) {
 		switch action.Kind {
 		case session.ActionControllerTimeout:
@@ -192,23 +207,25 @@ func (s *Server) tick(now time.Time) {
 			})
 		}
 	}
+	s.gameNotifyMu.Unlock()
 
-	if s.gameHeartbeatExpired(now) {
+	if game := s.expiredGame(now); game != nil {
 		s.log.Warn("game connection closed: heartbeat timeout", "timeout", s.cfg.GameHeartbeatTimeout)
-		s.mu.Lock()
-		game := s.game
-		s.mu.Unlock()
-		if game != nil {
-			game.closeGraceful(websocket.StatusGoingAway, "game_heartbeat_timeout")
-		}
+		game.closeGraceful(websocket.StatusGoingAway, "game_heartbeat_timeout")
 	}
 }
 
-func (s *Server) gameHeartbeatExpired(now time.Time) bool {
+// expiredGame returns the exact game connection whose heartbeat deadline has
+// passed. The pointer is captured while holding s.mu so a replacement game
+// cannot be closed by a tick that evaluated the old connection.
+func (s *Server) expiredGame(now time.Time) *gameConn {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.gameReady && s.game != nil &&
-		now.Sub(s.lastGameMessage) > s.cfg.GameHeartbeatTimeout
+	if !s.gameReady || s.game == nil ||
+		now.Sub(s.lastGameMessage) <= s.cfg.GameHeartbeatTimeout {
+		return nil
+	}
+	return s.game
 }
 
 func (s *Server) setGameMessageTime(now time.Time) {
@@ -228,13 +245,20 @@ func (s *Server) setGameReady(ready bool) {
 
 func (s *Server) closeIdleController(slot int, connID uint64) {
 	s.mu.Lock()
-	conn := s.controllers[slot]
+	conn := s.controllerConns[connID]
 	s.mu.Unlock()
-	if conn == nil || conn.id != connID {
+	if conn == nil {
 		return
 	}
+
+	connected := false
+	if slots := s.session.Slots(); slot >= 1 && slot <= len(slots) {
+		connected = slots[slot-1].Connected
+	}
+	if !connected {
+		s.sendToGame(protocol.TypePlayerLeft, protocol.PlayerLeftData{Slot: slot, Reason: "timeout"})
+	}
 	conn.log.Info("closing controller: heartbeat timeout", "slot", slot)
-	s.sendToGame(protocol.TypePlayerLeft, protocol.PlayerLeftData{Slot: slot, Reason: "timeout"})
 	conn.closeGraceful(websocket.StatusPolicyViolation, "heartbeat_timeout")
 }
 
@@ -257,6 +281,15 @@ func (s *Server) gameIsReady() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.gameReady
+}
+
+// gameIsCurrent reports whether conn is still the registered game. Callers
+// must hold gameActionMu so registration cannot swap the game between the
+// check and the action.
+func (s *Server) gameIsCurrent(conn *gameConn) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.game == conn
 }
 
 // wsConn wraps a WebSocket with a serialized writer goroutine. Writes are
@@ -428,10 +461,34 @@ func readEnvelope(ctx context.Context, ws *websocket.Conn, timeout time.Duration
 	return protocol.ParseEnvelope(raw)
 }
 
-func (s *Server) registerController(conn *controllerConn) {
+func (s *Server) addControllerConn(conn *controllerConn) {
 	s.mu.Lock()
-	s.controllers[conn.slot] = conn
+	s.controllerConns[conn.id] = conn
 	s.mu.Unlock()
+}
+
+func (s *Server) removeControllerConn(conn *controllerConn) {
+	s.mu.Lock()
+	if s.controllerConns[conn.id] == conn {
+		delete(s.controllerConns, conn.id)
+	}
+	s.mu.Unlock()
+}
+
+// registerControllerAndWelcome records the controller and enqueues its welcome
+// while holding the controller map lock. Broadcasts snapshot the map under the
+// same lock, so a phase broadcast cannot be queued before the welcome frame.
+func (s *Server) registerControllerAndWelcome(conn *controllerConn, view session.SlotView) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.controllers[view.Number] = conn
+	return conn.send(protocol.TypeWelcome, protocol.WelcomeData{
+		Slot:  view.Number,
+		Label: view.Label,
+		Color: view.Color,
+		Phase: s.session.Phase(),
+	})
 }
 
 func (s *Server) removeController(slot int, conn *controllerConn) {
@@ -465,7 +522,7 @@ func (s *Server) broadcast(typ string, data any) {
 func (s *Server) broadcastRaw(raw []byte) {
 	for _, conn := range s.controllerConnections() {
 		if !conn.enqueue(raw) {
-			conn.log.Debug("slow controller closed", "slot", conn.slot)
+			conn.log.Debug("slow controller closed", "slot", conn.slotNumber())
 			conn.closeGraceful(websocket.StatusPolicyViolation, "slow_client")
 		}
 	}
@@ -502,15 +559,21 @@ func (s *Server) sendPlayerLeft(slot int, reason string) {
 }
 
 func (s *Server) dropController(conn *controllerConn) {
-	if conn.slot == 0 {
+	slot := conn.slotNumber()
+	if slot == 0 {
 		return
 	}
 
-	view, changed := s.session.Disconnect(conn.slot, conn.id)
-	s.removeController(conn.slot, conn)
+	s.gameNotifyMu.Lock()
+	view, changed := s.session.Disconnect(slot, conn.id)
+	s.removeController(slot, conn)
 	if changed {
 		s.sendPlayerLeft(view.Number, "disconnect")
-		conn.log.Info("controller disconnected", "slot", conn.slot, "token", conn.tokenRef)
+	}
+	s.gameNotifyMu.Unlock()
+
+	if changed {
+		conn.log.Info("controller disconnected", "slot", slot, "token", conn.tokenRef)
 	}
 }
 
@@ -523,10 +586,17 @@ func (s *Server) closeAllControllers(reason string) {
 	}
 }
 
-func (s *Server) kickController(slot int) {
+func (s *Server) controllerForSlot(slot int) *controllerConn {
 	s.mu.Lock()
-	conn := s.controllers[slot]
-	delete(s.controllers, slot)
+	defer s.mu.Unlock()
+	return s.controllers[slot]
+}
+
+func (s *Server) kickController(conn *controllerConn, slot int) {
+	s.mu.Lock()
+	if s.controllers[slot] == conn {
+		delete(s.controllers, slot)
+	}
 	s.mu.Unlock()
 
 	if conn == nil {
@@ -545,6 +615,10 @@ func (s *Server) registerGame(conn *gameConn) {
 	s.mu.Lock()
 	old := s.game
 	s.game = conn
+	// A replacement game must complete its own handshake before it can be
+	// treated as ready or receive host commands.
+	s.gameReady = false
+	s.lastGameMessage = time.Time{}
 	s.mu.Unlock()
 
 	if old != nil {
@@ -554,6 +628,7 @@ func (s *Server) registerGame(conn *gameConn) {
 }
 
 func (s *Server) dropGame(conn *gameConn) {
+	s.gameActionMu.Lock()
 	s.mu.Lock()
 	wasCurrent := s.game == conn
 	if wasCurrent {
@@ -565,6 +640,7 @@ func (s *Server) dropGame(conn *gameConn) {
 		s.log.Info("game connection lost")
 		s.onGameDisconnected()
 	}
+	s.gameActionMu.Unlock()
 }
 
 // onGameDisconnected returns the session to attract, tells connected

@@ -64,7 +64,7 @@ func run() error {
 	}
 
 	if generated {
-		logger.Info("generated one-time game token", "game_token", token)
+		logger.Info("generated per-launch game token", "game_token", token)
 	}
 
 	port := listener.Addr().(*net.TCPAddr).Port
