@@ -2,6 +2,8 @@ package gameserver
 
 import (
 	"bytes"
+	"encoding/json"
+	"net/http"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -18,6 +20,24 @@ func countWriteLoops() int {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, 1)
 	return strings.Count(buf.String(), "(*wsConn).writeLoop")
+}
+
+func healthGameReady(t *testing.T, env *testEnv) bool {
+	t.Helper()
+
+	resp, err := http.Get(env.http.URL + "/healthz")
+	if err != nil {
+		t.Fatalf("get /healthz: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var body struct {
+		GameReady bool `json:"gameReady"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode /healthz: %v", err)
+	}
+	return body.GameReady
 }
 
 func TestDisconnectStopsWriterGoroutines(t *testing.T) {
@@ -154,7 +174,7 @@ func TestLeaveDuringGameRegistrationPreservesEventOrder(t *testing.T) {
 	}
 }
 
-func TestKickTargetsCapturedConnection(t *testing.T) {
+func TestKickTargetsCapturedConnectionAfterReplacementHello(t *testing.T) {
 	s := New(DefaultConfig())
 	old := &controllerConn{
 		wsConn: &wsConn{
@@ -164,7 +184,20 @@ func TestKickTargetsCapturedConnection(t *testing.T) {
 		log: s.log,
 		id:  1,
 	}
-	old.setSlot(1)
+	view, _, err := s.session.Hello("token-old", old.id)
+	if err != nil {
+		t.Fatalf("old hello: %v", err)
+	}
+	old.setSlot(view.Number)
+	s.controllers[view.Number] = old
+	captured := s.controllerForSlot(view.Number)
+
+	// The host command frees the slot before the replacement hello can claim
+	// it. The kick must still target the captured connection.
+	result, err := s.session.HostCommand(session.CommandKick, view.Number)
+	if err != nil || !result.Kicked {
+		t.Fatalf("kick command = %+v, %v; want kicked", result, err)
+	}
 
 	replacement := &controllerConn{
 		wsConn: &wsConn{
@@ -174,18 +207,20 @@ func TestKickTargetsCapturedConnection(t *testing.T) {
 		log: s.log,
 		id:  2,
 	}
-	replacement.setSlot(1)
+	newView, _, err := s.session.Hello("token-new", replacement.id)
+	if err != nil {
+		t.Fatalf("replacement hello: %v", err)
+	}
+	replacement.setSlot(newView.Number)
+	s.controllers[newView.Number] = replacement
 
-	s.controllers[1] = old
-	captured := s.controllerForSlot(1)
-	// Simulate a replacement registering between the host command and the
-	// kick notification.
-	s.controllers[1] = replacement
+	s.kickController(captured, view.Number)
 
-	s.kickController(captured, 1)
-
-	if s.controllers[1] != replacement {
+	if s.controllers[newView.Number] != replacement {
 		t.Fatal("kick removed the replacement controller")
+	}
+	if slots := s.session.Slots(); !slots[newView.Number-1].Connected {
+		t.Fatal("replacement slot is no longer connected")
 	}
 	select {
 	case raw := <-replacement.wsConn.queue:
@@ -425,9 +460,15 @@ func TestGameReplacementRequiresReady(t *testing.T) {
 	if env.server.gameIsReady() {
 		t.Fatal("replacement game inherited readiness from the previous game")
 	}
+	if healthGameReady(t, env) {
+		t.Fatal("/healthz reported the replacement game ready before game_ready")
+	}
 
 	second.send(protocol.TypeGameReady, nil, protocol.GameReadyData{GameVersion: "test", MapVersion: "test"})
 	waitFor(t, func() bool {
 		return env.server.gameIsReady()
 	})
+	if !healthGameReady(t, env) {
+		t.Fatal("/healthz did not report the replacement game ready after game_ready")
+	}
 }
