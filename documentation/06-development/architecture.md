@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-10-21
+Last updated: 2026-10-23
 
 This document describes the MVP runtime. Decisions are recorded in D-22,
 ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
@@ -65,7 +65,7 @@ the Sprint 0 spikes finish.
 - Session boundaries are enforced server-side: `host_denied` answers rejected
   host requests, a kicked device token is blocked for the session, host `end`
   clears slots and closes controllers gracefully, and `/healthz` reports
-  phase, slot count, and game readiness.
+  phase, open controller connections, and game readiness.
 - Session state is in memory. Device tokens are never forwarded to the game.
 - `cmd/fakecontroller` and `cmd/fakegame` provide manual end-to-end checks. The
   protocol details and current deviations are in `06-development/protocol.md`.

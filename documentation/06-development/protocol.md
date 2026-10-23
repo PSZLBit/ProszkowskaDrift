@@ -1,7 +1,7 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-10-22
+Last updated: 2026-10-23
 
 Protocol version: `1` (MVP). The S0-04 server slice implements a subset of this
 contract; see "Sprint 0 Implementation Notes" at the end. Changing a field or
@@ -336,7 +336,7 @@ Implementation choices:
   this document is illustrative, not a color mapping.
 - Controller heartbeat timeout is 6 s. Any controller message resets it; the
   controller is expected to ping every 2 s. Close reason: `heartbeat_timeout`.
-  Out-of-phase controllers are closed with `player_left.reason` `timeout`.
+  Timed-out controllers are closed with `player_left.reason` `timeout`.
 - A connection closes with `invalid_input` after 10 rejected input messages
   without an accepted input between them and with `rate_limited` after 20 rate
   violations without an accepted input between them. Only an accepted input
@@ -372,12 +372,16 @@ Session-boundary choices (this sprint, additive):
 - Host `end` clears slots, tokens, and the round identifier. New `hello`s and
   `phase` changes are rejected until the server restarts; connected
   controllers receive `phase` `ended` and a graceful close with reason
-  `session_ended`.
+  `session_ended`. Host commands are serialized with controller registration
+  and slot transitions, so a controller cannot join a session that just ended
+  and the game cannot receive `player_joined` after host `end`.
 - If every controller disconnects during `countdown` or `playing`, the server
   waits 10 s (configurable) and then pauses the round: it sends
   `host_command` `pause` to the game and broadcasts `phase` `paused`. A
   reconnecting controller stops the grace timer. This is the only case where
-  the server changes the phase without a host request.
+  the server changes the phase without a host request. Game `phase` messages
+  share the same transition lock as the timer and slot changes, so a
+  concurrent game phase cannot overwrite the paused broadcast.
 - The game heartbeat is live: any valid game message resets it. After 3 s
   without a game message on a ready connection, the server closes it with
   reason `game_heartbeat_timeout`, broadcasts `error` `game_unavailable`,

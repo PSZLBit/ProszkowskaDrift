@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-10-22
+Last updated: 2026-10-23
 
 ## Goals
 
@@ -116,6 +116,12 @@ Automated in S0-04:
 - Reconnect test: drop one controller, reconnect with the same token, verify the
   same slot and resumed input.
 - Host test: a controller cannot start/pause/reset; the server rejects it.
+- Host `end` ordering: an in-flight `hello` either registers before `end` and
+  is closed with `session_ended`, or is rejected after it; the controller
+  cannot join an ended session and the game sees `player_joined` before
+  `host_command` `end`.
+- Timer/phase ordering: a game `phase` message cannot overwrite the
+  all-disconnected paused broadcast.
 - Abuse tests: invalid input and rate violations close the connection after the
   configured threshold; a protocol version mismatch closes it immediately.
 
