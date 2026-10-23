@@ -1,11 +1,12 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-10-23
 
-Protocol version: `1` (MVP). This is a design contract, not implemented yet.
-Changing a field or message requires updating this file and, for breaking
-changes, bumping the protocol version.
+Protocol version: `1` (MVP). The S0-04 server slice implements a subset of this
+contract; see "Sprint 0 Implementation Notes" at the end. Changing a field or
+message requires updating this file and, for breaking changes, bumping the
+protocol version.
 
 ## Transport and Endpoints
 
@@ -81,7 +82,7 @@ Sent every 2 s. Server replies with `pong`.
 ```
 
 Optional clean leave. The slot remains reserved for the session unless the host
-resets/kicks it.
+kicks it.
 
 ## Server → Controller
 
@@ -146,10 +147,10 @@ Codes: `auth_failed`, `session_full`, `invalid_input`, `rate_limited`,
 ### `game_hello`
 
 First message from the server after the game WebSocket opens. The game is
-authenticated by a one-time token passed at launch.
+authenticated by a per-launch token passed at startup.
 
 ```json
-{"v":1,"type":"game_hello","data":{"token":"<one-time-token>","protocolVersion":1}}
+{"v":1,"type":"game_hello","data":{"token":"<per-launch-token>","protocolVersion":1}}
 ```
 
 ### `config`
@@ -158,7 +159,7 @@ authenticated by a one-time token passed at launch.
 {"v":1,"type":"config","data":{"roundDurationMs":180000,"tasksPerPlayer":5,"maxPlayers":4}}
 ```
 
-Sent on connect and after a reset. The game validates values.
+Sent once when the game connects. The game validates values.
 
 ### `player_joined` / `player_left`
 
@@ -206,7 +207,9 @@ The Godot window captures host keys and asks the server to execute a command.
 ```
 
 The server validates and responds with `host_command`. The game ignores its own
-local key action until the server confirms.
+local key action until the server confirms. Until the server has received
+`game_ready` on the current game connection, every `host_request` is answered
+with `host_denied` code `invalid_phase`.
 
 ### `phase`
 
@@ -292,7 +295,7 @@ Controller            Server                         Game
    still running.
 6. Controller resumes sending input. The game applies the latest input.
 
-Slots remain reserved for the session. The host can reset a slot to clear a lost
+Slots remain reserved for the session. The host can kick a slot to clear a lost
 or replaced tablet.
 
 ## Versioning
@@ -302,3 +305,113 @@ or replaced tablet.
 - Breaking changes bump the version and require a new decision/ADR.
 - The server logs a protocol mismatch and rejects the connection with
   `protocol_mismatch`.
+
+## Sprint 0 Implementation Notes (2026-10-22)
+
+The `server/` slice for S0-04 implements the envelope and a subset of this
+contract, using `github.com/coder/websocket` v1.8.15. This section records the
+choices and deviations. The document stays `Draft`; these are not final protocol
+decisions.
+
+Implemented now:
+
+- Controller endpoint, game endpoint, envelope validation, unknown-field
+  tolerance, and unknown-type dropping.
+- Controller `hello`, `input`, `ping`, and `leave`; server `welcome`, `phase`,
+  `error`, and `pong`.
+- Game `game_hello`, `config`, `player_joined`, `player_left`, forwarded
+  `input`, and `host_command`; game `game_ready`, `host_request`, `phase`,
+  `heartbeat`, and server `host_denied`.
+- Range, finite-number, phase, slot, sequence, and 60-messages-per-second
+  validation. Invalid values are dropped and reported; repeated abuse closes
+  the connection.
+- Device-token slot assignment and reconnect, with the slot reserved for the
+  session.
+- Server-side timers on a 250 ms tick: controller idle timeout, all-disconnected
+  pause, and game heartbeat monitoring.
+
+Implementation choices:
+
+- Slot colors are `P1` red, `P2` blue, `P3` green, `P4` yellow. The example in
+  this document is illustrative, not a color mapping.
+- Controller heartbeat timeout is 6 s. Any controller message resets it; the
+  controller is expected to ping every 2 s. Close reason: `heartbeat_timeout`.
+  Timed-out controllers are closed with `player_left.reason` `timeout`.
+- A connection closes with `invalid_input` after 10 rejected input messages
+  without an accepted input between them and with `rate_limited` after 20 rate
+  violations without an accepted input between them. Only an accepted input
+  resets both counters; pings and other message types do not. Input that
+  arrives outside the `playing` phase is dropped silently: no error, no
+  counter, and the sequence number stays unconsumed, so a controller that keeps
+  sending during a pause does not lose its sequence position.
+- A connection whose outbound queue stays full is closed with the
+  `slow_client` close reason; broadcasts never block on it.
+- A malformed device token, or a token whose slot is still connected, receives
+  `auth_failed`. A syntactically valid unknown token gets a free slot. A full
+  session receives `session_full`; the connection stays open and may retry.
+- The game token is presented as `?token=<value>` on `/ws/game` (the
+  `X-Game-Token` header is also accepted). The endpoint rejects non-loopback
+  connections before the WebSocket handshake.
+
+Session-boundary choices (this sprint, additive):
+
+- `host_request` that the server rejects is answered with `host_denied`
+  carrying `command`, `slot`, `code`, and `message`. Codes:
+  `no_players` (start with no connected controller), `invalid_phase` (command
+  not allowed in the current phase, including any command before the current
+  game connection sends `game_ready`), and `not_authorized` (unknown command or
+  slot). `reset` is only valid from `countdown`, `playing`, `paused`, and
+  `results`.
+- Kick blocks the kicked device token for the rest of the session: a reconnect
+  with the same token receives `error` `kicked`. A replacement token can claim
+  the freed slot immediately. There is no cross-session ban list.
+- `player_joined` and `player_left` are emitted in the same order as the
+  session slot transitions they describe. A game that connects while
+  controllers are joining or leaving receives the current snapshot without
+  duplicate or inverted events.
+- Host `end` clears slots, tokens, and the round identifier. New `hello`s and
+  `phase` changes are rejected until the server restarts; connected
+  controllers receive `phase` `ended` and a graceful close with reason
+  `session_ended`. Host commands are serialized with controller registration
+  and slot transitions, so a controller cannot join a session that just ended
+  and the game cannot receive `player_joined` after host `end`.
+- If every controller disconnects during `countdown` or `playing`, the server
+  waits 10 s (configurable) and then pauses the round: it sends
+  `host_command` `pause` to the game and broadcasts `phase` `paused`. A
+  reconnecting controller stops the grace timer. This is the only case where
+  the server changes the phase without a host request. Game `phase` messages
+  share the same transition lock as the timer and slot changes, so a
+  concurrent game phase cannot overwrite the paused broadcast.
+- The game heartbeat is live: any valid game message resets it. After 3 s
+  without a game message on a ready connection, the server closes it with
+  reason `game_heartbeat_timeout`, broadcasts `error` `game_unavailable`,
+  resets the session to `attract` (slots stay reserved), and waits for the
+  game to reconnect with the configured token. Token rotation per game launch
+  arrives with S0-07 game supervision.
+- `/healthz` (plain HTTP, not WebSocket) returns
+  `{status, phase, roundId, controllers, gameReady}` for the launcher and
+  manual checks.
+
+Deviations and open points:
+
+- This document does not say how the game presents its token. The query
+  parameter is the Sprint 0 choice. `game_hello` still carries the token as
+  documented, but there is no game-to-server authentication message.
+- The server owns a minimal phase for S0-04 so input gating can be tested
+  without a full Godot round: `start` moves directly to `playing` (no
+  `countdown`), `pause`/`resume` toggle `playing`/`paused`, `reset` moves to
+  `ready`, and `end` moves to `ended`. Server-generated `phase` messages omit
+  `timeLeftMs` because the server does not own a round timer. The game may send
+  `phase` (including `timeLeftMs` and `roundId`); the server stores it and
+  broadcasts it to controllers. Full countdown and timer ownership remain game
+  work. The all-disconnected pause is the exception: the server sets `paused`.
+- The server sends `phase` only to controllers. The game learns the accepted
+  host command from `host_command`; there is no server-to-game phase message.
+- `player_left.reason` may be `disconnect`, `leave`, `kicked`, or `timeout`
+  (idle timeout). The extra values are additive.
+- On reconnect the server sends `welcome` with the current phase, but not the
+  current task, because task data is not implemented yet.
+- Server-to-client messages omit `seq`; it is optional in the envelope.
+- A controller's `host_request` is an unknown type on the controller endpoint,
+  so it is logged and dropped by design. There is no host request message for
+  controllers.
