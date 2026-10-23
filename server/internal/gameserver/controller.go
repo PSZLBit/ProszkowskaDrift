@@ -144,6 +144,9 @@ func (s *Server) handleControllerHello(conn *controllerConn, env protocol.Envelo
 
 	conn.setSlot(view.Number)
 	conn.tokenRef = truncateToken(data.DeviceToken)
+	if s.afterControllerHello != nil {
+		s.afterControllerHello()
+	}
 	if !s.registerControllerAndWelcome(conn, view) {
 		s.gameNotifyMu.Unlock()
 		conn.log.Debug("welcome enqueue failed")

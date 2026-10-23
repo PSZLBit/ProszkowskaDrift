@@ -144,6 +144,11 @@ type Server struct {
 	// message from a replaced connection must not mutate the new game's state.
 	gameActionMu sync.Mutex
 
+	// afterControllerHello is a test hook invoked after a successful
+	// session.Hello and before the controller is registered. It is nil in
+	// production.
+	afterControllerHello func()
+
 	nextConnID atomic.Uint64
 }
 
@@ -201,8 +206,10 @@ func (s *Server) tick(now time.Time) {
 		case session.ActionPauseAllDisconnected:
 			s.log.Info("all controllers disconnected; pausing round")
 			s.sendToGame(protocol.TypeHostCommand, protocol.HostCommandData{Command: string(session.CommandPause)})
+			// Tick already set the session to paused. Broadcast that phase
+			// instead of re-reading a value a game message could change.
 			s.broadcastPhase(protocol.PhaseData{
-				Phase:   s.session.Phase(),
+				Phase:   protocol.PhasePaused,
 				RoundID: s.session.RoundID(),
 			})
 		}

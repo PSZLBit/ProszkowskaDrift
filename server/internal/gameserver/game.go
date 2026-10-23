@@ -183,12 +183,14 @@ func (s *Server) handleHostRequest(conn *gameConn, env protocol.Envelope) bool {
 		return false
 	}
 
-	// Serialize a kick with controller slot transitions so a reconnect cannot
-	// claim the freed slot before the old controller is notified and closed.
+	// Serialize the command with controller slot transitions. A hello,
+	// reconnect, leave, or disconnect must not interleave with a session
+	// change (notably host end) or with the notifications derived from it.
+	s.gameNotifyMu.Lock()
+	defer s.gameNotifyMu.Unlock()
+
 	var kickConn *controllerConn
 	if command == session.CommandKick {
-		s.gameNotifyMu.Lock()
-		defer s.gameNotifyMu.Unlock()
 		kickConn = s.controllerForSlot(data.Slot)
 	}
 
@@ -251,6 +253,13 @@ func (s *Server) handleGamePhase(conn *gameConn, env protocol.Envelope) bool {
 	if !data.Phase.Valid() {
 		return s.rejectGameInvalid(conn, "Unknown phase.")
 	}
+
+	// Serialize phase changes with the server timers and controller slot
+	// transitions. The all-disconnected pause must not race a game phase and
+	// leave the game paused while controllers are told another phase.
+	s.gameNotifyMu.Lock()
+	defer s.gameNotifyMu.Unlock()
+
 	if err := s.session.SetPhase(data.Phase, data.RoundID); err != nil {
 		if errors.Is(err, session.ErrSessionEnded) {
 			// After a session end the server stops forwarding phase

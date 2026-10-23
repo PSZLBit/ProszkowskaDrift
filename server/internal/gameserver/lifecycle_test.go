@@ -472,3 +472,159 @@ func TestGameReplacementRequiresReady(t *testing.T) {
 		t.Fatal("/healthz did not report the replacement game ready after game_ready")
 	}
 }
+
+func TestHostEndSerializesWithControllerHello(t *testing.T) {
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.TickInterval = time.Hour
+	})
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+	game.send(protocol.TypeGameReady, nil, protocol.GameReadyData{GameVersion: "test", MapVersion: "test"})
+	waitFor(t, func() bool {
+		return env.server.gameIsReady()
+	})
+
+	helloReached := make(chan struct{})
+	releaseHello := make(chan struct{})
+	env.server.afterControllerHello = func() {
+		close(helloReached)
+		<-releaseHello
+	}
+
+	controller := env.dialController(t)
+	controller.sendHello("token-end-race")
+	select {
+	case <-helloReached:
+	case <-time.After(2 * time.Second):
+		t.Fatal("controller hello did not reach the registration barrier")
+	}
+
+	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "end"})
+
+	// An end path that is not serialized with controller registration would
+	// clear the session during this pause. The controller would then register
+	// into an ended session and stay connected because its slot no longer
+	// exists for the idle timer.
+	time.Sleep(100 * time.Millisecond)
+	if phase := env.server.session.Phase(); phase == protocol.PhaseEnded {
+		t.Fatal("host end cleared the session while controller hello was in progress")
+	}
+	close(releaseHello)
+
+	controller.expectWelcome(1)
+	controller.expectClosed(websocket.StatusNormalClosure, "session_ended")
+
+	joined := false
+	for {
+		event := game.read()
+		switch event.Type {
+		case protocol.TypePlayerJoined:
+			joined = true
+		case protocol.TypeHostCommand:
+			if !joined {
+				t.Fatal("game received host end before the controller joined")
+			}
+			data, err := protocol.DecodeData[protocol.HostCommandData](event)
+			if err != nil {
+				t.Fatalf("decode host_command: %v", err)
+			}
+			if data.Command != string(session.CommandEnd) {
+				t.Fatalf("host_command = %+v, want end", data)
+			}
+			return
+		}
+	}
+}
+
+func TestGamePhaseWaitsForTimerSerialization(t *testing.T) {
+	s := New(DefaultConfig())
+	if err := s.session.SetPhase(protocol.PhasePlaying, 1); err != nil {
+		t.Fatalf("set phase: %v", err)
+	}
+
+	raw, err := protocol.Encode(protocol.TypePhase, nil, protocol.PhaseData{
+		Phase:   protocol.PhasePaused,
+		RoundID: 1,
+	})
+	if err != nil {
+		t.Fatalf("encode phase: %v", err)
+	}
+	env, err := protocol.ParseEnvelope(raw)
+	if err != nil {
+		t.Fatalf("parse phase: %v", err)
+	}
+
+	s.gameNotifyMu.Lock()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		s.handleGamePhase(&gameConn{log: s.log}, env)
+	}()
+
+	select {
+	case <-done:
+		t.Fatal("game phase was applied while the timer held the transition lock")
+	case <-time.After(50 * time.Millisecond):
+	}
+	s.gameNotifyMu.Unlock()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("game phase did not finish after the lock was released")
+	}
+	if phase := s.session.Phase(); phase != protocol.PhasePaused {
+		t.Fatalf("phase = %q, want %q", phase, protocol.PhasePaused)
+	}
+}
+
+func TestHostCommandWaitsForControllerTransitionLock(t *testing.T) {
+	s := New(DefaultConfig())
+	s.mu.Lock()
+	s.gameReady = true
+	s.mu.Unlock()
+
+	raw, err := protocol.Encode(protocol.TypeHostRequest, nil, protocol.HostRequestData{
+		Command: string(session.CommandEnd),
+	})
+	if err != nil {
+		t.Fatalf("encode host_request: %v", err)
+	}
+	env, err := protocol.ParseEnvelope(raw)
+	if err != nil {
+		t.Fatalf("parse host_request: %v", err)
+	}
+
+	conn := &gameConn{
+		wsConn: &wsConn{
+			queue: make(chan outbound, 8),
+			done:  make(chan struct{}),
+		},
+		log: s.log,
+	}
+
+	s.gameNotifyMu.Lock()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		s.handleHostRequest(conn, env)
+	}()
+
+	select {
+	case <-done:
+		t.Fatal("host command was applied while controller registration held the transition lock")
+	case <-time.After(50 * time.Millisecond):
+	}
+	s.gameNotifyMu.Unlock()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("host command did not finish after the lock was released")
+	}
+	if phase := s.session.Phase(); phase != protocol.PhaseEnded {
+		t.Fatalf("phase = %q, want %q", phase, protocol.PhaseEnded)
+	}
+}
