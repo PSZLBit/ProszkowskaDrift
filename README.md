@@ -26,7 +26,7 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
   pause, `/healthz`, and fake clients. Game process supervision is not
   implemented yet. See [`server/README.md`](server/README.md).
 - `game/` — Godot 4 game and fullscreen display: map, movement, collisions,
-  parking detection, scoring, HUD. (Planned; not scaffolded.)
+  parking detection, scoring, HUD. (Scaffolded.)
 - `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
   (Planned; not scaffolded.)
 - `documentation/` — source of truth: vision, game design, requirements,

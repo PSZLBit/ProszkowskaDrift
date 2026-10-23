@@ -198,6 +198,122 @@ Run on all four actual tablets, not only one.
 - No car-to-car collision; overlapping cars remain visually distinguishable.
 - A finished player's state is clear.
 
+## Component Manual Checks
+
+First checks for single scripts/scenes, outside a full round. Write the check
+here (or in the issue) before running it, run it on the target laptop, and
+record the result. A scratch scene or scratch input source is enough; do not
+commit scratch edits with it.
+
+### ServerInput spike (`game/scripts/server_input.gd`)
+
+Recorded: 2026-10-22. Result: pass for the tested path.
+
+Scope: Sprint 0 spike (D-18) for the single-car game input path. It does not
+promote the protocol from `Draft`, does not verify the Android controller, and
+does not replace the final host/start flow. `auto_start_round` is a spike
+convenience, not a production host flow.
+
+Purpose: verify that the Godot game can connect to the Go game endpoint,
+complete the handshake, stay connected with heartbeats, start a round, receive
+forwarded controller input, and drive the wired car.
+
+Environment:
+
+- Godot 4.7.2 stable.
+- Server branch `feat/s0-04-go-server`, commit `ac166e2`.
+- One `fakecontroller` client; no Android tablet and no TV.
+- `game/scenes/test.tscn`, with `ServerInput` and `Car.input_source` wired.
+
+Procedure:
+
+1. Create a temporary worktree from the server branch and start the server:
+
+   ```powershell
+   git worktree add --detach <temp-dir> origin/feat/s0-04-go-server
+   cd <temp-dir>/server
+   go run ./cmd/server -game-token dev-token -log-level debug
+   ```
+
+2. In a second terminal, connect one fake controller:
+
+   ```powershell
+   cd <temp-dir>/server
+   go run ./cmd/fakecontroller -clients 1 -duration 15s
+   ```
+
+3. Run `game/scenes/test.tscn` with F6 in Godot. The node connects to
+   `ws://127.0.0.1:8080/ws/game?token=dev-token`, sends `game_ready`, and
+   auto-sends `host_request start` after one second.
+
+4. Check the Godot Output panel and watch the car. For this record, a temporary
+   headless wrapper loaded the same scene and printed the car position; the
+   wrapper was deleted after the run.
+
+5. To check the 500 ms input timeout, restart the fake controller with
+   `-silent-after 3s`. The connection stays open while input stops; the car
+   should coast to a stop.
+
+6. For the connection-timeout check, point `server_url` at an unused local port
+   with no server running.
+
+Observed:
+
+- Handshake: `game_hello` with protocol 1, then `config` with a 180000 ms round,
+  5 tasks, and 4 max players.
+- `game_ready` was accepted and the server logged `game heartbeat` messages
+  every second, so the heartbeat requirement was met.
+- `player_joined slot=1`; `host_request start` produced `host_command start` and
+  the server logged `host command accepted ... phase=playing`.
+- First forwarded sample: `steer=0.150`, `throttle=0.600`.
+- The wired car moved from `(559, 322)` at the start to `(725.7, 342.7)` after
+  2 s and `(1222.7, 818.7)` after 5 s, so forwarded input reached the car through
+  `Car.input_source`.
+- Input timeout: after the fake controller went silent, `get_input()` returned
+  `(0.15, 0.6)` at 1.5 s and `(0.0, 0.0)` at 4.0 s; the car velocity reached zero.
+  This confirms the timeout path, not the exact 500 ms boundary.
+- Negative check: with an unused port, the node logged `connect timed out;
+  reconnecting` after about five seconds.
+
+Conclusion: the single-car Godot WebSocket path works for the spike. Keep the
+protocol and input decisions open; see `protocol.md` and D-14.
+
+Not covered by this check: the exact 500 ms timeout boundary, reconnect after an
+established server connection drops, multiple cars, the Android controller, and
+visible latency on the TV.
+
+### Car movement (`game/scripts/car.gd`)
+
+Run when the car script, its input handling, or its tuning changes.
+Environment: Godot editor on the target laptop.
+
+The car reads `(steer, throttle)` from its assigned `input_source` through
+`get_input()`. With no source assigned, it returns neutral input and coasts.
+
+| # | Step | Pass condition |
+|---|------|----------------|
+| 1 | Open a scene with `car.gd` on a `CharacterBody2D` (Sprite2D + rectangular collision shape) and a `StaticBody2D` wall on the same collision layer. Leave `Input Source` empty and run the scene. | Car does not move. |
+| 2 | Create a scratch `Node` with the script below and assign it to `Car.input_source`. Run the scene and hold Up. | Throttle accelerates to `max_speed` and holds; releasing Up coasts to a stop. |
+| 3 | Hold Down while moving forward, then at a stop. | Brake decelerates to 0 first and only then reverses, capped at `max_reverse_speed`. |
+| 4 | With the scratch source active, test steering at 0 speed / full speed / in reverse. | No turning at 0 speed; turn rate scales with speed; turning inverts in reverse; travel direction matches heading (no sliding). |
+| 5 | Drive into the wall. | Car slides along it, speed visibly reduced, car never destroyed; repeated contact does not tunnel or jitter. |
+| 6 | Remove the scratch source and set `Car.input_source` back to `../ServerInput`; save the scene. | Scene returns to server-driven input; no scratch files are committed. |
+
+Scratch keyboard source:
+
+```gdscript
+extends Node
+
+func get_input() -> Vector2:
+	return Vector2(
+		Input.get_axis("ui_left", "ui_right"),
+		Input.get_axis("ui_down", "ui_up"),
+	)
+```
+
+Record: date, pass/fail per step, Godot version. The scratch keyboard source
+must not end up committed; the production path is `ServerInput`.
+
 ## CI Plan
 
 Free-tier GitHub Actions; component jobs start after scaffolding. Tooling

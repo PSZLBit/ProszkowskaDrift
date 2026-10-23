@@ -1,7 +1,7 @@
 # Decision Log
 
 Status: Decided
-Last updated: 2026-10-21
+Last updated: 2026-10-22
 
 Register of all team decisions. Newest entries on top.
 For larger decisions, create an ADR file in this folder using `_templates/adr.md`
@@ -40,6 +40,12 @@ and link it here.
 | 2026-10-13 | D-03 | MVP bracket format is single-elimination only.                                                                                            | Superseded by D-06 | Team  |
 | 2026-10-13 | D-02 | Date of birth is private; never exposed in public views, APIs, or logs.                                                                   | Superseded by D-12 | Team  |
 | 2026-10-13 | D-01 | Tech stack, database, and hosting are not selected yet. Do not introduce them without a decision.                                         | Superseded by D-22 and D-25 | Team  |
+
+## Spike Results
+
+| Date | Spike | Result | Evidence |
+|------|-------|--------|----------|
+| 2026-10-22 | Godot `ServerInput` single-car WebSocket path | Pass for the tested path: handshake, heartbeat, auto-start, forwarded input, input-timeout path, and wired-car movement. Exact timeout boundary and established-connection reconnect were not exercised. | [`testing.md`](../06-development/testing.md), "ServerInput spike" |
 
 ## Rules
 

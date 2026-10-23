@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://c0didsv7dx62i"]
+
+[ext_resource type="Texture2D" uid="uid://x31i23d4txpf" path="res://assets/2D_TOPDOWN_PIXELART_CARS.png" id="1_k04wa"]
+
+[node name="Car" type="Sprite2D" unique_id=1220700557]
+texture_filter = 1
+texture = ExtResource("1_k04wa")
+hframes = 8
+vframes = 6

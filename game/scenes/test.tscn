@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://bav5otjbchbsh"]
+
+[ext_resource type="Texture2D" uid="uid://dpkabcrtgg3q3" path="res://assets/image_2024-03-02_131934629.png" id="1_errlg"]
+[ext_resource type="PackedScene" uid="uid://c0didsv7dx62i" path="res://scenes/sprites/car.tscn" id="2_bl13t"]
+[ext_resource type="Script" uid="uid://clkspw3dmfwmh" path="res://scripts/car.gd" id="2_iyx0m"]
+[ext_resource type="PackedScene" uid="uid://cm1oqj54hng44" path="res://scenes/server/server_input.tscn" id="4_74lek"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_iq4dh"]
+size = Vector2(26, 59)
+
+[node name="Node2D" type="Node2D" unique_id=283780713]
+
+[node name="Image20240302131934629" type="Sprite2D" parent="." unique_id=765179725]
+position = Vector2(647, 363)
+texture = ExtResource("1_errlg")
+
+[node name="Car" type="CharacterBody2D" parent="." unique_id=540012721 node_paths=PackedStringArray("input_source")]
+position = Vector2(559, 322)
+scale = Vector2(1.25, 1.25)
+script = ExtResource("2_iyx0m")
+input_source = NodePath("../ServerInput")
+
+[node name="Car" parent="Car" unique_id=1220700557 instance=ExtResource("2_bl13t")]
+rotation = 1.5707964
+scale = Vector2(1.25, 1.25)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Car" unique_id=1643313944]
+position = Vector2(0, -1.5)
+rotation = 1.5707964
+scale = Vector2(1.2499999, 1.2499999)
+shape = SubResource("RectangleShape2D_iq4dh")
+
+[node name="ServerInput" parent="." unique_id=1210669600 instance=ExtResource("4_74lek")]
