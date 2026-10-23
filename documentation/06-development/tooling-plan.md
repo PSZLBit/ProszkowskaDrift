@@ -85,17 +85,26 @@ Add per component, when the component exists.
 
 ## CI Quality Gates
 
-Planned for the first component scaffold (M1), free tier only:
+The Go server scaffold (S0-04, 2026-10-21) and the documentation site
+activated the free-tier gates that do not need extra tooling:
 
-1. Go job: `go test -race ./...`, `go vet ./...`, build.
+1. Go job: `go test -race ./...`, `go vet ./...`, build — active in
+   `.github/workflows/server.yml` since the `server/` scaffold.
 2. Android job: Gradle `assembleDebug` with cached dependencies; upload the APK.
+   Trigger: `controller-android/` scaffold.
 3. Godot job: headless logic tests when the test addon is chosen; export only on
-   tags if CI time becomes a problem.
+   tags if CI time becomes a problem. Trigger: `game/` test setup.
 4. Docs job: `mkdocs build --strict` when documentation, the MkDocs config, or
-   its requirements change.
-5. Cache Go modules, Gradle, and Godot downloads where possible.
-6. Required checks for `main`: Go tests/vet and the Android build. Add Godot
-   tests when configured.
+   its requirements change — active in `.github/workflows/docs.yml`.
+5. Cache Go modules, Gradle, and Godot downloads where possible; the Go job
+   caches modules through `actions/setup-go`.
+6. Required checks for `main`: Go tests/vet and the Android build. Branch
+   protection is a repository-settings task and is not configured yet.
+
+Pending in the Go job: `govulncheck ./...` (trigger met with the server
+scaffold; wire it pinned to a version). Pending overall: commit-message
+validation — its trigger ("first CI workflow") is now met; add a small script
+run by CI, not a Node tool chain.
 
 No containers, cloud runners, or paid services. If a check cannot run, the PR
 must say so (Definition of Done in `workflow.md`).

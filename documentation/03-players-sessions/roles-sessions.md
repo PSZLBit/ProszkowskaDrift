@@ -1,7 +1,7 @@
 # Players, Sessions, and Permissions
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-10-22
 
 There are no accounts. A play session is local and short-lived. Players are
 identified by slot color and `P1`–`P4`; no names or personal profiles are stored.
@@ -12,8 +12,8 @@ identified by slot color and `P1`–`P4`; no names or personal profiles are stor
   Can send input for their slot, see their task/score/time, and leave. A player
   cannot start, pause, reset, or kick.
 - `Host` — the person operating the server laptop and the display. Starts,
-  pauses, resumes, resets, and ends rounds; resets or kicks slots; can end the
-  session. The host does not play in MVP.
+  pauses, resumes, resets, and ends rounds; kicks slots; can end the session.
+  The host does not play in MVP.
 - `Spectator` — watches the big screen. No controller, no interaction, no data.
 
 ## Permission Matrix
@@ -24,7 +24,7 @@ identified by slot color and `P1`–`P4`; no names or personal profiles are stor
 | Send input for own slot | yes (while playing) | no |
 | View task, score, round time | own slot only | all slots on display |
 | Start / pause / resume / reset / end round | no | yes |
-| Kick or reset a slot | no | yes |
+| Kick a slot | no | yes |
 | End session | no | yes |
 | Start servers or game process | no | yes |
 
@@ -38,7 +38,7 @@ never used as authorization.
 - Each tablet stores a random device token in app storage. The server maps the
   token to a slot. The token is not a name, account, or personal profile.
 - On reconnect, the tablet sends the same token and reclaims its slot. The host
-  can reset a slot if a tablet is replaced or the token is lost.
+  can kick a slot if a tablet is replaced or the token is lost.
 - QR scanning or manual address entry exists only as a setup fallback. It is not
   part of the normal player flow.
 - A tablet that connects for the first time while no slot is free is rejected

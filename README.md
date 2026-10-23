@@ -21,7 +21,10 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
 ## Components
 
 - `server/` — Go session server: slots, input validation, reconnects, host
-  commands, game process supervision. (Planned; not scaffolded.)
+  commands, session timers, and recovery signals. Sprint 0 slice: controller
+  and game WebSocket endpoints, in-memory slots, validation, all-disconnected
+  pause, `/healthz`, and fake clients. Game process supervision is not
+  implemented yet. See [`server/README.md`](server/README.md).
 - `game/` — Godot 4 game and fullscreen display: map, movement, collisions,
   parking detection, scoring, HUD. (Scaffolded.)
 - `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
@@ -45,12 +48,12 @@ and [`adr-0002-legacy-android-controller.md`](documentation/05-architecture-deci
 
 ## Project Status
 
-Planning and Sprint 0. The game project is scaffolded; no production gameplay
-exists yet. The festival is 2026-11-24 and the internal festival-ready target
-is 2026-11-18. The committed scope is the Minimum Festival Demo (MFD); the full
-MVP is a stretch goal. The next milestone is a one-week technical spike: prove
-the Kotlin app on the four tablets, the Go↔Godot connection, input latency, and
-display readability.
+Planning and Sprint 0. The Go session server slice exists: controller and game
+WebSocket endpoints, four slots, input validation, reconnects, heartbeats, the
+minimal host command path, and fake client tools. Godot, the Android controller,
+scoring, and game supervision are not implemented yet. The festival is
+2026-11-24 and the internal festival-ready target is 2026-11-18. The committed
+scope is the Minimum Festival Demo (MFD); the full MVP is a stretch goal.
 
 Work board: <https://github.com/orgs/PSZLBit/projects/1>.
 
@@ -62,9 +65,10 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
 
 - Git. On Windows, install Git for Windows. Git Bash is optional for setup; the
   `pre-push` hook runs through Git's bundled shell.
+- Go 1.23 or newer for the `server/` component.
 
-Godot 4.7 is required for the scaffolded game project. Go and the Android SDK
-setup steps will be added when those components are scaffolded.
+Godot and the Android SDK are not required yet; their setup steps will be added
+when those components are scaffolded.
 
 ### Clone and set up
 

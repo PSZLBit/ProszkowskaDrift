@@ -6,9 +6,10 @@ Last updated: 2026-10-22
 ## Monorepo Layout
 
 - `server/` — Go session server, WebSocket endpoints, validation, supervisor,
-  and launcher scripts. (Not yet scaffolded.)
-- `game/` — Godot 4 project: map, simulation, scoring, HUD, display.
-  (Scaffolded.)
+  and launcher scripts. The Sprint 0 session/input slice is scaffolded; game
+  supervision and the launcher are later work.
+- `game/` — Godot 4 project: map, simulation, scoring, HUD, display. (Not yet
+  scaffolded.)
 - `controller-android/` — minimal Kotlin Android controller for API 19. (Not yet
   scaffolded.)
 - `documentation/` — source of truth and decision history.
