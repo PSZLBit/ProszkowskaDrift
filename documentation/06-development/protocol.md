@@ -457,7 +457,9 @@ Deviations and open points:
   logs the reason and closes the connection. The current contract has no
   game-to-server error message.
 - The server remains the phase authority. The game tracks the last accepted
-  `host_command` only to choose the correct local host-key action.
+  `host_command` only to choose the correct local host-key action. The game does
+  not send `phase` messages yet, so the server cannot get `timeLeftMs` or task
+  state from this scaffold.
 - `host_command` `kick` carries the slot and clears that car. The server also
   emits `player_left` with reason `kicked`, so the slot is cleared twice; the
   operation is idempotent.
