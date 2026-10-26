@@ -8,6 +8,7 @@ extends SceneTree
 const GameProtocol := preload("res://scripts/game_protocol.gd")
 const SlotInputStore := preload("res://scripts/slot_input_store.gd")
 const CarScript := preload("res://scripts/car.gd")
+const ServerInputScript := preload("res://scripts/server_input.gd")
 
 var _checks := 0
 var _failures := 0
@@ -27,6 +28,7 @@ func _initialize() -> void:
 	_test_protocol()
 	_test_input_store()
 	_test_car_movement()
+	_test_quit_key()
 	_test_main_scene()
 	_test_project_settings()
 
@@ -252,6 +254,29 @@ func _test_car_movement() -> void:
 	car.input_source = null
 	source.free()
 	car.free()
+
+
+func _test_quit_key() -> void:
+	var press := InputEventKey.new()
+	press.pressed = true
+	press.keycode = KEY_Q
+	_check(ServerInputScript.is_quit_event(press), "Q requests quit")
+
+	press.echo = true
+	_check(not ServerInputScript.is_quit_event(press), "key repeat does not request quit")
+
+	press.echo = false
+	press.pressed = false
+	_check(not ServerInputScript.is_quit_event(press), "released Q does not request quit")
+
+	press.pressed = true
+	press.keycode = KEY_P
+	_check(not ServerInputScript.is_quit_event(press), "P does not request quit")
+
+	_check(
+		not ServerInputScript.is_quit_event(InputEventMouseButton.new()),
+		"a mouse event does not request quit",
+	)
 
 
 func _test_main_scene() -> void:

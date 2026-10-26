@@ -97,8 +97,8 @@ Godot 4.7.2 project with:
   reconnecting) and exponential reconnect backoff from 1 s to 30 s for other
   disconnects.
 - Host keys `Enter` (start/resume), `P` (pause/resume), and `R` (reset) that
-  send `host_request`. `dev_auto_start_round` is development-only and defaults
-  to `false`.
+  send `host_request`. `Q` exits the local game process without a server
+  request. `dev_auto_start_round` is development-only and defaults to `false`.
 - `game/scenes/main.tscn`: placeholder background, boundary walls, and four cars
   on slots 1–4, configured for a 1920×1080 fullscreen window.
 - `game/tests/run_tests.gd`: headless tests for protocol parsing, config

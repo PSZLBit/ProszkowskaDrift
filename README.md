@@ -134,9 +134,9 @@ cd server
 go run ./cmd/fakecontroller -clients 4 -duration 60s
 ```
 
-Press `Enter` in the game window to start the round. For an automated smoke run,
-use `godot --headless --path game -- --dev-auto-start`; the flag is
-development-only.
+Press `Enter` in the game window to start the round and `Q` to quit. For an
+automated smoke run, use `godot --headless --path game -- --dev-auto-start`;
+the flag is development-only.
 
 Run the Godot tests:
 

@@ -101,6 +101,8 @@ The game scaffold uses a small headless GDScript runner
 - Car input-source wiring, including passing the car's own slot.
 - Main-scene structure: four cars, slots 1–4, collision layers, floating motion.
 - Project settings: main scene, 1920×1080 viewport, and fullscreen mode.
+- Local quit key: `Q` requests quit, while key repeat, key release, other keys,
+  and mouse events do not.
 
 Commands, from the repository root:
 
@@ -271,7 +273,7 @@ Procedure:
 
 Observed:
 
-- The headless runner passes 96 checks on 2026-10-26.
+- The headless runner passes 101 checks on 2026-10-26.
 - Handshake: `game_hello` protocol 1, then `config` with a 180000 ms round,
   5 tasks, and 4 max players; `game_ready` was accepted.
 - Four `player_joined` messages for slots 1–4 with labels `P1`–`P4` and colors
@@ -307,6 +309,7 @@ Environment: target laptop and TV, fullscreen 1920×1080, four fake controllers.
 | 5 | Press `P` and `R`. | Pause/resume and reset affect all cars and the server phase correctly. |
 | 6 | Restart the server. | The game reconnects, sends `game_ready`, and does not duplicate cars. |
 | 7 | Watch for at least one minute and record measurements. | 60 FPS target; note stutter, tearing, input-to-visible latency, and readability from the spectator distance. |
+| 8 | Press `Q` while the game window is focused. | The game exits immediately; the server treats the game as unavailable and waits for a restart. |
 
 Record the date, Godot version, server commit, FPS/tearing observations, and
 pass/fail per step. Do not mark the display criteria as passed until this check

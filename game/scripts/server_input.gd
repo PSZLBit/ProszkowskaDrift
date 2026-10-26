@@ -121,7 +121,22 @@ func clear_input() -> void:
 	_saw_input.clear()
 
 
+## True for a fresh Q key press. Q quits the local game process, so it is
+## checked before the connection and host-authority guards.
+static func is_quit_event(event: InputEvent) -> bool:
+	if not (event is InputEventKey):
+		return false
+
+	var key := event as InputEventKey
+	return key.pressed and not key.echo and key.keycode == KEY_Q
+
+
 func _unhandled_input(event: InputEvent) -> void:
+	if is_quit_event(event):
+		print("[ServerInput] Quit key pressed; exiting.")
+		get_tree().quit()
+		return
+
 	if not _connected or not _game_ready_sent:
 		return
 	if not (event is InputEventKey):

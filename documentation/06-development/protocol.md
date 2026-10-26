@@ -446,8 +446,8 @@ Implemented now:
   error frame may not be delivered. Other disconnects retry with exponential
   backoff from 1 s to 30 s. A missing token also fails fast.
 - Host keys `Enter` (start or resume), `P` (pause or resume), and `R` (reset)
-  send `host_request`. `dev_auto_start_round` is a development flag, default
-  `false`.
+  send `host_request`. `Q` exits the local game process without a server
+  request. `dev_auto_start_round` is a development flag, default `false`.
 - A main scene, 1920×1080 viewport, and fullscreen mode are configured in
   `game/project.godot`.
 

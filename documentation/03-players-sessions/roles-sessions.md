@@ -1,7 +1,7 @@
 # Players, Sessions, and Permissions
 
 Status: Decided
-Last updated: 2026-10-22
+Last updated: 2026-10-26
 
 There are no accounts. A play session is local and short-lived. Players are
 identified by slot color and `P1`–`P4`; no names or personal profiles are stored.
@@ -79,6 +79,7 @@ never used as authorization.
 - `Enter` — start round / confirm next round.
 - `P` — pause or resume.
 - `R` — reset current round to `Ready`.
+- `Q` — quit the local game process.
 - `1`–`4` — kick or disable the corresponding slot after confirmation.
 - `Esc` — leave fullscreen or open the host quit prompt.
 
