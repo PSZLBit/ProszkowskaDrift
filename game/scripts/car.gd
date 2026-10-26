@@ -8,8 +8,17 @@ extends CharacterBody2D
 ## low speed, friction, and a maximum speed. No drift mechanic in MVP.
 ##
 ## Input comes from an injected source that provides normalized `steer` and
-## `throttle` values through `get_input()`. The controller input scheme is still
-## TBD (D-14); the Sprint 0 spike uses `ServerInput`.
+## `throttle` values through `get_input(slot)`. The controller input scheme is
+## still TBD (D-14); the scaffold wires every car to the shared `ServerInput`.
+
+## Player slot this car follows, 1-4. The server input store is keyed by slot.
+@export_range(1, 4, 1) var slot := 1
+
+## Sprite-sheet frame used by this car's placeholder body.
+@export var sprite_frame := 0
+
+## Optional label override; when empty the car shows "P<slot>".
+@export var label_text := ""
 
 ## Turn rate at full forward speed, in degrees per second.
 @export var max_turn_speed_deg := 220.0
@@ -40,6 +49,16 @@ var throttle := 0.0
 var _speed := 0.0
 
 
+func _ready() -> void:
+	var sprite := get_node_or_null("Sprite2D") as Sprite2D
+	if sprite != null:
+		sprite.frame = sprite_frame
+
+	var label := get_node_or_null("Label") as Label
+	if label != null:
+		label.text = label_text if not label_text.is_empty() else "P%d" % slot
+
+
 func _physics_process(delta: float) -> void:
 	var input := _gather_input()
 	steer = input.x
@@ -60,12 +79,12 @@ func _physics_process(delta: float) -> void:
 
 
 ## Returns the current input as (steer, throttle), each in [-1, 1].
-## A missing source or a source without get_input() means neutral input.
+## A missing source or a source without get_input(slot) means neutral input.
 func _gather_input() -> Vector2:
 	if input_source == null or not input_source.has_method("get_input"):
 		return Vector2.ZERO
 
-	var value: Variant = input_source.call("get_input")
+	var value: Variant = input_source.call("get_input", slot)
 	if value is Vector2:
 		return value
 	return Vector2.ZERO
