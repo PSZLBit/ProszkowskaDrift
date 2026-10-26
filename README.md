@@ -25,8 +25,9 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
   and game WebSocket endpoints, in-memory slots, validation, all-disconnected
   pause, `/healthz`, and fake clients. Game process supervision is not
   implemented yet. See [`server/README.md`](server/README.md).
-- `game/` — Godot 4 game and fullscreen display: map, movement, collisions,
-  parking detection, scoring, HUD. (Scaffolded.)
+- `game/` — Godot 4 game and fullscreen display. Sprint 1 scaffold: one game
+  connection, four slot-keyed cars, placeholder map, fullscreen settings, and
+  headless tests. Parking detection, scoring, and HUD are later work.
 - `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
   (Planned; not scaffolded.)
 - `documentation/` — source of truth: vision, game design, requirements,
@@ -48,12 +49,14 @@ and [`adr-0002-legacy-android-controller.md`](documentation/05-architecture-deci
 
 ## Project Status
 
-Planning and Sprint 0. The Go session server slice exists: controller and game
-WebSocket endpoints, four slots, input validation, reconnects, heartbeats, the
-minimal host command path, and fake client tools. Godot, the Android controller,
-scoring, and game supervision are not implemented yet. The festival is
-2026-11-24 and the internal festival-ready target is 2026-11-18. The committed
-scope is the Minimum Festival Demo (MFD); the full MVP is a stretch goal.
+Sprint 1. The Go session server slice exists: controller and game WebSocket
+endpoints, four slots, input validation, reconnects, heartbeats, the minimal
+host command path, and fake client tools. The Godot scaffold exists: one game
+connection, four slot-keyed cars, placeholder map, fullscreen settings, and
+headless tests. The Android controller, scoring, game supervision, and the
+target-laptop/TV evidence are not complete yet. The festival is 2026-11-24 and
+the internal festival-ready target is 2026-11-18. The committed scope is the
+Minimum Festival Demo (MFD); the full MVP is a stretch goal.
 
 Work board: <https://github.com/orgs/PSZLBit/projects/1>.
 
@@ -66,9 +69,10 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
 - Git. On Windows, install Git for Windows. Git Bash is optional for setup; the
   `pre-push` hook runs through Git's bundled shell.
 - Go 1.23 or newer for the `server/` component.
+- Godot 4.7.2 for the `game/` component.
 
-Godot and the Android SDK are not required yet; their setup steps will be added
-when those components are scaffolded.
+The Android SDK is not required yet; its setup steps will be added when the
+controller is scaffolded.
 
 ### Clone and set up
 
@@ -105,6 +109,41 @@ git config --local --get core.hooksPath
 
 The local hook catches accidental direct pushes. It is not a security boundary:
 GitHub rules for `main` must still require a pull request and review.
+
+### Run the game locally
+
+Start the server in one terminal:
+
+```sh
+cd server
+go run ./cmd/server -game-token dev-token -log-level debug
+```
+
+Start the Godot project in another terminal. `PD_GAME_TOKEN` supplies the
+development token; the project does not commit one:
+
+```powershell
+$env:PD_GAME_TOKEN = "dev-token"
+godot --path game
+```
+
+Connect four fake controllers to exercise all cars:
+
+```sh
+cd server
+go run ./cmd/fakecontroller -clients 4 -duration 60s
+```
+
+Press `Enter` in the game window to start the round. For an automated smoke run,
+use `godot --headless --path game -- --dev-auto-start`; the flag is
+development-only.
+
+Run the Godot tests:
+
+```sh
+godot --headless --path game --import
+godot --headless --path game --script res://tests/run_tests.gd
+```
 
 For a local documentation preview, follow the pinned toolchain and commands in
 [`documentation/06-development/testing.md`](documentation/06-development/testing.md#documentation-site-checks).

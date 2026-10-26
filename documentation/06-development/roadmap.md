@@ -1,7 +1,7 @@
 # Delivery Roadmap
 
 Status: Decided
-Last updated: 2026-10-21
+Last updated: 2026-10-26
 
 Festival: Tuesday 2026-11-24, confirmed with the organizers on 2026-10-21.
 Internal festival-ready target: Wednesday 2026-11-18. The days from 2026-11-19
@@ -52,12 +52,12 @@ Goal: prove the risky parts before building the game.
 - Build a throwaway Kotlin app that sends WebSocket input to Go on all four
   tablets.
 - Start Godot on the target laptop, connect it to Go, and render four moving
-  rectangles on the TV.
+  cars on the TV.
 - Measure input-to-display latency, Wi-Fi stability, charging, and readability.
 - Confirm the Go supervisor can start/restart Godot.
 - Write the spike results into the decision log/docs.
 
-**Exit criteria:** four tablets move four rectangles through Go on the target
+**Exit criteria:** four tablets move four cars through Go on the target
 display; the measured path is understood; the Android toolchain is proven or a
 fallback decision is recorded.
 
@@ -142,7 +142,7 @@ before the festival:
 | S0-02 Collect tablet specs and battery health | ops | QA/Controller | Hardware inventory |
 | S0-03 Minimal Kotlin WebSocket app on all 4 tablets | controller | Controller/UI | APK + test notes |
 | S0-04 Go WebSocket server with fake controller | server | Backend | Running server + tests |
-| S0-05 Godot connects to Go and renders 4 rectangles | game | Game | Fullscreen demo |
+| S0-05 Godot game scaffold connects to Go and renders four slot-keyed cars | game | Game | Scaffold + headless tests; target-laptop/TV check pending (#13) |
 | S0-06 Measure latency and Wi-Fi stability | ops | Backend/QA | Measurements + verdict |
 | S0-07 Supervisor starts/restarts Godot | server | Backend | Crash-recovery demo |
 | S0-08 GitHub board, templates, DoR/DoD, CI skeleton | process | PM/Backend | Project setup |

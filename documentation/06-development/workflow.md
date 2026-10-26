@@ -1,15 +1,17 @@
 # Development Workflow
 
 Status: Decided
-Last updated: 2026-10-22
+Last updated: 2026-10-26
 
 ## Monorepo Layout
 
 - `server/` — Go session server, WebSocket endpoints, validation, supervisor,
   and launcher scripts. The Sprint 0 session/input slice is scaffolded; game
   supervision and the launcher are later work.
-- `game/` — Godot 4 project: map, simulation, scoring, HUD, display. (Not yet
-  scaffolded.)
+- `game/` — Godot 4 project: one game connection, four slot-keyed cars,
+  placeholder map, fullscreen display settings, and headless tests. Parking
+  detection, scoring, and HUD are later work. `game/scenes/main.tscn` is the
+  main scene.
 - `controller-android/` — minimal Kotlin Android controller for API 19. (Not yet
   scaffolded.)
 - `documentation/` — source of truth and decision history.
@@ -17,6 +19,21 @@ Last updated: 2026-10-22
 
 The four top-level component directories are fixed by D-07. Additional files
 live inside the relevant component.
+
+## Local Commands
+
+Run from the repository root unless a command changes directory.
+
+- Server tests: `cd server`, then `go test -race ./...` and `go vet ./...`.
+- Game tests: `godot --headless --path game --import`, then
+  `godot --headless --path game --script res://tests/run_tests.gd`.
+- Documentation site: `mkdocs build --strict`.
+- Local run instructions for server, game, and fake controllers are in the root
+  `README.md`.
+
+Controller commands will be added when `controller-android/` is scaffolded.
+CI runs the server and game commands in `.github/workflows/server.yml` and
+`.github/workflows/game.yml`.
 
 ## Team and Responsibilities
 

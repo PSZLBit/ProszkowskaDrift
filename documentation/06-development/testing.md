@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-10-23
+Last updated: 2026-10-26
 
 ## Goals
 
@@ -89,21 +89,31 @@ heartbeat check are documented in `server/README.md` and summarized in
 
 ## Godot Tests
 
-Use a lightweight test addon (GUT or a small headless script runner) for pure
-logic that can be separated from scenes:
+The game scaffold uses a small headless GDScript runner
+(`game/tests/run_tests.gd`) with no addon dependency. It covers:
 
-- Time score decay and floor.
-- Precision score for center offset and angle, including boundary values.
-- Collision penalty cap.
-- Finish bonus and cap.
-- Task assignment: unique active targets, no repeats, pool return.
-- Parking detection: all corners inside, speed threshold, 0.5 s hold.
-- Round state transitions: ready → countdown → playing → results.
-- Tie-breakers.
-- Auto-skip at 45 s.
+- Protocol envelope parsing, version rejection, payload validation, and fatal
+  error classification.
+- `game_hello` and `config` validation, including rejected ranges.
+- Slot-keyed input mapping, per-slot timeouts, sequence reset, and clearing one
+  slot without affecting the others.
+- Car throttle, brake/reverse, coast, and steering math.
+- Car input-source wiring, including passing the car's own slot.
+- Main-scene structure: four cars, slots 1–4, collision layers, floating motion.
+- Project settings: main scene, 1920×1080 viewport, and fullscreen mode.
 
-Scene-level smoke tests may verify that the main scene loads headless and the
-map/spawn/target nodes exist. Visual quality is a manual test.
+Commands, from the repository root:
+
+```sh
+godot --headless --path game --import
+godot --headless --path game --script res://tests/run_tests.gd
+```
+
+CI runs the same commands on pull requests touching `game/`
+(`.github/workflows/game.yml`).
+
+Still future: time/precision scoring, task assignment, parking detection, round
+transitions, tie-breakers, auto-skip, and a physics-level map/target test.
 
 ## Contract and Integration Tests
 
@@ -126,7 +136,7 @@ Automated in S0-04:
   configured threshold; a protocol version mismatch closes it immediately.
 
 Still future: the latency test (timestamp a round trip on the local network and
-record p50/p95), late join, game supervision, and real Godot integration.
+record p50/p95), late join, game supervision, and the target-display/TV run.
 
 ## Manual Server Checks
 
@@ -164,8 +174,8 @@ These checks use the S0-04 fake clients. Details and expected output are in
    `kicked`.
 
 Record the date, commit, commands, and observed result for these checks. A real
-Android controller and the real Godot client are not available yet; those
-hardware checks remain open.
+Android controller and the target TV run are not available yet; those hardware
+checks remain open.
 
 ## Android 4.4.2 Hardware Matrix
 
@@ -205,82 +215,102 @@ here (or in the issue) before running it, run it on the target laptop, and
 record the result. A scratch scene or scratch input source is enough; do not
 commit scratch edits with it.
 
-### ServerInput spike (`game/scripts/server_input.gd`)
+### Game scaffold input path (`game/scripts/server_input.gd`)
 
-Recorded: 2026-10-22. Result: pass for the tested path.
+Recorded: 2026-10-26. Result: pass for the automated and headless path; the
+target-display/TV run is still pending in issue #13.
 
-Scope: Sprint 0 spike (D-18) for the single-car game input path. It does not
-promote the protocol from `Draft`, does not verify the Android controller, and
-does not replace the final host/start flow. `auto_start_round` is a spike
-convenience, not a production host flow.
-
-Purpose: verify that the Godot game can connect to the Go game endpoint,
-complete the handshake, stay connected with heartbeats, start a round, receive
-forwarded controller input, and drive the wired car.
+Scope: the game scaffold promoted from S0-05 (D-32). It verifies one game
+WebSocket connection, the handshake, heartbeats, four slot-keyed cars,
+per-slot input, timeout, and host start. It does not verify the Android
+controller, TV readability, or measured latency.
 
 Environment:
 
 - Godot 4.7.2 stable.
-- Server branch `feat/s0-04-go-server`, commit `ac166e2`.
-- One `fakecontroller` client; no Android tablet and no TV.
-- `game/scenes/test.tscn`, with `ServerInput` and `Car.input_source` wired.
+- Server at `main` (`fbc1dc6`; PR #30 merged).
+- Four `fakecontroller` clients; no Android tablet and no TV.
+- `game/scenes/main.tscn`; no token is committed; `PD_GAME_TOKEN=dev-token`.
 
 Procedure:
 
-1. Create a temporary worktree from the server branch and start the server:
+1. Start the server from `server/`:
 
    ```powershell
-   git worktree add --detach <temp-dir> origin/feat/s0-04-go-server
-   cd <temp-dir>/server
    go run ./cmd/server -game-token dev-token -log-level debug
    ```
 
-2. In a second terminal, connect one fake controller:
+2. In a second terminal, connect four fake controllers:
 
    ```powershell
-   cd <temp-dir>/server
-   go run ./cmd/fakecontroller -clients 1 -duration 15s
+   cd server
+   go run ./cmd/fakecontroller -clients 4 -duration 15s
    ```
 
-3. Run `game/scenes/test.tscn` with F6 in Godot. The node connects to
-   `ws://127.0.0.1:8080/ws/game?token=dev-token`, sends `game_ready`, and
-   auto-sends `host_request start` after one second.
+3. Set the token and run the project from Godot (F5), or run the headless
+   smoke path:
 
-4. Check the Godot Output panel and watch the car. For this record, a temporary
-   headless wrapper loaded the same scene and printed the car position; the
-   wrapper was deleted after the run.
+   ```powershell
+   $env:PD_GAME_TOKEN = "dev-token"
+   godot --headless --path game --quit-after 600 -- --dev-auto-start
+   ```
 
-5. To check the 500 ms input timeout, restart the fake controller with
-   `-silent-after 3s`. The connection stays open while input stops; the car
-   should coast to a stop.
+   `--dev-auto-start` is a development-only flag; the normal host path is
+   `Enter` in the game window.
 
-6. For the connection-timeout check, point `server_url` at an unused local port
-   with no server running.
+4. In the window path, press `Enter` when the four controllers have joined. The
+   server must accept `host_request start` and forward input only after the
+   phase becomes `playing`.
+
+5. Check that each car moves independently and that stopping one fake
+   controller or leaving its slot stops only that car. Restart the server and
+   confirm the game reconnects and sends `game_ready` again.
+
+6. For the auth-failure check, start the game with a wrong `PD_GAME_TOKEN` and
+   confirm it logs the fatal error and does not keep reconnecting.
 
 Observed:
 
-- Handshake: `game_hello` with protocol 1, then `config` with a 180000 ms round,
-  5 tasks, and 4 max players.
-- `game_ready` was accepted and the server logged `game heartbeat` messages
-  every second, so the heartbeat requirement was met.
-- `player_joined slot=1`; `host_request start` produced `host_command start` and
-  the server logged `host command accepted ... phase=playing`.
-- First forwarded sample: `steer=0.150`, `throttle=0.600`.
-- The wired car moved from `(559, 322)` at the start to `(725.7, 342.7)` after
-  2 s and `(1222.7, 818.7)` after 5 s, so forwarded input reached the car through
-  `Car.input_source`.
-- Input timeout: after the fake controller went silent, `get_input()` returned
-  `(0.15, 0.6)` at 1.5 s and `(0.0, 0.0)` at 4.0 s; the car velocity reached zero.
-  This confirms the timeout path, not the exact 500 ms boundary.
-- Negative check: with an unused port, the node logged `connect timed out;
-  reconnecting` after about five seconds.
+- The headless runner passes 96 checks on 2026-10-26.
+- Handshake: `game_hello` protocol 1, then `config` with a 180000 ms round,
+  5 tasks, and 4 max players; `game_ready` was accepted.
+- Four `player_joined` messages for slots 1–4 with labels `P1`–`P4` and colors
+  red, blue, green, and yellow.
+- `host_request start` produced `host_command start`; forwarded input arrived
+  for all four slots independently (for example slot 1 `steer=0.600`,
+  `throttle=0.600` and slot 3 `steer=0.150`, `throttle=0.600`).
+- The main scene loads headless with four cars on slots 1–4, collision layer 2,
+  mask 1, floating motion, and each car wired to the shared `ServerInput`.
+- A temporary headless wrapper loaded `main.tscn` and ran it for 6 s with the
+  four fake controllers. All four cars moved from their spawn points (for
+  example slot 2 from `(350, 500)` to `(1021, 1020)`), so forwarded input reached
+  the scene. The wrapper was deleted after the run.
+- Wrong `PD_GAME_TOKEN`: the game logged `Fatal auth_failed` once and did not
+  reconnect, so the close-reason path works even when the final error frame is
+  not delivered.
+- Not covered: visible movement, per-slot leave/kick on the real display, TV
+  readability, FPS/tearing, latency, and the Android controller. Per-slot
+  clearing and timeout are covered by the headless unit tests.
 
-Conclusion: the single-car Godot WebSocket path works for the spike. Keep the
-protocol and input decisions open; see `protocol.md` and D-14.
+### Four-car fullscreen display
 
-Not covered by this check: the exact 500 ms timeout boundary, reconnect after an
-established server connection drops, multiple cars, the Android controller, and
-visible latency on the TV.
+Run before claiming the S0-05 display criteria. Result: pending (issue #13).
+
+Environment: target laptop and TV, fullscreen 1920×1080, four fake controllers.
+
+| # | Step | Pass condition |
+|---|------|----------------|
+| 1 | Start the server, connect four fake controllers, and run the project. | The window is fullscreen 1920×1080; four cars labelled P1–P4 are visible with distinct colors. |
+| 2 | Press `Enter` to start. | The server accepts the start; all four cars move independently. |
+| 3 | Drive each car into the environment and into another car. | Environment collisions reduce speed; cars pass through/overlap each other without colliding; boundary walls keep cars on-screen. |
+| 4 | Stop one fake controller without leaving, then reconnect it. | Only that car stops; the other cars continue; the reconnected car resumes in the same slot. |
+| 5 | Press `P` and `R`. | Pause/resume and reset affect all cars and the server phase correctly. |
+| 6 | Restart the server. | The game reconnects, sends `game_ready`, and does not duplicate cars. |
+| 7 | Watch for at least one minute and record measurements. | 60 FPS target; note stutter, tearing, input-to-visible latency, and readability from the spectator distance. |
+
+Record the date, Godot version, server commit, FPS/tearing observations, and
+pass/fail per step. Do not mark the display criteria as passed until this check
+has been run on the target laptop/TV.
 
 ### Car movement (`game/scripts/car.gd`)
 
@@ -288,23 +318,23 @@ Run when the car script, its input handling, or its tuning changes.
 Environment: Godot editor on the target laptop.
 
 The car reads `(steer, throttle)` from its assigned `input_source` through
-`get_input()`. With no source assigned, it returns neutral input and coasts.
+`get_input(slot)`. With no source assigned, it returns neutral input and coasts.
 
 | # | Step | Pass condition |
 |---|------|----------------|
-| 1 | Open a scene with `car.gd` on a `CharacterBody2D` (Sprite2D + rectangular collision shape) and a `StaticBody2D` wall on the same collision layer. Leave `Input Source` empty and run the scene. | Car does not move. |
+| 1 | Open `game/scenes/sprites/car.tscn` (CharacterBody2D + Sprite2D + collision shape) and add a `StaticBody2D` wall on collision layer 1. Leave `Input Source` empty and run the scene. | Car does not move. |
 | 2 | Create a scratch `Node` with the script below and assign it to `Car.input_source`. Run the scene and hold Up. | Throttle accelerates to `max_speed` and holds; releasing Up coasts to a stop. |
 | 3 | Hold Down while moving forward, then at a stop. | Brake decelerates to 0 first and only then reverses, capped at `max_reverse_speed`. |
 | 4 | With the scratch source active, test steering at 0 speed / full speed / in reverse. | No turning at 0 speed; turn rate scales with speed; turning inverts in reverse; travel direction matches heading (no sliding). |
 | 5 | Drive into the wall. | Car slides along it, speed visibly reduced, car never destroyed; repeated contact does not tunnel or jitter. |
-| 6 | Remove the scratch source and set `Car.input_source` back to `../ServerInput`; save the scene. | Scene returns to server-driven input; no scratch files are committed. |
+| 6 | Remove the scratch source and discard the local scene changes. | No scratch files or scratch wiring are committed; `main.tscn` already wires each car to `../ServerInput`. |
 
 Scratch keyboard source:
 
 ```gdscript
 extends Node
 
-func get_input() -> Vector2:
+func get_input(_slot: int) -> Vector2:
 	return Vector2(
 		Input.get_axis("ui_left", "ui_right"),
 		Input.get_axis("ui_down", "ui_up"),
@@ -322,16 +352,16 @@ details, triggers, and the "do not add yet" list live in
 
 - `server`: `go test -race ./...`, `go vet ./...`, build.
 - `controller-android`: Gradle `assembleDebug`; cache Gradle; upload APK artifact.
-- `game`: Godot headless tests where feasible; export is manual/tagged if CI is
-  too slow.
+- `game`: import the project headless and run `game/tests/run_tests.gd`; export
+  is manual/tagged if CI is too slow.
 - Docs: `mkdocs build --strict` when documentation, `mkdocs.yml`, or
   `requirements-docs.txt` change.
-- Required for merge: Go tests/vet and Android build. Godot headless tests are
-  required once configured.
+- Required for merge when branch protection is enabled: Go tests/vet and Godot
+  headless tests; the Android build joins when `controller-android/` is
+  scaffolded. Branch protection is still a repository-settings task.
 
-Server commands are documented above and in `server/README.md`. Android and
-Godot commands will be added here and in `README.md` when those components are
-scaffolded. Until then, report checks that could not run.
+Server commands are documented above and in `server/README.md`. Godot commands
+are documented above. Report any check that could not run.
 
 ## Developer Setup Check
 

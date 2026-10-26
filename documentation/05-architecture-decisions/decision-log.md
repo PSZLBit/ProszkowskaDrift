@@ -1,7 +1,7 @@
 # Decision Log
 
 Status: Decided
-Last updated: 2026-10-22
+Last updated: 2026-10-26
 
 Register of all team decisions. Newest entries on top.
 For larger decisions, create an ADR file in this folder using `_templates/adr.md`
@@ -9,6 +9,7 @@ and link it here.
 
 | Date       | ID   | Decision                                                                                                                                  | Status  | Owner |
 | ---------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----- |
+| 2026-10-26 | D-32 | The S0-05 Godot integration is promoted to the production `game/` scaffold after cleanup. The scaffold keeps one `/ws/game` connection, maps slots 1–4 to four cars with a slot-keyed input store, and validates protocol/config before play. Four-car/TV/FPS evidence remains tracked in issue #13 until the hardware check is recorded. D-18 continues to apply to throwaway prototype logic, not this scaffold. | Decided | Team  |
 | 2026-10-21 | D-31 | The festival date is 2026-11-24, confirmed with the organizers. The internal festival-ready target is 2026-11-18, with 2026-11-19–23 reserved for fixes, setup, and final rehearsal. The Minimum Festival Demo (MFD) is the committed scope and the full MVP is a stretch goal on a five-sprint calendar ([roadmap](../06-development/roadmap.md)). | Decided | Team  |
 | 2026-10-20 | D-30 | Project documentation is published as a read-only MkDocs site on GitHub Pages through GitHub Actions (first deployment pending Pages enablement); `documentation/` remains the source of truth and the in-repo router stays authoritative. MkDocs is pinned in `requirements-docs.txt` and CI runs `mkdocs build --strict`. | Decided | Team  |
 | 2026-10-19 | D-29 | On a task branch, commit each coherent step without waiting for a separate instruction; pushing, merging, and opening pull requests still require an explicit request. | Decided | Team  |
@@ -45,7 +46,8 @@ and link it here.
 
 | Date | Spike | Result | Evidence |
 |------|-------|--------|----------|
-| 2026-10-22 | Godot `ServerInput` single-car WebSocket path | Pass for the tested path: handshake, heartbeat, auto-start, forwarded input, input-timeout path, and wired-car movement. Exact timeout boundary and established-connection reconnect were not exercised. | [`testing.md`](../06-development/testing.md), "ServerInput spike" |
+| 2026-10-26 | Godot four-car game scaffold | Partial: four-car slot mapping, protocol/config validation, token/fatal-error handling, reconnect backoff, and headless tests implemented. Target laptop/TV run and FPS/tearing notes still pending (#13). | [`testing.md`](../06-development/testing.md), "Game scaffold input path"; `game/tests/run_tests.gd` |
+| 2026-10-22 | Godot `ServerInput` single-car WebSocket path | Pass for the tested path: handshake, heartbeat, auto-start, forwarded input, input-timeout path, and wired-car movement. Exact timeout boundary and established-connection reconnect were not exercised. | [PR #31](https://github.com/PSZLBit/ProszkowskaDrift/pull/31), single-car spike record |
 
 ## Rules
 
