@@ -1,7 +1,7 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-10-23
+Last updated: 2026-10-26
 
 Protocol version: `1` (MVP). The S0-04 server slice implements a subset of this
 contract; see "Sprint 0 Implementation Notes" at the end. Changing a field or
@@ -415,3 +415,57 @@ Deviations and open points:
 - A controller's `host_request` is an unknown type on the controller endpoint,
   so it is logged and dropped by design. There is no host request message for
   controllers.
+
+## Sprint 0 Implementation Notes (S0-05)
+
+The `game/` scaffold promoted from S0-05 (D-32) implements the contract above
+with these choices and deviations. This document stays `Draft`.
+
+Implemented now:
+
+- One `/ws/game` connection per game process. The server replaces the previous
+  game connection, so one `ServerInput` node owns the connection and all four
+  cars read from its slot-keyed input store.
+- Each slot has its own 500 ms input timeout, last sequence, and clear path.
+  `player_left` and `host_command` `kick` clear one slot; pause, reset, end, and
+  a connection loss clear every slot.
+- The game requires the protocol envelope and rejects a bare `InputData` object.
+- `game_hello.protocolVersion` and `config` values are validated before the game
+  sends `game_ready`; invalid values close the connection instead of starting a
+  partially configured round.
+- Input requires `slot` and `seq` and validates `steer`/`throttle` as finite
+  numbers in `[-1, 1]`. A duplicate or older sequence is ignored. `player_joined`
+  resets the slot, which handles the sequence reset after a controller
+  reconnect.
+- The game reads its token from the launcher/configuration; `PD_GAME_TOKEN` is
+  the development path. The token is not committed to the repository. S0-07
+  will inject a per-launch token.
+- `auth_failed`, `kicked`, and `protocol_mismatch` are fatal: the game stops
+  reconnecting. The same values are checked as WebSocket close reasons, because
+  the server can reject the game before or during the handshake and the final
+  error frame may not be delivered. Other disconnects retry with exponential
+  backoff from 1 s to 30 s. A missing token also fails fast.
+- Host keys `Enter` (start or resume), `P` (pause or resume), and `R` (reset)
+  send `host_request`. `Q` exits the local game process without a server
+  request. `dev_auto_start_round` is a development flag, default `false`.
+- A main scene, 1920×1080 viewport, and fullscreen mode are configured in
+  `game/project.godot`.
+
+Deviations and open points:
+
+- The game does not send an `error` message for a protocol or config failure; it
+  logs the reason and closes the connection. The current contract has no
+  game-to-server error message.
+- The server remains the phase authority. The game tracks the last accepted
+  `host_command` only to choose the correct local host-key action. The game does
+  not send `phase` messages yet, so the server cannot get `timeLeftMs` or task
+  state from this scaffold.
+- `host_command` `kick` carries the slot and clears that car. The server also
+  emits `player_left` with reason `kicked`, so the slot is cleared twice; the
+  operation is idempotent.
+- The four cars use placeholder art and a single background with boundary walls.
+  Map collision geometry, tasks, scoring, HUD, and the final assets are later
+  work.
+- Four-car display, TV readability, and FPS/tearing measurements are not
+  claimed by the scaffold; they are recorded in `testing.md` after the target
+  hardware run (issue #13).
