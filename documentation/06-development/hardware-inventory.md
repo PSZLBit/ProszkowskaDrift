@@ -7,8 +7,11 @@ Inventory of the four festival tablets and any spares, collected for Sprint 0
 (S0-02, issue #10). Devices are labelled `T1`–`T4`; slot labels `P1`–`P4` are
 assigned only during festival provisioning.
 
-**Collection status:** 1 of 4 tablets recorded (T1 static data only). Hardware
-checks and the remaining tablets are still open.
+**Collection status:** all four tablets are recorded and share the same
+platform. Static specifications were read from Settings and the device
+specification. Hardware checks (Wi-Fi stability, charging under load, battery
+health, touch, readability) were not performed and are deferred to the S0-03
+controller spike (#11) and the S0-06 measurements (#14).
 
 ## Privacy Rules
 
@@ -19,15 +22,16 @@ checks and the remaining tablets are still open.
 
 ## Method
 
-1. Charge each tablet to 100% and let it cool to room temperature.
-2. Record static specs from Settings, the service menu, and the model spec sheet.
-3. Run the checks below under identical conditions for all devices.
-4. Run the 30-minute Wi-Fi and charging checks with the festival router,
-   charger, and cable.
+1. Record static specs from Settings and the device specification.
+2. Treat every tablet as the same platform: the team confirmed that T1–T4 have
+   identical hardware and software.
+3. Record assumptions explicitly; do not present untested behavior as verified.
+4. Defer Wi-Fi, charging, battery-health, touch, and readability checks to the
+   spike that needs them (#11, #14, #17).
 5. Mark unknown values `TBD`; never guess.
 
-Tools used: Settings, Samsung service menus `*#0*#` and `*#*#4636*#*#`, router
-client list. Optional ADB commands:
+Tools used: Settings, device specification. Optional ADB commands for later
+checks:
 
 ```text
 adb shell getprop ro.product.model
@@ -44,20 +48,19 @@ adb shell dumpsys sensorservice
 
 | Field | T1 | T2 | T3 | T4 | Spare |
 |---|---|---|---|---|---|
-| Model number | SM-T210 | TBD | TBD | TBD | TBD |
-| Manufacturer | Samsung | TBD | TBD | TBD | TBD |
-| Android version | 4.4.2 | TBD | TBD | TBD | TBD |
-| API level | 19 | TBD | TBD | TBD | TBD |
-| RAM | TBD | TBD | TBD | TBD | TBD |
-| Internal storage total / free | 8.00 GB / 4.91 GB | TBD | TBD | TBD | TBD |
-| Display resolution / density | TBD | TBD | TBD | TBD | TBD |
-| Wi-Fi bands (2.4 / 5 GHz) | TBD | TBD | TBD | TBD | TBD |
-| Battery health | TBD | TBD | TBD | TBD | TBD |
-| Risk flag | TBD | TBD | TBD | TBD | TBD |
+| Model number | SM-T210 | SM-T210 | SM-T210 | SM-T210 | TBD |
+| Manufacturer | Samsung | Samsung | Samsung | Samsung | TBD |
+| Android version | 4.4.2 | 4.4.2 | 4.4.2 | 4.4.2 | TBD |
+| API level | 19 | 19 | 19 | 19 | TBD |
+| RAM | 800 MB | 800 MB | 800 MB | 800 MB | TBD |
+| Internal storage total / free | 8.00 GB / 4.91 GB | 8.00 GB / 4.91 GB | 8.00 GB / 4.91 GB | 8.00 GB / 4.91 GB | TBD |
+| Display | 7" 600×1024 TFT | 7" 600×1024 TFT | 7" 600×1024 TFT | 7" 600×1024 TFT | TBD |
+| Wi-Fi bands | 2.4 GHz | 2.4 GHz | 2.4 GHz | 2.4 GHz | TBD |
+| Battery rated capacity | 4000 mAh | 4000 mAh | 4000 mAh | 4000 mAh | TBD |
+| Battery health | Not measured | Not measured | Not measured | Not measured | TBD |
+| Risk flag | Medium | Medium | Medium | Medium | TBD |
 
-## Device Details
-
-### T1
+## Common Platform (T1–T4)
 
 | Field | Value |
 |---|---|
@@ -67,66 +70,72 @@ adb shell dumpsys sensorservice
 | Kernel version | 3.4.5-4081557 dpi@SWDD5907 #1 Tue Feb 3 15:14:55 KST 2015 |
 | Build number | KOT49H.T210XXBOB1 |
 | CPU / ABI | TBD |
-| RAM | TBD |
+| RAM | 800 MB reported |
 | Internal storage total | 8.00 GB |
 | System storage | 2.72 GB |
 | Internal storage used | 293 MB |
 | Cached data | 2.92 MB |
 | Miscellaneous files | 91.13 MB |
 | Internal storage available | 4.91 GB |
-| Display resolution / density / diagonal | TBD |
-| Wi-Fi bands | TBD |
+| Display size | 7" |
+| Display resolution | 600 × 1024 px |
+| Display aspect ratio | 15.4:9 |
+| Display panel | TFT |
+| Touch | Multi-touch supported |
+| Wi-Fi bands | 2.4 GHz |
+| USB connector | micro-USB |
+| Battery rated capacity | 4000 mAh |
 | Camera(s) | TBD |
 | Sensors (accelerometer, gyroscope, etc.) | TBD |
 | Hardware buttons | TBD |
-| Charging port / cable type | TBD |
 | Charger rating | TBD |
-| Screen condition (cracks, dead pixels, ghost touch) | TBD |
-| Touch / multi-touch test | TBD |
-| Battery health | TBD |
-| Battery level / voltage / temperature at start | TBD |
-| Charging while screen on, 30 min | TBD |
-| Wi-Fi idle, 30 min | TBD |
-| Wi-Fi off/on reconnect | TBD |
-| Keep-awake while charging | TBD |
-| Developer options / USB debugging | TBD |
-| Boots to home after reboot | TBD |
-| Risk flag | TBD |
-| Notes | Static data recorded from Settings on 2026-10-28. Hardware checks pending. |
 
-### T2
+## Per-Device Condition and Tests
 
-Not recorded yet. Copy the T1 table when the device is inspected.
+The static platform data above applies to all four tablets. The table below
+records device-specific condition and the checks that are still open.
 
-### T3
+| Check | T1 | T2 | T3 | T4 |
+|---|---|---|---|---|
+| Physical condition (cracks, dead pixels, port, buttons) | Not inspected | Not inspected | Not inspected | Not inspected |
+| Touch / multi-touch test | Not tested | Not tested | Not tested | Not tested |
+| Screen readability at arm's length | Not tested | Not tested | Not tested | Not tested |
+| Battery health | Not measured | Not measured | Not measured | Not measured |
+| Battery level / voltage / temperature | Not measured | Not measured | Not measured | Not measured |
+| Charging while screen on, 30 min | Not tested | Not tested | Not tested | Not tested |
+| Wi-Fi idle, 30 min | Not tested; assumed working | Not tested; assumed working | Not tested; assumed working | Not tested; assumed working |
+| Wi-Fi off/on reconnect | Not tested | Not tested | Not tested | Not tested |
+| Keep-awake while charging | TBD | TBD | TBD | TBD |
+| Developer options / USB debugging | TBD | TBD | TBD | TBD |
+| Boots to home after reboot | TBD | TBD | TBD | TBD |
+| Risk flag | Medium | Medium | Medium | Medium |
 
-Not recorded yet. Copy the T1 table when the device is inspected.
+### Risk Notes
 
-### T4
-
-Not recorded yet. Copy the T1 table when the device is inspected.
-
-### Spare
-
-| Field | Value |
-|---|---|
-| Available | TBD |
-| Model number | TBD |
-| Android version / API level | TBD |
-| Condition | TBD |
-| Notes | TBD |
+- **RAM:** 800 MB is reported. This is a low-end device for a controller app;
+  validate app stability and touch latency in S0-03 (#11). Keep the controller
+  UI and WebSocket client minimal.
+- **Wi-Fi:** 2.4 GHz only. This matches the architecture baseline, but the
+  30-minute stability and reconnect checks have not been run. They must pass
+  before the festival; treat the current state as an assumption, not evidence.
+- **Battery:** rated capacity is 4000 mAh, but health and charging under load
+  are unknown. Verify that each tablet charges while the screen is on in #11;
+  a tablet that loses charge under load is a festival blocker.
+- **Display:** 7" 600×1024 TFT. Readability at arm's length and touch-target
+  size must be validated with the real controller layout (#18).
+- **Storage:** 4.91 GB free is sufficient for the APK and logs.
 
 ## Acceptance Checks
 
 | Check | Pass condition | T1 | T2 | T3 | T4 |
 |---|---|---|---|---|---|
-| API level | Android 4.4.2 (API 19) confirmed | Pass | TBD | TBD | TBD |
-| Display | Landscape, readable at arm's length | TBD | TBD | TBD | TBD |
-| Touch | Buttons respond; multi-touch works; no stuck touches | TBD | TBD | TBD | TBD |
-| Wi-Fi | Connected for 30 min without drops | TBD | TBD | TBD | TBD |
-| Reconnect | Wi-Fi off/on or app restart reconnects | TBD | TBD | TBD | TBD |
-| Charging | Charges while screen is on and app is running | TBD | TBD | TBD | TBD |
-| Heat | No shutdown or severe throttling in 30 min | TBD | TBD | TBD | TBD |
+| API level | Android 4.4.2 (API 19) confirmed | Pass | Pass | Pass | Pass |
+| Display | Landscape, readable at arm's length | Not tested | Not tested | Not tested | Not tested |
+| Touch | Buttons respond; multi-touch works; no stuck touches | Not tested | Not tested | Not tested | Not tested |
+| Wi-Fi | Connected for 30 min without drops | Assumed; not tested | Assumed; not tested | Assumed; not tested | Assumed; not tested |
+| Reconnect | Wi-Fi off/on or app restart reconnects | Not tested | Not tested | Not tested | Not tested |
+| Charging | Charges while screen is on and app is running | Not tested | Not tested | Not tested | Not tested |
+| Heat | No shutdown or severe throttling in 30 min | Not tested | Not tested | Not tested | Not tested |
 | Kiosk readiness | Developer options and launcher change available | TBD | TBD | TBD | TBD |
 | Boot | Starts to home after reboot | TBD | TBD | TBD | TBD |
 
@@ -135,7 +144,7 @@ Not recorded yet. Copy the T1 table when the device is inspected.
 Flag a device as **High** if any of these is true:
 
 - API level is not 19.
-- RAM is below 1 GB.
+- RAM is below 512 MB.
 - Battery health is `Poor`, `Overheat`, or `Dead`.
 - The battery level drops while charging with the screen on.
 - Wi-Fi drops during the 30-minute idle test.
@@ -143,10 +152,14 @@ Flag a device as **High** if any of these is true:
 
 Flag a device as **Medium** if any of these is true:
 
-- 5 GHz Wi-Fi is unsupported.
+- Reported RAM is below 1 GB.
+- A required hardware check has not been performed yet.
 - The screen is small or has cosmetic damage that does not affect touch.
 - The charging port or cable is loose.
 - Storage free space is below 100 MB.
+
+2.4 GHz-only Wi-Fi is acceptable: it is the documented compatibility baseline
+in `06-development/architecture.md`.
 
 ## Spares and Replacements
 
@@ -157,16 +170,16 @@ Flag a device as **Medium** if any of these is true:
 
 ## Follow-ups
 
-- Record T2–T4 and all hardware checks.
 - Install the controller APK on all four tablets when S0-03 (#11) produces it.
-- Use these devices for the latency and Wi-Fi measurements in S0-06 (#14).
+- Run the 30-minute Wi-Fi, reconnect, and charging checks during #11 and #14.
+- Measure latency and readability in S0-06 (#14).
 - Update the hardware matrix in `06-development/testing.md` (#17).
 - Feed the device labels into the D-14 input-scheme playtest (#18).
 - Record any High risk in the roadmap risk register.
-- Update ADR-0002 validation evidence when the inventory is complete.
+- Update ADR-0002 validation evidence when the hardware checks are complete.
 
 ## Collection Log
 
 | Date | Device | What was recorded | By role |
 |---|---|---|---|
-| 2026-10-28 | T1 | Model, Android version, kernel, build, storage | QA/Controller |
+| 2026-10-28 | T1–T4 | Model, Android/API, kernel, build, storage, RAM, display, Wi-Fi band, USB, battery capacity | QA/Controller |

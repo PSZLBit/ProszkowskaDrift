@@ -82,4 +82,5 @@ Superseded decisions stay in the log. Do not delete history.
 - Delivery calendar: festival 2026-11-24; festival-ready target 2026-11-18;
   MFD committed, MVP stretch (D-31).
 - Open: controller input scheme (D-14), map/tuning details, and hardware specs
-  (`06-development/hardware-inventory.md`, collection in progress).
+  (`06-development/hardware-inventory.md`; static specs collected, hardware
+  checks deferred to the Sprint 0 spikes).
