@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-10-26
+Last updated: 2026-10-28
 
 ## Goals
 
@@ -181,7 +181,9 @@ checks remain open.
 
 ## Android 4.4.2 Hardware Matrix
 
-Run on all four actual tablets, not only one.
+Run on all four actual tablets, not only one. The per-device record (model,
+Android/API level, storage, battery health, and test results) is kept in
+[hardware-inventory.md](hardware-inventory.md).
 
 | Check | Pass condition |
 |-------|----------------|

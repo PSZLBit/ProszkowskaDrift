@@ -1,7 +1,7 @@
 # Festival Operations Runbook
 
 Status: Draft
-Last updated: 2026-10-21
+Last updated: 2026-10-28
 
 This is the operational plan for running Proszkowska Drift at a science-club
 festival stand. The game must work without a developer at the keyboard.
@@ -23,6 +23,9 @@ festival stand. The game must work without a developer at the keyboard.
 - No personal data is collected or retained.
 
 ## Hardware Checklist
+
+Per-device specs and test results are recorded in
+[hardware-inventory.md](hardware-inventory.md).
 
 - [ ] Laptop with the festival build, charger, and HDMI cable/adapter.
 - [ ] TV or monitor with power cable and remote.
