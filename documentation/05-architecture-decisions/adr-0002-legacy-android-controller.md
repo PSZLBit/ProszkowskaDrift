@@ -1,7 +1,7 @@
 # ADR-0002: Legacy Android Controller
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-10-28
 Date: 2026-10-19
 Owner: Team
 
@@ -83,6 +83,8 @@ supervised festival stand but not a fully locked kiosk.
 4. Measure touch responsiveness and input-to-display latency.
 5. Confirm charging, screen-on behavior, and immersive mode during a 30-minute
    test.
+6. Record device specs and the results in
+   [`hardware-inventory.md`](../06-development/hardware-inventory.md).
 
 If Kotlin/AGP cannot target API 19 reliably, try a minimal Java app. If the
 native path fails entirely, record a new decision before replacing the tablets

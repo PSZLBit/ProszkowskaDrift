@@ -1,7 +1,7 @@
 # Documentation — Source of Truth
 
 Status: Decided
-Last updated: 2026-10-21
+Last updated: 2026-10-28
 
 > All project artifacts are in English. This folder is the source of truth.
 > Code implements what is described here. Chat history does not override this folder.
@@ -38,6 +38,7 @@ Always read this file plus `00-meta/documentation-rules.md` and
 | Protocol messages | `06-development/protocol.md` |
 | Git, tests, Agile, AI workflow | `06-development/workflow.md`, `06-development/testing.md`, `06-development/roadmap.md` |
 | Tooling, hooks, CI quality gates | `06-development/tooling-plan.md` |
+| Hardware specs, tablets, battery health | `06-development/hardware-inventory.md` |
 | Festival setup and recovery | `06-development/festival-operations.md` |
 
 ## Map
@@ -80,4 +81,6 @@ Superseded decisions stay in the log. Do not delete history.
   remains the source of truth (D-30).
 - Delivery calendar: festival 2026-11-24; festival-ready target 2026-11-18;
   MFD committed, MVP stretch (D-31).
-- Open: controller input scheme (D-14), map/tuning details, and hardware specs.
+- Open: controller input scheme (D-14), map/tuning details, and hardware specs
+  (`06-development/hardware-inventory.md`; static specs collected, hardware
+  checks deferred to the Sprint 0 spikes).
