@@ -39,10 +39,11 @@ type Config struct {
 type Supervisor struct {
 	cfg Config
 
-	mu        sync.Mutex
-	restarts  int
-	stopped   bool
-	done      chan struct{}
+	mu       sync.Mutex
+	restarts int
+	stopped  bool
+	done     chan struct{}
+	stopOnce sync.Once
 }
 
 // New creates a supervisor. It does not start the process.
@@ -64,13 +65,53 @@ func New(cfg Config) *Supervisor {
 
 // Run starts the game and restarts it after unexpected exits until ctx is
 // cancelled, Stop is called, or the restart budget is exhausted.
+
+// appendEnv appends extra environment variables, replacing any existing value
+// for the same key so overrides such as PD_GAME_TOKEN take effect.
+func appendEnv(base, extra []string) []string {
+	out := make([]string, 0, len(base)+len(extra))
+	for _, item := range base {
+		key, _, ok := splitEnv(item)
+		if !ok {
+			out = append(out, item)
+			continue
+		}
+		if hasEnvKey(extra, key) {
+			continue
+		}
+		out = append(out, item)
+	}
+	out = append(out, extra...)
+	return out
+}
+
+func splitEnv(item string) (string, string, bool) {
+	for i := 0; i < len(item); i++ {
+		if item[i] == '=' {
+			return item[:i], item[i+1:], true
+		}
+	}
+	return item, "", false
+}
+
+func hasEnvKey(items []string, key string) bool {
+	for _, item := range items {
+		if k, _, ok := splitEnv(item); ok && k == key {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Supervisor) Run(ctx context.Context) error {
 	if s.cfg.Binary == "" {
 		return nil
 	}
-	if _, err := os.Stat(s.cfg.Binary); err != nil {
+	resolved, err := exec.LookPath(s.cfg.Binary)
+	if err != nil {
 		return fmt.Errorf("game binary not found: %w", err)
 	}
+	s.cfg.Binary = resolved
 
 	backoff := s.cfg.InitialBackoff
 	for {
@@ -89,7 +130,7 @@ func (s *Supervisor) Run(ctx context.Context) error {
 
 		s.cfg.Logger.Info("starting game process", "binary", s.cfg.Binary, "args", s.cfg.Args)
 		cmd := exec.CommandContext(ctx, s.cfg.Binary, s.cfg.Args...)
-		cmd.Env = append(os.Environ(), s.cfg.Env...)
+		cmd.Env = appendEnv(os.Environ(), s.cfg.Env)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
@@ -129,9 +170,11 @@ func (s *Supervisor) Run(ctx context.Context) error {
 // Stop prevents further restarts. It does not kill the current process.
 func (s *Supervisor) Stop() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.stopped = true
-	close(s.done)
+	s.mu.Unlock()
+	s.stopOnce.Do(func() {
+		close(s.done)
+	})
 }
 
 // Restarts returns the number of unexpected exits handled so far.
