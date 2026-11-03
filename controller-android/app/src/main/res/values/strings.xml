@@ -1,4 +1,16 @@
 <resources>
   <string name="app_name">Controller</string>
   <string name="status_disconnected">Disconnected</string>
+  <string name="status_connecting">Connecting</string>
+  <string name="status_connected">Connected</string>
+  <string name="status_reconnecting">Reconnecting</string>
+  <string name="status_failed">Failed</string>
+  <string name="status_playing">Playing</string>
+  <string name="status_paused">Paused</string>
+  <string name="status_attract">Attract</string>
+  <string name="status_ready">Ready</string>
+  <string name="status_countdown">Countdown</string>
+  <string name="status_results">Results</string>
+  <string name="status_ended">Ended</string>
+  <string name="status_unknown">Unknown</string>
 </resources>

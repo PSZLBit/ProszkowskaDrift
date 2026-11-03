@@ -30,5 +30,8 @@ android {
 // platform Views so it installs and runs on API 19. Add a dependency only
 // after it is proven to support API 19.
 dependencies {
+    // D-20 / ADR-0002: OkHttp 3.12 is the last line that supports Android API 19;
+    // OkHttp 4 requires API 21 and is not allowed for the controller.
+    implementation("com.squareup.okhttp3:okhttp:3.12.1")
     testImplementation(libs.junit)
 }
