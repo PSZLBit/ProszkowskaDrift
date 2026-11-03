@@ -1,7 +1,7 @@
 # Game Design — Proszkowska Drift MVP
 
 Status: Draft
-Last updated: 2026-10-20
+Last updated: 2026-11-03
 
 This document defines the first playable game. Core rules are agreed in D-19;
 numeric values are initial tuning targets and should be changed only after a
@@ -245,10 +245,43 @@ into the MVP implementation.
 | Parked speed threshold | TBD in game code | Controller/game spike |
 | Car max speed | TBD in game code | First map playtest |
 
+## Controller Input Scheme (Open, D-14)
+
+D-14 is still `TBD`: the final scheme is chosen by playtesting on the real
+tablets (issue #18). The WebSocket spike (issue #11) does not decide it; it
+only sends `steer`/`throttle` in `[-1, 1]` and leaves the mapping from touch
+to those values to the production controller (issue #48). Candidate schemes to
+playtest on the four Android 4.4.2 tablets, in landscape, with at least four
+people:
+
+| Scheme | How it maps to `steer`/`throttle` | Pros | Cons / risks |
+|---|---|---|---|
+| Two large touch buttons (left/right) + two buttons (accelerate/brake) | Discrete: `steer` ±1, `throttle` ±1 or 0 | Easiest to hit on old touch screens; predictable; no accidental drift | Coarse control; precision score may suffer; many fingers needed |
+| Virtual joystick (single pad, X = steer, Y = throttle) | Continuous X/Y → `steer`/`throttle` | Fine-grained control; one thumb; good for precision score | Small target on a 10" tablet; accidental touches; harder for left-handed players |
+| Analog slider / dial for steering + hold button for throttle | Slider X → `steer`; button → `throttle` | Separates axes; reduces accidental steering; good precision | Two hands or two thumbs; more UI elements on screen |
+| Tilt / accelerometer steering + touch throttle | Sensor X → `steer`; button → `throttle` | Hands-free steering; novel | Sensor quality varies on old tablets; calibration; motion sickness; not accessible while seated |
+| Hybrid: virtual joystick for steering, separate large throttle/brake buttons | Joystick X → `steer`; buttons → `throttle` ±1 | Best precision for steering with reliable throttle | More UI; must avoid overlap with joystick |
+
+Notes for the playtest:
+
+- Measure comfort, missed inputs, accidental touches, and readability at arm's
+  length for each scheme.
+- Consider handedness and visitors who have never played.
+- The chosen scheme must not change the protocol: the controller still sends
+  `steer` and `throttle` in `[-1, 1]` at 20–30 Hz.
+- Record the recommendation and the playtest notes in issue #18, then update
+  D-14 in `05-architecture-decisions/decision-log.md` and this section.
+
 ## Open Questions
 
 - Exact control scheme (D-14): buttons, analog slider, or virtual joystick.
+  See the candidate table above and issue #18.
 - Exact map layout and the number of spots after the first sketch.
+- Whether a task can be manually skipped by the player in MVP, or only
+  auto-skipped.
+- Whether finished cars should be hidden, ghosted, or parked in a finish area.
+- Whether the display should show a minimap for target finding or only on-map
+  beacons.
 - Whether a task can be manually skipped by the player in MVP, or only
   auto-skipped.
 - Whether finished cars should be hidden, ghosted, or parked in a finish area.
