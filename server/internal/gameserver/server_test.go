@@ -1147,6 +1147,73 @@ func TestConfigJSONShape(t *testing.T) {
 	}
 }
 
+func TestSlowControllerClosedOnDirectSend(t *testing.T) {
+	t.Parallel()
+
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.ControllerQueueSize = 1
+		cfg.ControllerTimeout = 10 * time.Second
+	})
+
+	c := env.dialController(t)
+	c.sendHello("token-slow-direct")
+	c.expectWelcome(1)
+
+	done := make(chan struct{})
+	go func() {
+		for i := 0; ; i++ {
+			select {
+			case <-done:
+				return
+			default:
+			}
+			raw, err := protocol.Encode(protocol.TypePing, nil, protocol.PingData{ClientTime: int64(i)})
+			if err != nil {
+				return
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			err = c.conn.Write(ctx, websocket.MessageText, raw)
+			cancel()
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	readTerminated(t, c, 5*time.Second)
+	close(done)
+}
+
+func TestGameQueueFullClosesGameAndReturnsToAttract(t *testing.T) {
+	t.Parallel()
+
+	env := newTestEnv(t, func(cfg *Config) {
+		cfg.GameQueueSize = 2
+		cfg.TickInterval = time.Hour
+	})
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+
+	// Fill the game's outbound queue without draining it.
+	first := env.dialController(t)
+	first.sendHello("token-game-queue-full-1")
+	first.expectWelcome(1)
+
+	second := env.dialController(t)
+	second.sendHello("token-game-queue-full-2")
+	second.expectWelcome(2)
+
+	// Disconnecting now needs to enqueue player_left, but the queue is full.
+	first.close()
+	waitFor(t, func() bool {
+		return env.server.session.Phase() == protocol.PhaseAttract
+	})
+
+	readTerminated(t, game, 5*time.Second)
+}
+
 func int64Ptr(v int64) *int64       { return &v }
 func float64Ptr(v float64) *float64 { return &v }
 
