@@ -217,6 +217,8 @@ kick 2
 phase playing 120000 7
 quit
 ```
+Stdin EOF is not a quit signal: `fakegame` keeps running until `quit`, a signal,
+or `-duration`. Redirecting stdin from `/dev/null` is safe.
 
 ## Not implemented in this slice
 

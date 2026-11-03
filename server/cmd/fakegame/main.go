@@ -132,14 +132,16 @@ func run(opts options) error {
 
 	if opts.autoStart {
 		go func() {
-			if !sleep(ctx, time.Second) {
-				return
+			for i := 0; i < 5; i++ {
+				if !sleep(ctx, time.Second) {
+					return
+				}
+				if err := send(protocol.TypeHostRequest, protocol.HostRequestData{Command: "start"}); err != nil {
+					logger.Printf("auto-start failed: %v", err)
+					return
+				}
+				logger.Printf("auto-start host_request sent (attempt %d)", i+1)
 			}
-			if err := send(protocol.TypeHostRequest, protocol.HostRequestData{Command: "start"}); err != nil {
-				logger.Printf("auto-start failed: %v", err)
-				return
-			}
-			logger.Printf("auto-start host_request sent")
 		}()
 	}
 	go func() {
@@ -289,6 +291,9 @@ func commandLoop(ctx context.Context, in *os.File, logger *log.Logger, send func
 			logger.Printf("unknown command %q", fields[0])
 		}
 	}
+	// Stdin EOF is not a quit signal. Keep running until the context is
+	// cancelled by a signal, duration, or an explicit quit command.
+	<-ctx.Done()
 }
 
 func readGameEnvelope(ctx context.Context, conn *websocket.Conn, timeout time.Duration) (protocol.Envelope, error) {
