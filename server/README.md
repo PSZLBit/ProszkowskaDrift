@@ -77,8 +77,15 @@ This slice implements a subset and records the following choices:
   receives `player_left` with reason `timeout`.
 - `leave` keeps the slot reserved for the session.
 - Writes are queued per connection (controller queue 64, game queue 256). If a
-  broadcast cannot be queued, the connection is closed with `slow_client`; a
-  slow client never delays other connections.
+  frame cannot be queued on any send path, the connection is closed with
+  `slow_client`; a slow client never delays other connections. For the game,
+  a full outbound queue also resets the session to `attract` (see
+  `game_unavailable`) instead of dropping `player_left`, `host_command`, or a
+  phase update.
+- Teardown is bounded: close handshakes run in a dedicated goroutine with a 3 s
+  fallback to an abrupt close, so a peer that never answers cannot stall the
+  tick loop, broadcasts, or another connection. When the queue is full the close
+  frame may not be delivered and the connection is torn down abruptly.
 - Rejected host commands are answered to the game with `host_denied`
   (`no_players`, `invalid_phase`, or `not_authorized`). `host_request` is only
   accepted after the current game connection sends `game_ready`; `start` needs

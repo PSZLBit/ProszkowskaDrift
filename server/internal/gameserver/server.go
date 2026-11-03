@@ -330,7 +330,9 @@ func newWSConn(ws *websocket.Conn, queueSize int) *wsConn {
 }
 
 // enqueue queues a text frame. It reports false when the connection is
-// closing or its queue is full.
+// closing or its queue is full. A full queue means the peer is not draining
+// its frames; close it as a slow client on every send path, not just
+// broadcasts, so a stalled controller or game is torn down consistently.
 func (c *wsConn) enqueue(raw []byte) bool {
 	if c.closing.Load() {
 		return false
@@ -341,6 +343,7 @@ func (c *wsConn) enqueue(raw []byte) bool {
 	case <-c.done:
 		return false
 	default:
+		c.closeGraceful(websocket.StatusPolicyViolation, "slow_client")
 		return false
 	}
 }
@@ -387,10 +390,15 @@ func (c *wsConn) closeGraceful(code websocket.StatusCode, reason string) {
 	}()
 }
 
-// killNow tears the connection down without a close handshake.
+// killNow tears the connection down without a close handshake. Marking the
+// connection done first bounds teardown for callers even if the underlying
+// WebSocket close waits on a peer that never answers.
 func (c *wsConn) killNow() {
-	_ = c.ws.CloseNow()
+	c.closing.Store(true)
 	c.closeDoneOnce()
+	go func() {
+		_ = c.ws.CloseNow()
+	}()
 }
 
 func (c *wsConn) closeDoneOnce() {
@@ -546,7 +554,15 @@ func (s *Server) sendToGame(typ string, data any) bool {
 	if game == nil {
 		return false
 	}
-	return game.send(typ, data)
+	if game.send(typ, data) {
+		return true
+	}
+	// The game's outbound queue is full: enqueue() has already started
+	// closing it as a slow client. The connection drop resets the session to
+	// attract (see dropGame/onGameDisconnected), so control messages are not
+	// silently lost.
+	s.log.Warn("game outbound queue full; game is being closed", "type", typ)
+	return false
 }
 
 func (s *Server) sendPlayerJoined(slot session.SlotView) {
