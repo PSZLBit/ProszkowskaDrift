@@ -1,7 +1,7 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-10-26
+Last updated: 2026-11-03
 
 Protocol version: `1` (MVP). The S0-04 server slice implements a subset of this
 contract; see "Sprint 0 Implementation Notes" at the end. Changing a field or
@@ -345,7 +345,20 @@ Implementation choices:
   counter, and the sequence number stays unconsumed, so a controller that keeps
   sending during a pause does not lose its sequence position.
 - A connection whose outbound queue stays full is closed with the
-  `slow_client` close reason; broadcasts never block on it.
+  `slow_client` close reason; broadcasts never block on it. The same close
+  happens on every send path, including direct replies such as `pong`,
+  `error`, `welcome`, and `host_denied`, so a controller that stops reading is
+  torn down consistently instead of only during broadcasts.
+- Queue-full policy for game control messages: when a `player_left`,
+  `host_command` (pause/resume/kick/end), or phase broadcast cannot be queued
+  for the game, the game connection is closed as a slow client and the session
+  resets to `attract` (`game_unavailable` to controllers, slots stay reserved).
+  Critical control messages are therefore never silently dropped; a game that
+  cannot keep up is replaced instead.
+- Teardown is bounded: a close handshake runs in a dedicated goroutine with a
+  3 s fallback to an abrupt close. A peer that never answers cannot stall the
+  tick loop, broadcasts, or another connection. When the queue is full the close
+  frame may not be delivered and the connection is torn down abruptly.
 - A malformed device token, or a token whose slot is still connected, receives
   `auth_failed`. A syntactically valid unknown token gets a free slot. A full
   session receives `session_full`; the connection stays open and may retry.
