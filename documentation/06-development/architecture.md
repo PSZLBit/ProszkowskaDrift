@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-10-26
+Last updated: 2026-11-03
 
 This document describes the MVP runtime. Decisions are recorded in D-22,
 ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
@@ -37,13 +37,17 @@ or simulate the game.
 
 | Component | Process | Responsibilities |
 |-----------|---------|------------------|
-| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect |
+| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold is on an unmerged branch; production work is #48 |
 | Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; supervision is later work |
-| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Sprint 1 scaffold: one game connection, four slot-keyed cars, placeholder map; simulation and scoring are later work |
+| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, placeholder boundaries; no map, parking, or scoring yet |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
-## Sprint 0 Server Slice
+As of 2026-11-03 the controller production code is not on `main`. The API 19
+scaffold is on `feat/controller-scaffold` and is tracked by #11 and #48; it is not
+implemented production behavior.
+
+## Server Slice
 
 Issue #12 scaffolded the server on 2026-10-21. It is a Go 1.23 module,
 `github.com/PSZLBit/ProszkowskaDrift/server`, using
@@ -59,9 +63,9 @@ the Sprint 0 spikes finish.
   `start`, `pause`, `resume`, `reset`, `end`, and `kick`.
 - A server tick loop (250 ms) enforces the controller idle timeout, the
   all-disconnected pause (10 s grace), and game heartbeat monitoring. Writing
-  is serialized per connection through a bounded queue; a connection that
-  stops draining its queue is closed as `slow_client` instead of blocking
-  broadcasts.
+  is serialized per connection through a bounded queue. Broadcasts close a
+  connection that stops draining, but control messages can still be dropped and
+  the `slow_client` reason is unreliable (#25).
 - Session boundaries are enforced server-side: `host_denied` answers rejected
   host requests, a kicked device token is blocked for the session, host `end`
   clears slots and closes controllers gracefully, and `/healthz` reports
@@ -75,7 +79,7 @@ silent game connection already; launching, token rotation per launch, and
 restarts are S0-07), assign tasks, score, implement late join, or provide a
 production controller UI. Those remain later sprint items.
 
-## Sprint 0 Game Scaffold
+## Game Scaffold
 
 The S0-05 spike was promoted to the production `game/` scaffold (D-32) on
 2026-10-26; issue #13 tracks the remaining target-laptop/TV evidence. It is a
