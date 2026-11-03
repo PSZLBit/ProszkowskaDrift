@@ -628,3 +628,37 @@ func TestHostCommandWaitsForControllerTransitionLock(t *testing.T) {
 		t.Fatalf("phase = %q, want %q", phase, protocol.PhaseEnded)
 	}
 }
+
+func TestGamePhaseRejectsEnded(t *testing.T) {
+	s := New(DefaultConfig())
+	if err := s.session.SetPhase(protocol.PhasePlaying, 1); err != nil {
+		t.Fatalf("set phase: %v", err)
+	}
+
+	raw, err := protocol.Encode(protocol.TypePhase, nil, protocol.PhaseData{
+		Phase:   protocol.PhaseEnded,
+		RoundID: 1,
+	})
+	if err != nil {
+		t.Fatalf("encode phase: %v", err)
+	}
+	env, err := protocol.ParseEnvelope(raw)
+	if err != nil {
+		t.Fatalf("parse phase: %v", err)
+	}
+
+	conn := &gameConn{
+		wsConn: &wsConn{
+			queue: make(chan outbound, 8),
+			done:  make(chan struct{}),
+		},
+		log: s.log,
+	}
+
+	if closed := s.handleGamePhase(conn, env); closed {
+		t.Fatal("game connection was closed on the first invalid ended phase")
+	}
+	if phase := s.session.Phase(); phase != protocol.PhasePlaying {
+		t.Fatalf("phase = %q, want %q", phase, protocol.PhasePlaying)
+	}
+}

@@ -382,6 +382,10 @@ Session-boundary choices (this sprint, additive):
   the server changes the phase without a host request. Game `phase` messages
   share the same transition lock as the timer and slot changes, so a
   concurrent game phase cannot overwrite the paused broadcast.
+- The game may not send `phase: ended`. Session end is host authority and runs
+  through `host_request` `end`, which clears slots and tokens and closes
+  controllers with `session_ended`. A game-sent `ended` phase is rejected as
+  invalid input.
 - The game heartbeat is live: any valid game message resets it. After 3 s
   without a game message on a ready connection, the server closes it with
   reason `game_heartbeat_timeout`, broadcasts `error` `game_unavailable`,
