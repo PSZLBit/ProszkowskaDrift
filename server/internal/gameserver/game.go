@@ -253,6 +253,12 @@ func (s *Server) handleGamePhase(conn *gameConn, env protocol.Envelope) bool {
 	if !data.Phase.Valid() {
 		return s.rejectGameInvalid(conn, "Unknown phase.")
 	}
+	if data.Phase == protocol.PhaseEnded {
+		// Session end is host authority. A game-reported ended phase must
+		// not wedge the session; the game ends a round through host_request
+		// end, which runs the full cleanup path.
+		return s.rejectGameInvalid(conn, "Game may not end the session; use host_request end.")
+	}
 
 	// Serialize phase changes with the server timers and controller slot
 	// transitions. The all-disconnected pause must not race a game phase and
