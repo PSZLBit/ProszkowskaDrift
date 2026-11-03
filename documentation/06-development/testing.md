@@ -1,7 +1,11 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-10-28
+Last updated: 2026-11-03
+
+The test-plan update is tracked in issue #17. As of 2026-11-03 the controller is
+not on `main`; the API 19 scaffold and real-tablet checks are tracked by #11 and
+#48.
 
 ## Goals
 

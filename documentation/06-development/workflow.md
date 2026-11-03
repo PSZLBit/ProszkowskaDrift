@@ -1,7 +1,7 @@
 # Development Workflow
 
 Status: Decided
-Last updated: 2026-10-26
+Last updated: 2026-11-03
 
 ## Monorepo Layout
 
@@ -12,8 +12,8 @@ Last updated: 2026-10-26
   placeholder map, fullscreen display settings, and headless tests. Parking
   detection, scoring, and HUD are later work. `game/scenes/main.tscn` is the
   main scene.
-- `controller-android/` — minimal Kotlin Android controller for API 19. (Not yet
-  scaffolded.)
+- `controller-android/` — minimal Kotlin Android controller for API 19. The
+  scaffold exists on an unmerged branch; production work is tracked by #48.
 - `documentation/` — source of truth and decision history.
 - Tests live next to the code they test; no separate top-level test tree.
 
@@ -31,7 +31,7 @@ Run from the repository root unless a command changes directory.
 - Local run instructions for server, game, and fake controllers are in the root
   `README.md`.
 
-Controller commands will be added when `controller-android/` is scaffolded.
+Controller commands will be added when the controller lands on `main`.
 CI runs the server and game commands in `.github/workflows/server.yml` and
 `.github/workflows/game.yml`.
 
@@ -68,6 +68,9 @@ coordinate testing; code review requires a developer.
 - **Capacity:** record actual availability per sprint for the first two sprints;
   use observed throughput instead of invented velocity.
 
+Sprint reviews and plans are recorded in `06-development/sprint-reviews.md` and
+mirrored in GitHub Discussions.
+
 ## GitHub Projects
 
 Use GitHub Projects as the single work board, with issues and milestones.
@@ -98,9 +101,9 @@ the item is not flagged.
 
 **Milestones:**
 
-- `M0 — Decisions and spikes`
-- `M1 — Vertical slice`
-- `M2 — MVP`
+- `M0 — Decisions and Spikes`
+- `M1 — Vertical Slice`
+- `M2 — Minimum Festival Demo (MFD)`
 - `M3 — Festival-ready`
 - `M4 — Post-MVP`
 
@@ -238,7 +241,8 @@ AI assistance is expected and allowed. The human author remains accountable.
 ## Testing and CI
 
 See `06-development/testing.md` for the strategy and
-`06-development/tooling-plan.md` for the planned tooling and quality gates. The
-planned CI runs Go tests/vet and builds the Android APK; Godot headless tests are
-added once the project exists. Use free-tier GitHub Actions and cache
-dependencies. Report any check that cannot run.
+`06-development/tooling-plan.md` for the planned tooling and quality gates. CI
+runs Go tests/vet, Godot headless tests in `.github/workflows/game.yml`, and
+documentation builds; the Android APK build joins when `controller-android/`
+lands on `main`. Use free-tier GitHub Actions and cache dependencies. Report any
+check that cannot run.

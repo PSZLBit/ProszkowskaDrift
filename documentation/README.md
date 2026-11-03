@@ -1,7 +1,7 @@
 # Documentation — Source of Truth
 
 Status: Decided
-Last updated: 2026-10-28
+Last updated: 2026-11-03
 
 > All project artifacts are in English. This folder is the source of truth.
 > Code implements what is described here. Chat history does not override this folder.
@@ -37,6 +37,7 @@ Always read this file plus `00-meta/documentation-rules.md` and
 | Tech stack, transport, engine, hosting | `05-architecture-decisions/decision-log.md`, ADRs, `06-development/architecture.md` |
 | Protocol messages | `06-development/protocol.md` |
 | Git, tests, Agile, AI workflow | `06-development/workflow.md`, `06-development/testing.md`, `06-development/roadmap.md` |
+| Sprint reviews and plans | `06-development/sprint-reviews.md` |
 | Tooling, hooks, CI quality gates | `06-development/tooling-plan.md` |
 | Hardware specs, tablets, battery health | `06-development/hardware-inventory.md` |
 | Festival setup and recovery | `06-development/festival-operations.md` |
@@ -52,7 +53,7 @@ Always read this file plus `00-meta/documentation-rules.md` and
 - `04-product/` — functional and non-functional requirements per component.
 - `05-architecture-decisions/` — decision log, ADRs, retained stack analysis.
 - `06-development/` — architecture, protocol, workflow, testing, tooling plan,
-  roadmap, festival runbook.
+  roadmap, sprint reviews, festival runbook.
 - `_templates/` — templates for ADR, decision entry, feature spec.
 
 ## Update Rule
@@ -81,6 +82,9 @@ Superseded decisions stay in the log. Do not delete history.
   remains the source of truth (D-30).
 - Delivery calendar: festival 2026-11-24; festival-ready target 2026-11-18;
   MFD committed, MVP stretch (D-31).
+- Game scaffold promoted from S0-05 (D-32).
+- Sprint 2 re-baselined to a single-tablet vertical slice; four-player MFD
+  validation moved to Sprint 3 (D-33).
 - Open: controller input scheme (D-14), map/tuning details, and hardware specs
   (`06-development/hardware-inventory.md`; static specs collected, hardware
   checks deferred to the Sprint 0 spikes).

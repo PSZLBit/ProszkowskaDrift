@@ -1,5 +1,7 @@
 # Proszkowska Drift
 
+Last updated: 2026-11-03
+
 Working title for a local multiplayer arcade parking game. One to four players
 use Android tablets as controllers; a laptop runs the game and shows it on a TV
 or monitor. Each round is a short parking time attack on a stylized map of the
@@ -25,11 +27,12 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
   and game WebSocket endpoints, in-memory slots, validation, all-disconnected
   pause, `/healthz`, and fake clients. Game process supervision is not
   implemented yet. See [`server/README.md`](server/README.md).
-- `game/` — Godot 4 game and fullscreen display. Sprint 1 scaffold: one game
-  connection, four slot-keyed cars, placeholder map, fullscreen settings, and
-  headless tests. Parking detection, scoring, and HUD are later work.
+- `game/` — Godot 4 game and fullscreen display. Current scaffold: one game
+  connection, four slot-keyed cars, protocol validation, fullscreen settings,
+  and headless tests. Map, parking detection, scoring, and HUD are next.
 - `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
-  (Planned; not scaffolded.)
+  The scaffold exists on an unmerged branch, not on `main`; WebSocket input and
+  real-tablet proof are in progress (#11, #48).
 - `documentation/` — source of truth: vision, game design, requirements,
   decisions, architecture, protocol, testing, roadmap, festival runbook.
 
@@ -49,16 +52,23 @@ and [`adr-0002-legacy-android-controller.md`](documentation/05-architecture-deci
 
 ## Project Status
 
-Sprint 1. The Go session server slice exists: controller and game WebSocket
-endpoints, four slots, input validation, reconnects, heartbeats, the minimal
-host command path, and fake client tools. The Godot scaffold exists: one game
-connection, four slot-keyed cars, placeholder map, fullscreen settings, and
-headless tests. The Android controller, scoring, game supervision, and the
-target-laptop/TV evidence are not complete yet. The festival is 2026-11-24 and
-the internal festival-ready target is 2026-11-18. The committed scope is the
-Minimum Festival Demo (MFD); the full MVP is a stretch goal.
+Sprint 2 (2026-11-02 – 2026-11-08) targets a single-tablet end-to-end vertical
+slice: one real API 19 tablet connects through Go, drives a car, gets one parking
+task, the game detects the park, and a basic score/time/result is visible on the
+target laptop. This follows the D-33 re-baseline after Sprint 1 delivered only
+the game scaffold. The Go session server slice exists: controller and game WebSocket
+endpoints, four slots, input validation, reconnects, heartbeats, the minimal host
+command path, and fake client tools. The Godot scaffold exists: one game
+connection, four slot-keyed cars, protocol validation, fullscreen settings, and
+headless tests. The Android controller is not on `main`; only an API 19 scaffold
+exists on an unmerged branch. Four-player MFD validation moves to Sprint 3, and
+the festival-ready target is 2026-11-18. The Minimum Festival Demo (MFD) is
+committed; the full MVP is a stretch goal. The festival is 2026-11-24.
 
 Work board: <https://github.com/orgs/PSZLBit/projects/1>.
+
+Sprint reviews and plans:
+[`documentation/06-development/sprint-reviews.md`](documentation/06-development/sprint-reviews.md).
 
 See [`documentation/06-development/roadmap.md`](documentation/06-development/roadmap.md).
 
@@ -72,7 +82,7 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
 - Godot 4.7.2 for the `game/` component.
 
 The Android SDK is not required yet; its setup steps will be added when the
-controller is scaffolded.
+controller lands on `main`.
 
 ### Clone and set up
 
@@ -161,6 +171,7 @@ Start with [`documentation/README.md`](documentation/README.md), then read:
 - [`documentation/06-development/architecture.md`](documentation/06-development/architecture.md)
 - [`documentation/06-development/protocol.md`](documentation/06-development/protocol.md)
 - [`documentation/06-development/workflow.md`](documentation/06-development/workflow.md)
+- [`documentation/06-development/sprint-reviews.md`](documentation/06-development/sprint-reviews.md)
 
 ## Repository History
 

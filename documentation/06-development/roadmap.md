@@ -1,7 +1,7 @@
 # Delivery Roadmap
 
 Status: Decided
-Last updated: 2026-10-26
+Last updated: 2026-11-03
 
 Festival: Tuesday 2026-11-24, confirmed with the organizers on 2026-10-21.
 Internal festival-ready target: Wednesday 2026-11-18. The days from 2026-11-19
@@ -18,16 +18,32 @@ Post-MVP, not by extending the MVP or the festival date.
 | Sprint | Dates | Milestone and focus |
 |--------|-------|---------------------|
 | 0 | 2026-10-19 – 2026-10-25 | M0: decisions and spikes |
-| 1 | 2026-10-26 – 2026-11-01 | M1: vertical slice, first half |
-| 2 | 2026-11-02 – 2026-11-08 | M1: vertical slice exit |
-| 3 | 2026-11-09 – 2026-11-15 | M2: MFD core; operations preparation starts |
-| 4 | 2026-11-16 – 2026-11-22 | M3 checkpoint 2026-11-18; buffer 2026-11-19–22 |
+| 1 | 2026-10-26 – 2026-11-01 | M1: first half — missed; see Sprint 1 review |
+| 2 | 2026-11-02 – 2026-11-08 | M1: single-tablet vertical slice (re-baselined 2026-11-03) |
+| 3 | 2026-11-09 – 2026-11-15 | M2: four-player MFD acceptance |
+| 4 | 2026-11-16 – 2026-11-22 | M3: festival-ready; checkpoint 2026-11-18 |
 | Final setup | 2026-11-23 | Venue setup, final rehearsal, freeze |
 | Festival | 2026-11-24 | Public event |
 
 Each sprint ends with a demo and retrospective. Sprint 4 keeps the normal
 one-week cadence, but its M3 checkpoint is Wednesday 2026-11-18; the rest of the
 sprint is buffer for fixes and rehearsal.
+
+## Progress Review — 2026-11-03
+
+Sprint 0 closed partial with eight carry-over issues: the Go server slice,
+decisions, CI, and project setup landed, but the four-tablet path, latency
+measurement, and Android toolchain proof did not. Sprint 1 missed its M1
+first-half goal; only the game scaffold landed (PR #31). M1 first half was not
+achieved, and the controller and parking loop did not start.
+
+D-33 re-baselines delivery: Sprint 2 is a single-tablet end-to-end vertical
+slice, Sprint 3 is the four-player MFD acceptance run, and Sprint 4 is
+festival-ready work. The MFD is committed; the full MVP remains a stretch. The
+MFD (2026-11-15) and festival-ready (2026-11-18) dates do not change.
+
+The detailed reviews, Sprint 2 plan, component status, and open risks are in
+[`sprint-reviews.md`](sprint-reviews.md).
 
 ## Scope Tiers
 
@@ -63,18 +79,23 @@ fallback decision is recorded.
 
 ### M1 — Vertical Slice (Sprints 1–2: 2026-10-26 – 2026-11-08)
 
-Goal: one complete round with one task type.
+Goal: one complete round with one task type on one real tablet.
 
 - Fixed map with spots, spawn points, static obstacles, and a perimeter loop.
-- Four cars, arcade movement, environment collisions, no car-to-car collisions.
-- One target spot per player, exclusive assignment, parking detection.
+- Cars for slots 1–4, arcade movement, environment collisions, no car-to-car
+  collisions.
+- One target spot per active player, exclusive assignment, parking detection.
 - Time score + basic precision + collision count, live score, 3-minute timer.
 - Placeholder HUD and results screen.
 - Go session/slots/input validation; controller connect/reconnect; host start.
-- Continuous playtest on the real hardware.
+- Continuous playtest on one real tablet.
 
-**Exit criteria:** four people play a full round on the real tablets and display;
-scores and reconnects work; the team can demo it.
+**Exit criteria:** one real tablet connects, drives, completes one parking task,
+and shows a basic score and result on the target laptop; reconnect works; the
+team can demo it.
+
+Sprint 1 (2026-10-26 – 2026-11-01) delivered only the game scaffold. The
+four-player M1 exit is now part of M2.
 
 ### M2 — Minimum Festival Demo (Sprint 3: 2026-11-09 – 2026-11-15)
 
@@ -82,6 +103,7 @@ Goal: a visitor can play one short round on the real hardware.
 
 Committed MFD work:
 
+- Four-player validation of the M1 slice on the real tablets and display.
 - Four tablets connect and reclaim slots; four cars move.
 - One parking task per player with exclusive assignment and parking detection.
 - Time score plus basic precision and collision count; live score and 3-minute
@@ -133,7 +155,10 @@ before the festival:
 - Anonymous event leaderboard, if privacy-safe.
 - Art/audio polish.
 
-## Sprint 0 Backlog (Start Here)
+## Sprint 0 Backlog (Historical)
+
+M0 closed on 2026-11-03 with carry-over. Outcomes and owners are in
+[`sprint-reviews.md`](sprint-reviews.md).
 
 | Item | Area | Owner role | Output |
 |------|------|------------|--------|
@@ -148,7 +173,24 @@ before the festival:
 | S0-08 GitHub board, templates, DoR/DoD, CI skeleton | process | PM/Backend | Project setup |
 | S0-09 Test plan and first hardware checklist | docs | QA | `testing.md` updates |
 
-Do not start M1 until S0-03, S0-04, S0-05, and S0-06 have a clear result.
+M0 closed on 2026-11-03 with carry-over; the original gate was not met.
+
+## Sprint 2 Backlog (Current)
+
+Sprint 2 goal: single-tablet end-to-end vertical slice (D-33). The full plan,
+exit criteria, and risks are in [`sprint-reviews.md`](sprint-reviews.md).
+
+| Issue | Work | Owner | Priority | Status |
+|-------|------|-------|----------|--------|
+| #10 | Tablet specs and battery health | ZofiaDan | P0 | In Progress |
+| #11 | Kotlin WebSocket spike on one tablet | TracerDS | P0 | In Progress |
+| #45 | Define the MFD gameplay baseline | Brzana | P0 | In Progress |
+| #46 | One parking task with exclusive assignment and detection | Brzana | P0 | Ready |
+| #47 | Score, timer, and results overlay | Brzana | P0 | Ready |
+| #17 | Test plan and hardware checklist | ZofiaDan | P1 | Ready |
+| #18 | D-14 choose controller input scheme | TracerDS | P0 | Ready |
+| #25 | Queue backpressure and slow-client close | GreenDude5 | P1 | In Progress |
+| #51 | Reconcile documentation and board drift | GreenDude5 | P1 | Ready |
 
 ## Epic Backlog
 
@@ -215,6 +257,8 @@ Do not start M1 until S0-03, S0-04, S0-05, and S0-06 have a clear result.
 | Scope creep (racing, drift, extra quests) | High | High | Scope tiers; Post-MVP list; PM gate | PM |
 | Five weeks vs seven-week plan | High | High | MFD committed, MVP stretch; weekly scope gate; cut scope, not dates; M3 target 2026-11-18 with 2026-11-19–23 buffer | PM |
 | Sprint 0 spikes not proven by 2026-10-25 | High | High | Run S0-03, S0-04, S0-05, and S0-06 in parallel; narrow to one controller→Go→Godot path; daily check; if unproven, skip M1 scope and go straight to MFD | Backend/Game/Controller |
+| Sprint 1 delivered only the game scaffold; the controller/game vertical slice is unproven | High | High | Single-tablet Sprint 2; cut four-player scope; daily check; MFD only | Game/Controller |
+| Game delivery depends on one owner on the critical path | High | High | Baseline first; pair GreenDude5 or TracerDS on game logic; cut polish | Team |
 | Unknown availability | High | Medium | One-week sprints; small items; measure throughput; cut scope | PM |
 | Hardware/TV/laptop not available | Medium | High | Confirm owner and specs; test early; backup monitor/laptop | Backend/QA |
 | AI-generated code quality | Medium | Medium | Review, tests, reproduce, no blind merges | Team |
@@ -222,8 +266,8 @@ Do not start M1 until S0-03, S0-04, S0-05, and S0-06 have a clear result.
 
 ## Dependencies and Gates
 
-- M1 cannot start until M0 proves the controller→Go→Godot path by 2026-10-25.
-- M2 cannot start until M1 has a playable round on real hardware by 2026-11-08.
+- M2 cannot start until one real tablet completes the M1 vertical slice by
+  2026-11-08.
 - M3 cannot start until the MFD acceptance criteria pass by 2026-11-15;
   operations preparation may start earlier in Sprint 3.
 - M3 target is 2026-11-18. From 2026-11-19, no new features; the buffer is for
@@ -235,8 +279,12 @@ Do not start M1 until S0-03, S0-04, S0-05, and S0-06 have a clear result.
 
 ## Capacity Notes
 
-The team has four people with unknown weekly availability. Five sprints remain
-including Sprint 0. Record planned vs actual hours from Sprint 0 and use the
-observed throughput to plan, not a guessed velocity. If throughput is below the
-plan, cut MFD items, not the buffer. Protect one weekly demo slot even in a bad
-week; a small demo keeps the project honest.
+The team has four people with unknown weekly availability. Three sprints remain
+from Sprint 2. Record planned vs actual hours from Sprint 0 and use the observed
+throughput to plan, not a guessed velocity. If throughput is below the plan, cut
+MFD items, not the buffer. Protect one weekly demo slot even in a bad week; a
+small demo keeps the project honest.
+
+Observed throughput: Sprint 0 delivered the server slice and project setup;
+Sprint 1 delivered only the game scaffold. Plan by observed throughput, not
+optimism.
