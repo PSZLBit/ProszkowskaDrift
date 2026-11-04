@@ -133,6 +133,25 @@ class ControllerClientTest {
     }
 
     @Test
+    fun sessionFullRetriesInsteadOfSticking() {
+        val first = FakeControllerServer()
+        val second = FakeControllerServer()
+        server.enqueue(MockResponse().withWebSocketUpgrade(first))
+        server.enqueue(MockResponse().withWebSocketUpgrade(second))
+
+        startClient(backoffMs = 20L)
+        first.awaitOpen()
+        first.awaitMessage("hello")
+        first.sendError("session_full", "No free player slot.")
+
+        second.awaitOpen()
+        val hello = second.awaitMessage("hello")
+        assertEquals("device-token-1", hello.getJSONObject("data").getString("deviceToken"))
+        assertEquals(2, server.requestCount)
+        assertTrue(listener.errors.contains("session_full"))
+    }
+
+    @Test
     fun baseAddressIsExpandedToTheControllerEndpoint() {
         assertEquals(
             "ws://192.168.1.10:8080/ws/controller",

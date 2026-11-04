@@ -285,11 +285,18 @@ class ControllerClient(
 
             is ServerMessage.ServerError -> {
                 lastError = "${message.code}: ${message.message}"
-                if (message.code in FATAL_ERRORS) {
-                    fatal = true
-                    reconnectScheduled.set(false)
-                    closeSocket(CLOSE_NORMAL, "fatal: ${message.code}")
-                    setState(ConnectionState.FATAL, lastError)
+                when {
+                    message.code in FATAL_ERRORS -> {
+                        fatal = true
+                        reconnectScheduled.set(false)
+                        closeSocket(CLOSE_NORMAL, "fatal: ${message.code}")
+                        setState(ConnectionState.FATAL, lastError)
+                    }
+
+                    message.code in RETRYABLE_ERRORS -> {
+                        closeSocket(CLOSE_NORMAL, "retry: ${message.code}")
+                        scheduleReconnect(lastError ?: message.code)
+                    }
                 }
             }
 
@@ -340,6 +347,7 @@ class ControllerClient(
         private const val RTT_SAMPLES = 10
         private const val PHASE_PLAYING = "playing"
         private val FATAL_ERRORS = setOf("auth_failed", "kicked", "protocol_mismatch")
+        private val RETRYABLE_ERRORS = setOf("session_full", "game_unavailable")
     }
 }
 

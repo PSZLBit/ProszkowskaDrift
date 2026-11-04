@@ -109,8 +109,8 @@ The spike (issue #11) adds host-JVM tests under
 - `ControllerClientTest` uses OkHttp MockWebServer as a fake Go server. It
   checks the `/ws/controller` endpoint, `hello` with the device token and app
   version, input only while `playing` with increasing sequence numbers,
-  reconnect with the same token after a server drop, fatal `auth_failed`
-  handling, and base-address expansion to `/ws/controller`.
+  reconnect with the same token after a server drop, retry on `session_full`,
+  fatal `auth_failed` handling, and base-address expansion to `/ws/controller`.
 - `ProtocolTest` covers the version 1 encoder/parser, unknown fields and
   messages, malformed JSON, and a wrong protocol version.
 - `BackoffTest` covers the reconnect delay: base, doubling, cap, and custom
@@ -134,8 +134,8 @@ Manual check, written down before implementing any controller change:
    app reconnects with the same device token and reclaims the same slot.
 
 Status 2026-11-04: the plain-Views scaffold has the WebSocket spike — OkHttp
-3.12.x, `hello`/input/ping/reconnect client, and 26 host-JVM tests. On this
-machine `:app:testDebugUnitTest` passes (26 tests) and `:app:assembleDebug`
+3.12.x, `hello`/input/ping/reconnect client, and 27 host-JVM tests. On this
+machine `:app:testDebugUnitTest` passes (27 tests) and `:app:assembleDebug`
 produces the debug APK. The configured send rate is 25 Hz. Install/run on the
 real tablets, measured latency, and the Kotlin-versus-Java recommendation for
 issue #11 are still pending hardware validation.
