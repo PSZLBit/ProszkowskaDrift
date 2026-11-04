@@ -118,7 +118,9 @@ class ControllerClient(
         if (!started.compareAndSet(false, true)) return
         running.set(true)
         connectNow()
-        scheduler.scheduleAtFixedRate(
+        // Fixed delay, not fixed rate: after a GC or scheduling pause the client
+        // must not emit a catch-up burst above the 20–30 Hz input budget.
+        scheduler.scheduleWithFixedDelay(
             { sendInput() },
             0L,
             maxOf(1L, 1_000L / inputHz),
