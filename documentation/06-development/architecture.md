@@ -111,7 +111,11 @@ Godot 4.7.2 project with:
   collision polygons are not converted yet. It is generated from the committed
   placeholder sheets by `game/tools/build_parking_lot_tileset.gd`.
   `game/scripts/parking_lot_art.gd` swaps in the purchased textures at runtime
-  when they are installed locally (D-35). `game/scenes/map/parking_lot.tscn`
+  when they are installed locally (D-35). When the purchased sheets are present,
+  the generator also writes the gitignored
+  `game/tilesets/parking_lot.local.tres`, which the demo map prefers, so the
+  editor shows the real art without committing purchased assets.
+  `game/scenes/map/parking_lot.tscn`
   shows a 40×22 lot with a kerb, plain ground, four parking bays, four boundary
   collision shapes, and spawn/bay markers; it is a tileset demo and the base for
   #46, not final map geometry.

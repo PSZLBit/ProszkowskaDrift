@@ -12,6 +12,13 @@ extends Node2D
 ## no cars, scoring, or input wiring.
 
 const TILESET_PATH := "res://tilesets/parking_lot.tres"
+const TILESET_LOCAL_PATH := "res://tilesets/parking_lot.local.tres"
+
+
+func _tileset_path() -> String:
+	if ResourceLoader.exists(TILESET_LOCAL_PATH):
+		return TILESET_LOCAL_PATH
+	return TILESET_PATH
 
 const MAP_SIZE := Vector2i(40, 22)
 const MAP_OFFSET := Vector2(0, 12)
@@ -38,7 +45,7 @@ func _ready() -> void:
 		push_error("ParkingLotMap needs a TileMapLayer child.")
 		return
 	if tile_map.tile_set == null:
-		tile_map.tile_set = load(TILESET_PATH) as TileSet
+		tile_map.tile_set = load(_tileset_path()) as TileSet
 	ParkingLotArt.apply(tile_map.tile_set)
 	build()
 
@@ -50,9 +57,9 @@ func build() -> void:
 		push_error("ParkingLotMap needs a TileMapLayer child.")
 		return
 	if tile_map.tile_set == null:
-		tile_map.tile_set = load(TILESET_PATH) as TileSet
+		tile_map.tile_set = load(_tileset_path()) as TileSet
 	if tile_map.tile_set == null:
-		push_error("Could not load %s." % TILESET_PATH)
+		push_error("Could not load %s." % _tileset_path())
 		return
 
 	tile_map.clear()

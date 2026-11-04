@@ -48,8 +48,11 @@ coverage.html
 /game/build/
 
 # Purchased third-party art assets stay local; see game/assets/CREDITS.md (D-34).
-# Team members obtain the purchased copy and place it in this folder themselves.
 /game/assets/Large Parking Lot/
+
+# Locally generated TileSets that reference the purchased art (D-34, D-35).
+/game/tilesets/*.local.tres
+/game/tilesets/*.local.tres.import
 
 # Godot export presets may contain keystore paths or passwords; keep them local.
 /game/export_presets.cfg

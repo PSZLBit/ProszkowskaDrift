@@ -28,6 +28,11 @@ This file records the source and licence of third-party assets under
   and 48×48 grid as the purchased files. They are committed so the TileSet and
   map load in CI and on fresh clones. `game/scripts/parking_lot_art.gd` swaps in
   the purchased textures at runtime when the local folder is present (D-35).
+- Local override: running `game/tools/build_parking_lot_tileset.gd` when the
+  purchased folder is installed also writes the gitignored
+  `game/tilesets/parking_lot.local.tres` from the purchased sheets. The demo
+  map prefers it when present, so the editor shows the real art without
+  committing purchased assets.
 
 ## Pending provenance
 
