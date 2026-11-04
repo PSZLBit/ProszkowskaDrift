@@ -1,12 +1,12 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
-Protocol version: `1` (MVP). The S0-04 server slice implements a subset of this
-contract; see "Sprint 0 Implementation Notes" at the end. Changing a field or
-message requires updating this file and, for breaking changes, bumping the
-protocol version.
+Protocol version: `1` (MVP). The S0-04 server slice and the controller
+WebSocket spike implement this contract; see the Sprint 0 implementation notes
+at the end. Changing a field or message requires updating this file and, for
+breaking changes, bumping the protocol version.
 
 ## Transport and Endpoints
 

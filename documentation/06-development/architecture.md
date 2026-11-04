@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 This document describes the MVP runtime. Decisions are recorded in D-22,
 ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
@@ -37,15 +37,24 @@ or simulate the game.
 
 | Component | Process | Responsibilities |
 |-----------|---------|------------------|
-| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold is on an unmerged branch; production work is #48 |
+| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 WebSocket spike is implemented; real-tablet validation and the production UI are #48 |
 | Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; supervision is later work |
 | Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, placeholder boundaries; no map, parking, or scoring yet |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
-As of 2026-11-03 the controller production code is not on `main`. The API 19
-scaffold is on `feat/controller-scaffold` and is tracked by #11 and #48; it is not
-implemented production behavior.
+Controller implementation status (2026-11-04): `controller-android/` is an API 19
+app — `minSdk 19` / `targetSdk 19`, landscape, one plain-Views `Activity`,
+keep-screen-on, platform Holo theme — built with AGP 9.4.1 and AGP built-in
+Kotlin. Per D-20/ADR-0002 it has no Compose and no AndroidX; dependencies are
+JUnit for local unit tests and OkHttp 3.12.x for the WebSocket client. The
+WebSocket spike (issue #11) implements `connect` to `/ws/controller` (a bare
+host address is expanded to that path), the `hello` device-token handshake,
+`input` at 25 Hz while the phase is `playing`, a 2 s application `ping`, and
+reconnect with exponential backoff. The wire protocol and connection state
+machine are covered by host-JVM tests with OkHttp MockWebServer as the fake
+server. Real-tablet validation is still pending; the production controller is
+issue #48.
 
 ## Server Slice
 
@@ -233,8 +242,9 @@ engine, or architecture. Do not silently add prediction, UDP, or a new runtime.
 ## Open Architecture Items
 
 - Final confirmation of the Go WebSocket library after the Sprint 0 spikes.
-  The S0-04 slice uses `github.com/coder/websocket` v1.8.15; the Android
-  WebSocket library is still open.
+  The S0-04 slice uses `github.com/coder/websocket` v1.8.15.
+- Android WebSocket library: OkHttp 3.12.x is used in the controller spike;
+  confirm API 19 stability on the real tablets.
 - Exact process supervisor implementation (Go or shell script).
 - Windows vs Linux festival laptop.
 - Router model and static-IP plan.

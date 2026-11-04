@@ -1,6 +1,6 @@
 # Proszkowska Drift
 
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 Working title for a local multiplayer arcade parking game. One to four players
 use Android tablets as controllers; a laptop runs the game and shows it on a TV
@@ -31,8 +31,9 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
   connection, four slot-keyed cars, protocol validation, fullscreen settings,
   and headless tests. Map, parking detection, scoring, and HUD are next.
 - `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
-  The scaffold exists on an unmerged branch, not on `main`; WebSocket input and
-  real-tablet proof are in progress (#11, #48).
+  The WebSocket spike is implemented: `/ws/controller` connection, device-token
+  handshake, 25 Hz input, ping, reconnect with backoff, and host-JVM fake-server
+  tests. Real-tablet proof and the production UI remain (#11, #48).
 - `documentation/` — source of truth: vision, game design, requirements,
   decisions, architecture, protocol, testing, roadmap, festival runbook.
 
@@ -60,8 +61,9 @@ the game scaffold. The Go session server slice exists: controller and game WebSo
 endpoints, four slots, input validation, reconnects, heartbeats, the minimal host
 command path, and fake client tools. The Godot scaffold exists: one game
 connection, four slot-keyed cars, protocol validation, fullscreen settings, and
-headless tests. The Android controller is not on `main`; only an API 19 scaffold
-exists on an unmerged branch. Four-player MFD validation moves to Sprint 3, and
+headless tests. The Android controller WebSocket spike is implemented with
+host-JVM fake-server tests; real-tablet install, latency, and stability remain
+open. Four-player MFD validation moves to Sprint 3, and
 the festival-ready target is 2026-11-18. The Minimum Festival Demo (MFD) is
 committed; the full MVP is a stretch goal. The festival is 2026-11-24.
 
@@ -80,9 +82,17 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
   `pre-push` hook runs through Git's bundled shell.
 - Go 1.23 or newer for the `server/` component.
 - Godot 4.7.2 for the `game/` component.
+- Android SDK (compile SDK 37, build tools 37) and JDK 17 or newer for the
+  `controller-android/` component. Set `sdk.dir` in
+  `controller-android/local.properties` or `ANDROID_HOME`.
 
-The Android SDK is not required yet; its setup steps will be added when the
-controller lands on `main`.
+Build and test the controller:
+
+```sh
+cd controller-android
+./gradlew :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+```
 
 ### Clone and set up
 

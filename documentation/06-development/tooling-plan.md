@@ -1,7 +1,7 @@
 # Tooling and Quality Gate Plan
 
 Status: Draft
-Last updated: 2026-10-26
+Last updated: 2026-11-04
 
 Developer tooling for the project. A tool enters the repository only with a
 **trigger**, an **owner**, and — if it changes the stack or the merge gate — a
@@ -91,8 +91,10 @@ not need extra tooling:
 
 1. Go job: `go test -race ./...`, `go vet ./...`, build — active in
    `.github/workflows/server.yml` since the `server/` scaffold.
-2. Android job: Gradle `assembleDebug` with cached dependencies; upload the APK.
-   Trigger: `controller-android/` scaffold.
+2. Android job: Gradle `testDebugUnitTest`, `assembleDebug`, and `lintDebug`
+   with cached dependencies; upload the APK. Trigger met with the
+   `controller-android/` scaffold; the workflow is not added yet, but the
+   commands pass locally.
 3. Godot job: headless import plus `game/tests/run_tests.gd` — active in
    `.github/workflows/game.yml` since the game scaffold. It pins Godot 4.7.2 and
    downloads it in CI. Export only on tags if CI time becomes a problem.
@@ -101,8 +103,8 @@ not need extra tooling:
 5. Cache Go modules, Gradle, and Godot downloads where possible; the Go job
    caches modules through `actions/setup-go`.
 6. Required checks for `main`: Go tests/vet and the Godot headless tests. The
-   Android build joins when `controller-android/` is scaffolded. Branch
-   protection is a repository-settings task and is not configured yet.
+   Android build joins when a controller workflow is added. Branch protection
+   is a repository-settings task and is not configured yet.
 
 Pending in the Go job: `govulncheck ./...` (trigger met with the server
 scaffold; wire it pinned to a version). Pending overall: commit-message

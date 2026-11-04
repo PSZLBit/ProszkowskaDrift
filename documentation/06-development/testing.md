@@ -1,11 +1,11 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
-The test-plan update is tracked in issue #17. As of 2026-11-03 the controller is
-not on `main`; the API 19 scaffold and real-tablet checks are tracked by #11 and
-#48.
+The test-plan update is tracked in issue #17. The controller WebSocket spike is
+implemented with host-JVM tests; install/run on the real tablets and the latency
+measurements remain tracked by #11 and #48.
 
 ## Goals
 
@@ -127,8 +127,8 @@ Automated in S0-04:
 
 - A fake game client connects to the Go server, receives `game_hello` and
   `config`, sends `game_ready`, and exchanges `host_command`/`phase` messages.
-- Four fake controllers connect, receive slots, send input, and verify that the
-  server forwards only validated input.
+- Four fake controllers connect, receive slots, send input at 20–30 Hz, and
+  verify that the server forwards only validated input.
 - Reconnect test: drop one controller, reconnect with the same token, verify the
   same slot and resumed input.
 - Host test: a controller cannot start/pause/reset; the server rejects it.
@@ -182,6 +182,58 @@ These checks use the S0-04 fake clients. Details and expected output are in
 Record the date, commit, commands, and observed result for these checks. A real
 Android controller and the target TV run are not available yet; those hardware
 checks remain open.
+
+## Android Controller Build Checks
+
+The controller is in `controller-android/`. It is a minimal API 19 app with no
+Compose and no AndroidX (D-20, ADR-0002).
+
+Commands:
+
+```sh
+cd controller-android
+./gradlew :app:testDebugUnitTest
+./gradlew :app:assembleDebug        # APK under app/build/outputs/apk/debug/
+./gradlew :app:lintDebug
+```
+
+The spike (issue #11) adds host-JVM tests under
+`app/src/test/java/pszlbit/drift/{net,protocol,input}/`:
+
+- `ControllerClientTest` uses OkHttp MockWebServer as a fake Go server. It
+  checks the `/ws/controller` endpoint, `hello` with the device token and app
+  version, input only while `playing` with increasing sequence numbers,
+  reconnect with the same token after a server drop, retry on `session_full`,
+  fatal `auth_failed` handling, and base-address expansion to `/ws/controller`.
+- `ProtocolTest` covers the version 1 encoder/parser, unknown fields and
+  messages, malformed JSON, and a wrong protocol version.
+- `BackoffTest` covers the reconnect delay: base, doubling, cap, and custom
+  values.
+- `InputTrackerTest` covers the temporary touch mapping: neutral state,
+  opposite zones cancelling, two pointers, release, and clear.
+
+MockWebServer owns a local ephemeral socket and plays the server side; the tests
+do not need the venue network, a Go server, or a tablet.
+
+Manual check, written down before implementing any controller change:
+
+1. `app-debug.apk` installs on an API 19 tablet.
+2. The app launches into landscape, shows the status text, and keeps the
+   screen on.
+3. No crash within one minute of idle.
+4. With a reachable server, the status shows connected, `hello` assigns a slot,
+   and the diagnostics line reports a send rate inside 20–30 Hz while
+   `playing`.
+5. Force a disconnect (stop the server or disable Wi-Fi), then restore it: the
+   app reconnects with the same device token and reclaims the same slot.
+
+Status 2026-11-04: the plain-Views scaffold has the WebSocket spike — OkHttp
+3.12.x, `hello`/input/ping/reconnect client, and 27 host-JVM tests. On this
+machine `:app:testDebugUnitTest` passes (27 tests), `:app:assembleDebug`
+produces the debug APK, and `:app:lintDebug` passes. The configured send rate is
+25 Hz. Install/run on the real tablets, measured latency, and the
+Kotlin-versus-Java recommendation for issue #11 are still pending hardware
+validation.
 
 ## Android 4.4.2 Hardware Matrix
 
@@ -369,8 +421,10 @@ details, triggers, and the "do not add yet" list live in
   headless tests; the Android build joins when `controller-android/` is
   scaffolded. Branch protection is still a repository-settings task.
 
-Server commands are documented above and in `server/README.md`. Godot commands
-are documented above. Report any check that could not run.
+The controller CI job is not enabled yet, but `controller-android/` now builds
+and tests locally, so it can be added. Server commands are documented above and
+in `server/README.md`; Godot commands are documented above. Report any check
+that could not run.
 
 ## Developer Setup Check
 
