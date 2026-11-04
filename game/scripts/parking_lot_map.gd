@@ -18,7 +18,18 @@ const TILESET_LOCAL_PATH := "res://tilesets/parking_lot.local.tres"
 func _tileset_path() -> String:
 	if ResourceLoader.exists(TILESET_LOCAL_PATH):
 		return TILESET_LOCAL_PATH
+	if not ResourceLoader.exists(TILESET_PATH):
+		_generate_tileset()
 	return TILESET_PATH
+
+
+func _generate_tileset() -> void:
+	var builder := load("res://scripts/parking_lot_tileset_builder.gd")
+	if builder == null:
+		return
+	var base_dir := "res://assets/placeholders/large_parking_lot/"
+	var files: Dictionary = builder.placeholder_files()
+	builder.build(base_dir, files, TILESET_PATH)
 
 const MAP_SIZE := Vector2i(40, 22)
 const MAP_OFFSET := Vector2(0, 12)

@@ -330,6 +330,13 @@ func _test_main_scene() -> void:
 
 
 func _test_parking_lot_tileset() -> void:
+	var builder = load("res://scripts/parking_lot_tileset_builder.gd")
+	if builder != null and not ResourceLoader.exists("res://tilesets/parking_lot.tres"):
+		builder.build(
+			"res://assets/placeholders/large_parking_lot/",
+			builder.placeholder_files(),
+			"res://tilesets/parking_lot.tres",
+		)
 	var tile_set := load("res://tilesets/parking_lot.tres") as TileSet
 	_check(tile_set != null, "parking_lot.tres loads")
 	if tile_set == null:
@@ -404,8 +411,7 @@ func _test_parking_lot_map() -> void:
 	var map = packed.instantiate()
 	var tile_map: TileMapLayer = map.get_tile_map_layer()
 	_check(tile_map != null, "the parking map has a TileMapLayer")
-	_check(tile_map.tile_set != null, "the parking map has a TileSet")
-	if tile_map == null or tile_map.tile_set == null:
+	if tile_map == null:
 		map.free()
 		return
 
@@ -429,6 +435,10 @@ func _test_parking_lot_map() -> void:
 		_check_eq(shape_count, 4, "the map boundary has four collision shapes")
 
 	map.build()
+	_check(tile_map.tile_set != null, "the parking map has a TileSet")
+	if tile_map.tile_set == null:
+		map.free()
+		return
 	_check_eq(
 		tile_map.get_cell_source_id(Vector2i(0, 0)),
 		ParkingLotMapScript.SOURCE_A2_2,

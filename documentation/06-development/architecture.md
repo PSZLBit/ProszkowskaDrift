@@ -105,20 +105,16 @@ Godot 4.7.2 project with:
   request. `dev_auto_start_round` is development-only and defaults to `false`.
 - `game/scenes/main.tscn`: placeholder background, boundary walls, and four cars
   on slots 1–4, configured for a 1920×1080 fullscreen window.
-- `game/tilesets/parking_lot.tres`: TileSet with eight 48×48 atlas sources
-  (A2-1, A2-2, A4-walls, B-01 through B-05) and one physics layer. All source
-  tiles are available on the grid; RPG Maker autotile rules and per-tile
-  collision polygons are not converted yet. It is generated from the committed
-  placeholder sheets by `game/tools/build_parking_lot_tileset.gd`.
-  `game/scripts/parking_lot_art.gd` swaps in the purchased textures at runtime
-  when they are installed locally (D-35). When the purchased sheets are present,
-  the generator also writes the gitignored
-  `game/tilesets/parking_lot.local.tres`, which the demo map prefers, so the
-  editor shows the real art without committing purchased assets.
-  `game/scenes/map/parking_lot.tscn`
-  shows a 40×22 lot with a kerb, plain ground, four parking bays, four boundary
-  collision shapes, and spawn/bay markers; it is a tileset demo and the base for
-  #46, not final map geometry.
+- `game/tilesets/` (generated, gitignored): `parking_lot.tres` is built from the
+  committed placeholder sheets by `game/tools/build_parking_lot_tileset.gd` (via
+  `ParkingLotTilesetBuilder`); `parking_lot.local.tres` is also built from the
+  purchased sheets when they are installed and is preferred by the map. The demo
+  map regenerates the committed-path TileSet on demand when it is missing. The
+  map shows a 40×22 lot with a kerb, plain ground, four parking bays, four
+  boundary collision shapes, and spawn/bay markers; it is a tileset demo and the
+  base for #46, not final map geometry. All source tiles are available on the
+  grid; RPG Maker autotile rules and per-tile collision polygons are not
+  converted yet.
 - `game/scenes/ui/hud.tscn` plus `game/scripts/hud.gd`, `round_clock.gd`, and
   `score_model.gd`: a minimal HUD, round timer, and results overlay shell for
   #47. Scoring values, phase rules, and layout are provisional pending #45 and

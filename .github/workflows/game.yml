@@ -45,5 +45,8 @@ jobs:
       - name: Import project
         run: '"$GODOT_BIN" --headless --path game --import'
 
+      - name: Generate tilesets
+        run: '"$GODOT_BIN" --headless --path game --script res://tools/build_parking_lot_tileset.gd'
+
       - name: Run headless tests
         run: '"$GODOT_BIN" --headless --path game --script res://tests/run_tests.gd'

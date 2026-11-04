@@ -1,7 +1,6 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/parking_lot_map.gd" id="1_map"]
-[ext_resource type="TileSet" path="res://tilesets/parking_lot.tres" id="2_tileset"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_horizontal"]
 size = Vector2(1920, 20)
@@ -14,7 +13,6 @@ script = ExtResource("1_map")
 
 [node name="TileMapLayer" type="TileMapLayer" parent="."]
 position = Vector2(0, 12)
-tile_set = ExtResource("2_tileset")
 
 [node name="Environment" type="StaticBody2D" parent="."]
 position = Vector2(0, 12)

@@ -25,14 +25,13 @@ This file records the source and licence of third-party assets under
   data.
 - Placeholder atlases: `game/assets/placeholders/large_parking_lot/` contains
   original project-created placeholder sheets with the same pixel dimensions
-  and 48×48 grid as the purchased files. They are committed so the TileSet and
-  map load in CI and on fresh clones. `game/scripts/parking_lot_art.gd` swaps in
+  and 48×48 grid as the purchased files. They are committed so the TileSet can be
+  generated in CI and on fresh clones. `game/scripts/parking_lot_art.gd` swaps in
   the purchased textures at runtime when the local folder is present (D-35).
-- Local override: running `game/tools/build_parking_lot_tileset.gd` when the
-  purchased folder is installed also writes the gitignored
-  `game/tilesets/parking_lot.local.tres` from the purchased sheets. The demo
-  map prefers it when present, so the editor shows the real art without
-  committing purchased assets.
+- Generated tilesets: `game/tilesets/` is gitignored. Running
+  `game/tools/build_parking_lot_tileset.gd` writes `parking_lot.tres` from the
+  placeholders and `parking_lot.local.tres` from the purchased sheets when they
+  are installed. CI runs the generator before the tests.
 
 ## Pending provenance
 
