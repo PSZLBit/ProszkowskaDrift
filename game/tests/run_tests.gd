@@ -9,6 +9,10 @@ const GameProtocol := preload("res://scripts/game_protocol.gd")
 const SlotInputStore := preload("res://scripts/slot_input_store.gd")
 const CarScript := preload("res://scripts/car.gd")
 const ServerInputScript := preload("res://scripts/server_input.gd")
+const ParkingLotArt := preload("res://scripts/parking_lot_art.gd")
+const ParkingLotMapScript := preload("res://scripts/parking_lot_map.gd")
+const RoundClock := preload("res://scripts/round_clock.gd")
+const ScoreModel := preload("res://scripts/score_model.gd")
 
 var _checks := 0
 var _failures := 0
@@ -30,6 +34,12 @@ func _initialize() -> void:
 	_test_car_movement()
 	_test_quit_key()
 	_test_main_scene()
+	_test_parking_lot_tileset()
+	_test_parking_lot_map()
+	_test_parking_lot_art_swap()
+	_test_round_clock()
+	_test_score_model()
+	_test_hud_scene()
 	_test_project_settings()
 
 	if _failures == 0:
@@ -291,6 +301,8 @@ func _test_main_scene() -> void:
 
 	var server_input := scene.find_child("ServerInput", true, false)
 	_check(server_input != null, "the main scene has one server input node")
+	var hud := scene.find_child("Hud", true, false)
+	_check(hud != null, "the main scene has a HUD overlay")
 
 	var slots: Array[int] = []
 	for car in cars:
@@ -315,6 +327,424 @@ func _test_main_scene() -> void:
 	slots.sort()
 	_check_eq(slots, [1, 2, 3, 4], "cars cover slots 1-4 exactly once")
 	scene.free()
+
+
+func _test_parking_lot_tileset() -> void:
+	var builder = load("res://scripts/parking_lot_tileset_builder.gd")
+	if builder != null and not ResourceLoader.exists("res://tilesets/parking_lot.tres"):
+		builder.build(
+			"res://assets/placeholders/large_parking_lot/",
+			builder.placeholder_files(),
+			"res://tilesets/parking_lot.tres",
+		)
+	var tile_set := load("res://tilesets/parking_lot.tres") as TileSet
+	_check(tile_set != null, "parking_lot.tres loads")
+	if tile_set == null:
+		return
+
+	_check_eq(tile_set.tile_size, Vector2i(48, 48), "parking tiles are 48x48")
+	_check_eq(tile_set.get_source_count(), 8, "the tileset has eight atlas sources")
+	_check_eq(tile_set.get_physics_layers_count(), 1, "the tileset has one physics layer")
+	_check_eq(
+		tile_set.get_physics_layer_collision_layer(0),
+		1,
+		"parking tiles target the environment collision layer",
+	)
+	_check_eq(
+		tile_set.get_physics_layer_collision_mask(0),
+		2,
+		"parking tiles detect the car collision layer",
+	)
+
+	var expected := ["A2-1", "A2-2", "A4-walls", "B-01", "B-02", "B-03", "B-04", "B-05"]
+	var names: Array[String] = []
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		_check(source != null, "source %d is an atlas source" % index)
+		if source == null:
+			continue
+		names.append(source.resource_name)
+		_check(source.texture != null, "source %s has a texture" % source.resource_name)
+		_check_eq(
+			source.texture_region_size,
+			Vector2i(48, 48),
+			"source %s uses 48x48 regions" % source.resource_name,
+		)
+		if source.texture != null:
+			_check_eq(
+				source.texture.get_width() % 48,
+				0,
+				"source %s width is a 48px multiple" % source.resource_name,
+			)
+			_check_eq(
+				source.texture.get_height() % 48,
+				0,
+				"source %s height is a 48px multiple" % source.resource_name,
+			)
+	_check_eq(names, expected, "atlas sources are named in generation order")
+
+	var a2 := _find_atlas_source(tile_set, "A2-2")
+	_check(a2 != null, "the A2-2 ground source exists")
+	if a2 != null and a2.texture != null:
+		_check(
+			a2.texture.resource_path.ends_with(
+				"assets/placeholders/large_parking_lot/a2_2.png"
+			),
+			"the committed tileset uses the placeholder A2-2 sheet",
+		)
+		_check(a2.has_tile(Vector2i(1, 3)), "the plain ground tile exists")
+		_check(a2.has_tile(Vector2i(6, 3)), "the kerb tile exists")
+
+	var b01 := _find_atlas_source(tile_set, "B-01")
+	_check(b01 != null, "the B-01 parking source exists")
+	if b01 != null:
+		_check(b01.has_tile(Vector2i(0, 2)), "the first bay top tile exists")
+		_check(b01.has_tile(Vector2i(3, 3)), "the last bay bottom tile exists")
+
+
+func _test_parking_lot_map() -> void:
+	var packed := load("res://scenes/map/parking_lot.tscn") as PackedScene
+	_check(packed != null, "parking_lot.tscn loads")
+	if packed == null:
+		return
+
+	var map = packed.instantiate()
+	var tile_map: TileMapLayer = map.get_tile_map_layer()
+	_check(tile_map != null, "the parking map has a TileMapLayer")
+	if tile_map == null:
+		map.free()
+		return
+
+	_check_eq(tile_map.position, ParkingLotMapScript.MAP_OFFSET, "the map is centred vertically")
+	_check_eq(
+		ParkingLotMapScript.MAP_SIZE * 48,
+		Vector2i(1920, 1056),
+		"the 40x22 map fills the 1920px width",
+	)
+
+	var environment := map.get_node_or_null("Environment") as StaticBody2D
+	_check(environment != null, "the demo map has an environment body")
+	if environment != null:
+		_check_eq(environment.collision_layer, 1, "the map boundary uses the environment layer")
+		_check_eq(environment.collision_mask, 2, "the map boundary detects cars")
+		var boundary_shapes := environment.get_children()
+		var shape_count := 0
+		for child in boundary_shapes:
+			if child is CollisionShape2D and child.shape != null:
+				shape_count += 1
+		_check_eq(shape_count, 4, "the map boundary has four collision shapes")
+
+	map.build()
+	_check(tile_map.tile_set != null, "the parking map has a TileSet")
+	if tile_map.tile_set == null:
+		map.free()
+		return
+	_check_eq(
+		tile_map.get_cell_source_id(Vector2i(0, 0)),
+		ParkingLotMapScript.SOURCE_A2_2,
+		"the border uses the A2-2 source",
+	)
+	_check_eq(
+		tile_map.get_cell_atlas_coords(Vector2i(0, 0)),
+		ParkingLotMapScript.KERB_COORDS,
+		"the border uses the kerb tile",
+	)
+	_check_eq(
+		tile_map.get_cell_atlas_coords(Vector2i(1, 1)),
+		ParkingLotMapScript.GROUND_COORDS,
+		"the interior uses the plain ground tile",
+	)
+
+	for bay in ParkingLotMapScript.BAY_COUNT:
+		var column: int = ParkingLotMapScript.BAY_FIRST_COLUMN + bay
+		var top_row: int = ParkingLotMapScript.BAY_TOP_ROW
+		_check_eq(
+			tile_map.get_cell_source_id(Vector2i(column, top_row)),
+			ParkingLotMapScript.SOURCE_B_01,
+			"bay %d uses the B-01 source" % (bay + 1),
+		)
+		_check_eq(
+			tile_map.get_cell_atlas_coords(Vector2i(column, top_row)),
+			ParkingLotMapScript.BAY_TOP_COORDS + Vector2i(bay, 0),
+			"bay %d top marking is correct" % (bay + 1),
+		)
+		_check_eq(
+			tile_map.get_cell_atlas_coords(Vector2i(column, top_row + 1)),
+			ParkingLotMapScript.BAY_BOTTOM_COORDS + Vector2i(bay, 0),
+			"bay %d bottom marking is correct" % (bay + 1),
+		)
+
+	var spawns := map.get_node_or_null("Spawns") as Node2D
+	_check(spawns != null, "the parking map has spawn markers")
+	if spawns != null:
+		_check_eq(spawns.get_child_count(), 4, "there are four spawn markers")
+
+	var bays := map.get_node_or_null("Bays") as Node2D
+	_check(bays != null, "the parking map has bay markers")
+	if bays != null:
+		_check_eq(
+			bays.get_child_count(),
+			ParkingLotMapScript.BAY_COUNT,
+			"every bay has a marker",
+		)
+		for bay in ParkingLotMapScript.BAY_COUNT:
+			var marker := bays.get_node_or_null("Bay%d" % (bay + 1)) as Marker2D
+			_check(marker != null, "bay %d has a marker" % (bay + 1))
+			if marker != null:
+				var center := Vector2(
+					(ParkingLotMapScript.BAY_FIRST_COLUMN + bay + 0.5) * 48.0,
+					(ParkingLotMapScript.BAY_TOP_ROW + 1) * 48.0,
+				)
+				_check_eq(marker.position, center, "bay %d marker sits in its bay" % (bay + 1))
+
+	map.free()
+
+
+func _test_parking_lot_art_swap() -> void:
+	_check_eq(
+		ParkingLotArt.REAL_FILES.size(),
+		8,
+		"every atlas source has a purchased file mapping",
+	)
+	_check_eq(
+		ParkingLotArt.REAL_FILES.get("A2-1", ""),
+		"Tile_A2-1 (2).png",
+		"the A2-1 mapping matches the purchased file",
+	)
+	_check_eq(
+		ParkingLotArt.REAL_FILES.get("B-05", ""),
+		"tile-B-05.png",
+		"the B-05 mapping matches the purchased file",
+	)
+	_check_eq(ParkingLotArt.apply(null), 0, "a missing TileSet is ignored")
+
+	var tile_set := load("res://tilesets/parking_lot.tres") as TileSet
+	_check(tile_set != null, "the tileset loads for the art-swap test")
+	if tile_set == null:
+		return
+
+	var before: Array = []
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		before.append(source.texture if source != null else null)
+
+	var swapped := ParkingLotArt.apply(
+		tile_set,
+		"res://assets/__missing_parking_lot__/",
+	)
+	_check_eq(
+		swapped,
+		0,
+		"missing purchased sheets leave the placeholder textures in place",
+	)
+
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		if source != null:
+			_check_eq(
+				source.texture,
+				before[index],
+				"source %d keeps its placeholder texture" % index,
+			)
+
+
+func _find_atlas_source(tile_set: TileSet, source_name: String) -> TileSetAtlasSource:
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		if source != null and source.resource_name == source_name:
+			return source
+	return null
+
+
+func _test_round_clock() -> void:
+	var clock := RoundClock.new()
+	_check_eq(clock.phase, RoundClock.Phase.READY, "the clock starts ready")
+	_check_eq(clock.remaining_ms, 180000, "the clock starts full")
+
+	clock.start()
+	_check_eq(clock.phase, RoundClock.Phase.PLAYING, "start enters playing")
+	_check_eq(clock.remaining_ms, 180000, "start resets the timer")
+
+	clock.tick(1.0)
+	_check_eq(clock.remaining_ms, 179000, "one second elapses")
+
+	clock.tick(-1.0)
+	_check_eq(clock.remaining_ms, 179000, "negative ticks are ignored")
+	clock.tick(INF)
+	_check_eq(clock.remaining_ms, 179000, "non-finite ticks are ignored")
+
+	clock.pause()
+	_check_eq(clock.phase, RoundClock.Phase.PAUSED, "pause enters paused")
+	clock.tick(10.0)
+	_check_eq(clock.remaining_ms, 179000, "paused time does not elapse")
+
+	clock.resume()
+	_check_eq(clock.phase, RoundClock.Phase.PLAYING, "resume enters playing")
+
+	clock.reset()
+	_check_eq(clock.phase, RoundClock.Phase.READY, "reset returns to ready")
+	_check_eq(clock.remaining_ms, 180000, "reset restores the full time")
+
+	var finished := [false]
+	clock.finished.connect(func() -> void: finished[0] = true)
+	clock.start()
+	clock.tick(180.0)
+	_check_eq(clock.remaining_ms, 0, "the timer clamps at zero")
+	_check_eq(clock.phase, RoundClock.Phase.FINISHED, "expiry enters finished")
+	_check(finished[0], "expiry emits finished")
+
+	clock.show_results()
+	_check_eq(clock.phase, RoundClock.Phase.RESULTS, "finished shows results")
+
+	clock.reset()
+	clock.round_length_ms = 5000
+	clock.start()
+	_check_eq(clock.remaining_ms, 5000, "a custom length is used")
+	clock.tick(10.0)
+	_check_eq(clock.remaining_ms, 0, "oversized ticks clamp at zero")
+
+	clock.free()
+
+
+func _test_score_model() -> void:
+	var scores := ScoreModel.new()
+	scores.register(1)
+	scores.register(2)
+	_check(scores.has_player(1), "player 1 is registered")
+	_check_eq(scores.total(1), 0, "an unfinished player scores zero")
+
+	scores.set_precision(1, 1.5)
+	scores.finish(1, 60000)
+	scores.set_precision(1, 0.8)
+	scores.record_collision(1)
+
+	scores.finish(2, 90000)
+	scores.set_precision(2, 1.0)
+
+	_check_eq(
+		scores.total(1),
+		180000 - 60000 + 80 - 50 + 500,
+		"worked example player 1",
+	)
+	_check_eq(
+		scores.total(2),
+		180000 - 90000 + 100 + 500,
+		"worked example player 2",
+	)
+	_check_eq(scores.ranking(), [1, 2], "ranking orders by total")
+
+	var tie := ScoreModel.new()
+	tie.round_length_ms = 1000
+	tie.register(1)
+	tie.register(2)
+	tie.finish(1, 500)
+	tie.finish(2, 500)
+	tie.set_precision(1, 0.5)
+	tie.set_precision(2, 0.5)
+	_check_eq(tie.total(1), tie.total(2), "tied totals are equal")
+	_check_eq(tie.ranking(), [1, 2], "ties break by slot ascending")
+
+	var collision_tie := ScoreModel.new()
+	collision_tie.round_length_ms = 1000
+	collision_tie.register(1)
+	collision_tie.register(2)
+	collision_tie.finish(1, 500)
+	collision_tie.finish(2, 500)
+	collision_tie.set_precision(1, 1.0)
+	collision_tie.record_collision(1)
+	collision_tie.set_precision(2, 0.5)
+	_check_eq(
+		collision_tie.total(1),
+		collision_tie.total(2),
+		"collision tie totals are equal",
+	)
+	_check_eq(collision_tie.ranking(), [2, 1], "ties break by fewer collisions")
+
+	var invalid := ScoreModel.new()
+	invalid.register(0)
+	invalid.register(5)
+	_check(not invalid.has_player(0), "slot 0 is rejected by the score model")
+	_check(not invalid.has_player(5), "slot 5 is rejected by the score model")
+
+	var clamped := ScoreModel.new()
+	clamped.register(3)
+	clamped.set_precision(3, -1.0)
+	clamped.finish(3, 0)
+	_check_eq(clamped.total(3), 180000 + 0 + 500, "precision clamps at zero")
+
+	_check_eq(scores.total(99), 0, "unknown players score zero")
+
+
+func _test_hud_scene() -> void:
+	var packed := load("res://scenes/ui/hud.tscn") as PackedScene
+	_check(packed != null, "hud.tscn loads")
+	if packed == null:
+		return
+
+	var hud = packed.instantiate()
+	_check(hud.get_node_or_null("TimerLabel") != null, "the HUD has a timer label")
+	_check(hud.get_node_or_null("TaskLabel") != null, "the HUD has a task label")
+	_check(
+		hud.get_node_or_null("ResultsPanel") != null,
+		"the HUD has a results panel",
+	)
+	_check(
+		hud.get_node_or_null("ResultsPanel/ResultsLabel") != null,
+		"the results panel has a label",
+	)
+	var scores_node := hud.get_node_or_null("Scores")
+	_check(scores_node != null, "the HUD has a scores container")
+	if scores_node != null:
+		_check_eq(scores_node.get_child_count(), 4, "the HUD shows four scores")
+
+	var clock := RoundClock.new()
+	var model := ScoreModel.new()
+	model.register(1)
+	model.finish(1, 60000)
+	model.set_precision(1, 0.5)
+	hud.bind(clock, model)
+	hud.set_task_state("Park in bay 2")
+	_check_eq(hud.task_label.text, "Park in bay 2", "task state is shown")
+	hud.update_scores()
+	_check(
+		hud.score_labels[0].text.contains("120550"),
+		"scores are rendered",
+	)
+	clock.remaining_ms = 90000
+	hud._on_time_changed(90000)
+	_check_eq(hud.timer_label.text, "01:30", "timer formats as MM:SS")
+
+	hud.hide_results()
+	_check(
+		not hud.get_node("ResultsPanel").visible,
+		"results start hidden",
+	)
+	hud.show_results()
+	_check(
+		hud.get_node("ResultsPanel").visible,
+		"show_results reveals the panel",
+	)
+	_check(
+		hud.get_node("ResultsPanel/ResultsLabel").text.contains("P1"),
+		"results list players",
+	)
+
+	clock.start()
+	_check(
+		not hud.get_node("ResultsPanel").visible,
+		"starting a round hides old results",
+	)
+	clock.tick(180.0)
+	_check_eq(hud.timer_label.text, "00:00", "the timer shows zero at expiry")
+	_check(
+		hud.get_node("ResultsPanel").visible,
+		"round expiry reveals results automatically",
+	)
+	hud._on_time_changed(-1000)
+	_check_eq(hud.timer_label.text, "00:00", "negative time formats as zero")
+
+	hud.free()
+	clock.free()
 
 
 func _test_project_settings() -> void:

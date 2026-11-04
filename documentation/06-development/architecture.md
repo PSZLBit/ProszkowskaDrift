@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 This document describes the MVP runtime. Decisions are recorded in D-22,
 ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
@@ -39,7 +39,7 @@ or simulate the game.
 |-----------|---------|------------------|
 | Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold is on an unmerged branch; production work is #48 |
 | Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; supervision is later work |
-| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, placeholder boundaries; no map, parking, or scoring yet |
+| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, a demo parking-lot tilemap, a minimal HUD, and provisional scoring; no tasks or parking detection yet |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
@@ -105,14 +105,32 @@ Godot 4.7.2 project with:
   request. `dev_auto_start_round` is development-only and defaults to `false`.
 - `game/scenes/main.tscn`: placeholder background, boundary walls, and four cars
   on slots 1–4, configured for a 1920×1080 fullscreen window.
+- `game/tilesets/` (generated, gitignored): `parking_lot.tres` is built from the
+  committed placeholder sheets by `game/tools/build_parking_lot_tileset.gd` (via
+  `ParkingLotTilesetBuilder`); `parking_lot.local.tres` is also built from the
+  purchased sheets when they are installed and is preferred by the map. The demo
+  map regenerates the committed-path TileSet on demand when it is missing. The
+  map shows a 40×22 lot with a kerb, plain ground, four parking bays, four
+  boundary collision shapes, and spawn/bay markers; it is a tileset demo and the
+  base for #46, not final map geometry. All source tiles are available on the
+  grid; RPG Maker autotile rules and per-tile collision polygons are not
+  converted yet.
+- `game/scenes/ui/hud.tscn` plus `game/scripts/hud.gd`, `round_clock.gd`, and
+  `score_model.gd`: a minimal HUD, round timer, and results overlay shell for
+  #47. The results panel appears when the round clock expires; scoring values,
+  phase rules, and layout are provisional pending #45 and are covered by
+  headless tests.
 - `game/tests/run_tests.gd`: headless tests for protocol parsing, config
-  validation, slot input/timeout, car movement, scene structure, and project
-  settings. CI runs the same commands in `.github/workflows/game.yml`.
+  validation, slot input/timeout, car movement, scene structure, the
+  parking-lot TileSet and demo map, the round clock, score model, HUD scene,
+  and project settings. CI runs the same commands in
+  `.github/workflows/game.yml`.
 
-The scaffold does not implement tasks, parking detection, scoring, HUD, final
-map geometry, or final assets. The target laptop/TV run, readability, FPS, and
-input-to-visible measurements remain in issue #13 until recorded in
-`06-development/testing.md`.
+The scaffold does not implement tasks, parking detection, or final map geometry.
+A minimal HUD/results shell and provisional scoring exist for #47; final values
+and task integration come from #45 and #46. The target laptop/TV run,
+readability, FPS, and input-to-visible measurements remain in issue #13 until
+recorded in `06-development/testing.md`.
 
 ## Authority and Trust Boundary
 

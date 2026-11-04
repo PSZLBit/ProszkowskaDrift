@@ -1,7 +1,7 @@
 # Game Design — Proszkowska Drift MVP
 
 Status: Draft
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 The MFD subset is being baselined in issue #45 (Sprint 2). The full GDD remains
 issue #32 and is deferred to the MVP stretch/Post-MVP; this document stays Draft
@@ -113,6 +113,10 @@ task points. The player receives the next task. This prevents a stuck player fro
 blocking the festival queue.
 
 ## Scoring (Initial Tuning)
+
+Note: #47 implements a provisional subset in `game/scripts/score_model.gd` and
+`game/scripts/round_clock.gd`. The final formula and constants come from #45;
+the values here remain the design target.
 
 Each task produces a score (illustrative pseudocode, not executable):
 
