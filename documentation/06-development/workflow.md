@@ -171,7 +171,7 @@ outcome and acceptance criteria. Link every PR to an issue.
   issue/PR, not only in chat.
 - Demo on the real target hardware every week when the work touches controller,
   game, or network behavior.
-- Do not commit purchased or third-party art assets. Keep them local under
+- Do not commit purchased third-party art assets. Keep them local under
   `game/assets/` (the purchased tileset is ignored by `.gitignore`), record
   provenance in `game/assets/CREDITS.md`, and never commit purchase receipts or
   personal data (D-34).

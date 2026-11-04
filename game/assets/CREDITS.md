@@ -11,8 +11,9 @@ This file records the source and licence of third-party assets under
   in game projects, prohibit reselling or redistributing the assets as
   standalone resources, and state that attribution is appreciated but not
   required.
-- Use here: the tiles are integrated into this game project and are not
-  redistributed as a standalone asset pack.
+- Intended use: the tiles will be used in this game project and are not
+  redistributed as a standalone asset pack. Map integration is pending (#46);
+  the tiles are not referenced by any scene yet.
 - AI disclosure: the itch.io page marks the pack as AI-assisted.
 - Files: `game/assets/Large Parking Lot/*.png`, eight tiles. The folder is not
   committed to Git (D-34); each team member obtains the purchased copy and
