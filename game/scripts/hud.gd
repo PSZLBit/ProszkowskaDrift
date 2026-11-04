@@ -56,23 +56,31 @@ func bind(new_clock: RoundClock, new_scores: ScoreModel) -> void:
 		clock.time_changed.disconnect(_on_time_changed)
 	if clock != null and clock.phase_changed.is_connected(_on_phase_changed):
 		clock.phase_changed.disconnect(_on_phase_changed)
+	if clock != null and clock.finished.is_connected(_on_clock_finished):
+		clock.finished.disconnect(_on_clock_finished)
 	clock = new_clock
 	scores = new_scores
 	if clock != null:
 		clock.time_changed.connect(_on_time_changed)
 		clock.phase_changed.connect(_on_phase_changed)
+		clock.finished.connect(_on_clock_finished)
 		_on_time_changed(clock.remaining_ms)
 	update_scores()
 
 
 func _on_time_changed(remaining_ms: int) -> void:
 	_ensure_nodes()
-	timer_label.text = _format_time(remaining_ms)
+	if timer_label != null:
+		timer_label.text = _format_time(remaining_ms)
 
 
 func _on_phase_changed(phase: int) -> void:
 	if clock != null and phase == int(RoundClock.Phase.RESULTS):
 		show_results()
+
+
+func _on_clock_finished() -> void:
+	show_results()
 
 
 func update_scores() -> void:
@@ -81,32 +89,37 @@ func update_scores() -> void:
 		return
 	for slot in range(1, 5):
 		var value := 0
-		if scores.has_player(slot):
+		if scores != null and scores.has_player(slot):
 			value = scores.total(slot)
-		score_labels[slot - 1].text = "P%d: %d" % [slot, value]
+		if slot - 1 < score_labels.size():
+			score_labels[slot - 1].text = "P%d: %d" % [slot, value]
 
 
 func set_task_state(text: String) -> void:
 	_ensure_nodes()
-	task_label.text = text
+	if task_label != null:
+		task_label.text = text
 
 
 func show_results() -> void:
 	_ensure_nodes()
 	if scores == null:
 		return
-	results_panel.visible = true
+	if results_panel != null:
+		results_panel.visible = true
 	var lines: Array[String] = []
 	var rank := 1
 	for slot in scores.ranking():
 		lines.append("%d. P%d - %d" % [rank, slot, scores.total(slot)])
 		rank += 1
-	results_label.text = "\n".join(lines)
+	if results_label != null:
+		results_label.text = "\n".join(lines)
 
 
 func hide_results() -> void:
 	_ensure_nodes()
-	results_panel.visible = false
+	if results_panel != null:
+		results_panel.visible = false
 
 
 func _format_time(ms: int) -> String:

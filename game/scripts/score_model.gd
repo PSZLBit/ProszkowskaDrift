@@ -69,6 +69,10 @@ func ranking() -> Array[int]:
 		var tb := total(b)
 		if ta != tb:
 			return ta > tb
+		var ca := int(_players[a]["collisions"])
+		var cb := int(_players[b]["collisions"])
+		if ca != cb:
+			return ca < cb
 		var fa := int(_players[a]["finish_time_ms"])
 		var fb := int(_players[b]["finish_time_ms"])
 		if fa != fb:
