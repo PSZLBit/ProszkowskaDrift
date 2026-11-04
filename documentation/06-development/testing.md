@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 The test-plan update is tracked in issue #17. As of 2026-11-03 the controller is
 not on `main`; the API 19 scaffold and real-tablet checks are tracked by #11 and
@@ -104,6 +104,12 @@ The game scaffold uses a small headless GDScript runner
 - Car throttle, brake/reverse, coast, and steering math.
 - Car input-source wiring, including passing the car's own slot.
 - Main-scene structure: four cars, slots 1–4, collision layers, floating motion.
+- Parking-lot TileSet: eight 48×48 atlas sources, one physics layer, expected
+  ground/kerb/bay tiles, and committed placeholder texture paths.
+- Demo map: the 40×22 layout, boundary collision, border/interior/bay cells,
+  and four spawn plus four bay markers.
+- Runtime art swap: a missing purchased folder leaves the committed
+  placeholders in place.
 - Project settings: main scene, 1920×1080 viewport, and fullscreen mode.
 - Local quit key: `Q` requests quit, while key repeat, key release, other keys,
   and mouse events do not.
@@ -320,6 +326,24 @@ Environment: target laptop and TV, fullscreen 1920×1080, four fake controllers.
 Record the date, Godot version, server commit, FPS/tearing observations, and
 pass/fail per step. Do not mark the display criteria as passed until this check
 has been run on the target laptop/TV.
+
+### Parking-lot TileSet and demo map (`game/tilesets/parking_lot.tres`)
+
+Run when the placeholder sheets, the TileSet generator, the runtime art swap, or
+the demo map changes. Environment: Godot editor on the target laptop; run once
+with the purchased folder installed and once without it.
+
+| # | Step | Pass condition |
+|---|------|----------------|
+| 1 | Open `game/scenes/map/parking_lot.tscn` and run it. | The 40×22 map fills the 1920 px width, is centred vertically (12 px top and bottom), and shows a kerb border, plain ground, and four parking bays at the top left. |
+| 2 | With `game/assets/Large Parking Lot/` present, inspect the ground, kerb, and bays. | The scene uses the purchased art; no placeholder checker pattern remains. |
+| 3 | Remove or rename the purchased folder, reimport, and run the scene. | The scene still loads and shows the placeholder sheets; no missing-resource errors. |
+| 4 | Check the `Environment` body, `Spawns`, and `Bays` nodes in the 2D view. | The `Environment` body has four collision shapes and uses layer 1/mask 2; four spawn markers sit in the lower half; `Bay1`–`Bay4` are centred in the four bays. |
+| 5 | Change a placeholder, then run `godot --headless --path game --import` followed by `godot --headless --path game --script res://tools/build_parking_lot_tileset.gd`. | The generator exits 0, updates `game/tilesets/parking_lot.tres`, and the headless tests still pass. |
+| 6 | Run `git status --short --ignored` and inspect the staged file list. | Only placeholders and generated resources are staged; no file under `game/assets/Large Parking Lot/` is tracked. |
+
+Record: date, Godot version, pass/fail per step. The placeholder render is the
+CI/fresh-clone baseline; the purchased render is the local target look.
 
 ### Car movement (`game/scripts/car.gd`)
 

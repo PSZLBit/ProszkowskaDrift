@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 This document describes the MVP runtime. Decisions are recorded in D-22,
 ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
@@ -105,12 +105,24 @@ Godot 4.7.2 project with:
   request. `dev_auto_start_round` is development-only and defaults to `false`.
 - `game/scenes/main.tscn`: placeholder background, boundary walls, and four cars
   on slots 1–4, configured for a 1920×1080 fullscreen window.
+- `game/tilesets/parking_lot.tres`: TileSet with eight 48×48 atlas sources
+  (A2-1, A2-2, A4-walls, B-01 through B-05) and one physics layer. All source
+  tiles are available on the grid; RPG Maker autotile rules and per-tile
+  collision polygons are not converted yet. It is generated from the committed
+  placeholder sheets by `game/tools/build_parking_lot_tileset.gd`.
+  `game/scripts/parking_lot_art.gd` swaps in the purchased textures at runtime
+  when they are installed locally (D-35). `game/scenes/map/parking_lot.tscn`
+  shows a 40×22 lot with a kerb, plain ground, four parking bays, four boundary
+  collision shapes, and spawn/bay markers; it is a tileset demo and the base for
+  #46, not final map geometry.
 - `game/tests/run_tests.gd`: headless tests for protocol parsing, config
-  validation, slot input/timeout, car movement, scene structure, and project
-  settings. CI runs the same commands in `.github/workflows/game.yml`.
+  validation, slot input/timeout, car movement, scene structure, the
+  parking-lot TileSet and demo map, and project settings. CI runs the same
+  commands in `.github/workflows/game.yml`.
 
-The scaffold does not implement tasks, parking detection, scoring, HUD, final
-map geometry, or final assets. The target laptop/TV run, readability, FPS, and
+The scaffold does not implement tasks, parking detection, scoring, HUD, or final
+map geometry. The demo map only proves the prepared tileset; task assignment and
+parking detection remain in #46. The target laptop/TV run, readability, FPS, and
 input-to-visible measurements remain in issue #13 until recorded in
 `06-development/testing.md`.
 

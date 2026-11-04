@@ -9,6 +9,8 @@ const GameProtocol := preload("res://scripts/game_protocol.gd")
 const SlotInputStore := preload("res://scripts/slot_input_store.gd")
 const CarScript := preload("res://scripts/car.gd")
 const ServerInputScript := preload("res://scripts/server_input.gd")
+const ParkingLotArt := preload("res://scripts/parking_lot_art.gd")
+const ParkingLotMapScript := preload("res://scripts/parking_lot_map.gd")
 
 var _checks := 0
 var _failures := 0
@@ -30,6 +32,9 @@ func _initialize() -> void:
 	_test_car_movement()
 	_test_quit_key()
 	_test_main_scene()
+	_test_parking_lot_tileset()
+	_test_parking_lot_map()
+	_test_parking_lot_art_swap()
 	_test_project_settings()
 
 	if _failures == 0:
@@ -315,6 +320,223 @@ func _test_main_scene() -> void:
 	slots.sort()
 	_check_eq(slots, [1, 2, 3, 4], "cars cover slots 1-4 exactly once")
 	scene.free()
+
+
+func _test_parking_lot_tileset() -> void:
+	var tile_set := load("res://tilesets/parking_lot.tres") as TileSet
+	_check(tile_set != null, "parking_lot.tres loads")
+	if tile_set == null:
+		return
+
+	_check_eq(tile_set.tile_size, Vector2i(48, 48), "parking tiles are 48x48")
+	_check_eq(tile_set.get_source_count(), 8, "the tileset has eight atlas sources")
+	_check_eq(tile_set.get_physics_layers_count(), 1, "the tileset has one physics layer")
+	_check_eq(
+		tile_set.get_physics_layer_collision_layer(0),
+		1,
+		"parking tiles target the environment collision layer",
+	)
+	_check_eq(
+		tile_set.get_physics_layer_collision_mask(0),
+		2,
+		"parking tiles detect the car collision layer",
+	)
+
+	var expected := ["A2-1", "A2-2", "A4-walls", "B-01", "B-02", "B-03", "B-04", "B-05"]
+	var names: Array[String] = []
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		_check(source != null, "source %d is an atlas source" % index)
+		if source == null:
+			continue
+		names.append(source.resource_name)
+		_check(source.texture != null, "source %s has a texture" % source.resource_name)
+		_check_eq(
+			source.texture_region_size,
+			Vector2i(48, 48),
+			"source %s uses 48x48 regions" % source.resource_name,
+		)
+		if source.texture != null:
+			_check_eq(
+				source.texture.get_width() % 48,
+				0,
+				"source %s width is a 48px multiple" % source.resource_name,
+			)
+			_check_eq(
+				source.texture.get_height() % 48,
+				0,
+				"source %s height is a 48px multiple" % source.resource_name,
+			)
+	_check_eq(names, expected, "atlas sources are named in generation order")
+
+	var a2 := _find_atlas_source(tile_set, "A2-2")
+	_check(a2 != null, "the A2-2 ground source exists")
+	if a2 != null and a2.texture != null:
+		_check(
+			a2.texture.resource_path.ends_with(
+				"assets/placeholders/large_parking_lot/a2_2.png"
+			),
+			"the committed tileset uses the placeholder A2-2 sheet",
+		)
+		_check(a2.has_tile(Vector2i(1, 3)), "the plain ground tile exists")
+		_check(a2.has_tile(Vector2i(6, 3)), "the kerb tile exists")
+
+	var b01 := _find_atlas_source(tile_set, "B-01")
+	_check(b01 != null, "the B-01 parking source exists")
+	if b01 != null:
+		_check(b01.has_tile(Vector2i(0, 2)), "the first bay top tile exists")
+		_check(b01.has_tile(Vector2i(3, 3)), "the last bay bottom tile exists")
+
+
+func _test_parking_lot_map() -> void:
+	var packed := load("res://scenes/map/parking_lot.tscn") as PackedScene
+	_check(packed != null, "parking_lot.tscn loads")
+	if packed == null:
+		return
+
+	var map = packed.instantiate()
+	var tile_map: TileMapLayer = map.get_tile_map_layer()
+	_check(tile_map != null, "the parking map has a TileMapLayer")
+	_check(tile_map.tile_set != null, "the parking map has a TileSet")
+	if tile_map == null or tile_map.tile_set == null:
+		map.free()
+		return
+
+	_check_eq(tile_map.position, ParkingLotMapScript.MAP_OFFSET, "the map is centred vertically")
+	_check_eq(
+		ParkingLotMapScript.MAP_SIZE * 48,
+		Vector2i(1920, 1056),
+		"the 40x22 map fills the 1920px width",
+	)
+
+	var environment := map.get_node_or_null("Environment") as StaticBody2D
+	_check(environment != null, "the demo map has an environment body")
+	if environment != null:
+		_check_eq(environment.collision_layer, 1, "the map boundary uses the environment layer")
+		_check_eq(environment.collision_mask, 2, "the map boundary detects cars")
+		var boundary_shapes := environment.get_children()
+		var shape_count := 0
+		for child in boundary_shapes:
+			if child is CollisionShape2D and child.shape != null:
+				shape_count += 1
+		_check_eq(shape_count, 4, "the map boundary has four collision shapes")
+
+	map.build()
+	_check_eq(
+		tile_map.get_cell_source_id(Vector2i(0, 0)),
+		ParkingLotMapScript.SOURCE_A2_2,
+		"the border uses the A2-2 source",
+	)
+	_check_eq(
+		tile_map.get_cell_atlas_coords(Vector2i(0, 0)),
+		ParkingLotMapScript.KERB_COORDS,
+		"the border uses the kerb tile",
+	)
+	_check_eq(
+		tile_map.get_cell_atlas_coords(Vector2i(1, 1)),
+		ParkingLotMapScript.GROUND_COORDS,
+		"the interior uses the plain ground tile",
+	)
+
+	for bay in ParkingLotMapScript.BAY_COUNT:
+		var column: int = ParkingLotMapScript.BAY_FIRST_COLUMN + bay
+		var top_row: int = ParkingLotMapScript.BAY_TOP_ROW
+		_check_eq(
+			tile_map.get_cell_source_id(Vector2i(column, top_row)),
+			ParkingLotMapScript.SOURCE_B_01,
+			"bay %d uses the B-01 source" % (bay + 1),
+		)
+		_check_eq(
+			tile_map.get_cell_atlas_coords(Vector2i(column, top_row)),
+			ParkingLotMapScript.BAY_TOP_COORDS + Vector2i(bay, 0),
+			"bay %d top marking is correct" % (bay + 1),
+		)
+		_check_eq(
+			tile_map.get_cell_atlas_coords(Vector2i(column, top_row + 1)),
+			ParkingLotMapScript.BAY_BOTTOM_COORDS + Vector2i(bay, 0),
+			"bay %d bottom marking is correct" % (bay + 1),
+		)
+
+	var spawns := map.get_node_or_null("Spawns") as Node2D
+	_check(spawns != null, "the parking map has spawn markers")
+	if spawns != null:
+		_check_eq(spawns.get_child_count(), 4, "there are four spawn markers")
+
+	var bays := map.get_node_or_null("Bays") as Node2D
+	_check(bays != null, "the parking map has bay markers")
+	if bays != null:
+		_check_eq(
+			bays.get_child_count(),
+			ParkingLotMapScript.BAY_COUNT,
+			"every bay has a marker",
+		)
+		for bay in ParkingLotMapScript.BAY_COUNT:
+			var marker := bays.get_node_or_null("Bay%d" % (bay + 1)) as Marker2D
+			_check(marker != null, "bay %d has a marker" % (bay + 1))
+			if marker != null:
+				var center := Vector2(
+					(ParkingLotMapScript.BAY_FIRST_COLUMN + bay + 0.5) * 48.0,
+					(ParkingLotMapScript.BAY_TOP_ROW + 1) * 48.0,
+				)
+				_check_eq(marker.position, center, "bay %d marker sits in its bay" % (bay + 1))
+
+	map.free()
+
+
+func _test_parking_lot_art_swap() -> void:
+	_check_eq(
+		ParkingLotArt.REAL_FILES.size(),
+		8,
+		"every atlas source has a purchased file mapping",
+	)
+	_check_eq(
+		ParkingLotArt.REAL_FILES.get("A2-1", ""),
+		"Tile_A2-1 (2).png",
+		"the A2-1 mapping matches the purchased file",
+	)
+	_check_eq(
+		ParkingLotArt.REAL_FILES.get("B-05", ""),
+		"tile-B-05.png",
+		"the B-05 mapping matches the purchased file",
+	)
+	_check_eq(ParkingLotArt.apply(null), 0, "a missing TileSet is ignored")
+
+	var tile_set := load("res://tilesets/parking_lot.tres") as TileSet
+	_check(tile_set != null, "the tileset loads for the art-swap test")
+	if tile_set == null:
+		return
+
+	var before: Array = []
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		before.append(source.texture if source != null else null)
+
+	var swapped := ParkingLotArt.apply(
+		tile_set,
+		"res://assets/__missing_parking_lot__/",
+	)
+	_check_eq(
+		swapped,
+		0,
+		"missing purchased sheets leave the placeholder textures in place",
+	)
+
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		if source != null:
+			_check_eq(
+				source.texture,
+				before[index],
+				"source %d keeps its placeholder texture" % index,
+			)
+
+
+func _find_atlas_source(tile_set: TileSet, source_name: String) -> TileSetAtlasSource:
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		if source != null and source.resource_name == source_name:
+			return source
+	return null
 
 
 func _test_project_settings() -> void:

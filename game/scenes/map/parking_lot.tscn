@@ -1,0 +1,68 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/parking_lot_map.gd" id="1_map"]
+[ext_resource type="TileSet" path="res://tilesets/parking_lot.tres" id="2_tileset"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_horizontal"]
+size = Vector2(1920, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vertical"]
+size = Vector2(20, 1056)
+
+[node name="ParkingLot" type="Node2D"]
+script = ExtResource("1_map")
+
+[node name="TileMapLayer" type="TileMapLayer" parent="."]
+position = Vector2(0, 12)
+tile_set = ExtResource("2_tileset")
+
+[node name="Environment" type="StaticBody2D" parent="."]
+position = Vector2(0, 12)
+collision_layer = 1
+collision_mask = 2
+
+[node name="TopWall" type="CollisionShape2D" parent="Environment"]
+position = Vector2(960, 10)
+shape = SubResource("RectangleShape2D_horizontal")
+
+[node name="BottomWall" type="CollisionShape2D" parent="Environment"]
+position = Vector2(960, 1046)
+shape = SubResource("RectangleShape2D_horizontal")
+
+[node name="LeftWall" type="CollisionShape2D" parent="Environment"]
+position = Vector2(10, 528)
+shape = SubResource("RectangleShape2D_vertical")
+
+[node name="RightWall" type="CollisionShape2D" parent="Environment"]
+position = Vector2(1910, 528)
+shape = SubResource("RectangleShape2D_vertical")
+
+[node name="Spawns" type="Node2D" parent="."]
+position = Vector2(0, 12)
+
+[node name="Spawn1" type="Marker2D" parent="Spawns"]
+position = Vector2(720, 936)
+
+[node name="Spawn2" type="Marker2D" parent="Spawns"]
+position = Vector2(880, 936)
+
+[node name="Spawn3" type="Marker2D" parent="Spawns"]
+position = Vector2(1040, 936)
+
+[node name="Spawn4" type="Marker2D" parent="Spawns"]
+position = Vector2(1200, 936)
+
+[node name="Bays" type="Node2D" parent="."]
+position = Vector2(0, 12)
+
+[node name="Bay1" type="Marker2D" parent="Bays"]
+position = Vector2(168, 144)
+
+[node name="Bay2" type="Marker2D" parent="Bays"]
+position = Vector2(216, 144)
+
+[node name="Bay3" type="Marker2D" parent="Bays"]
+position = Vector2(264, 144)
+
+[node name="Bay4" type="Marker2D" parent="Bays"]
+position = Vector2(312, 144)
