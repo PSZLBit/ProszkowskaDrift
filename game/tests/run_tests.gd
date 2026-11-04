@@ -568,6 +568,11 @@ func _test_round_clock() -> void:
 	clock.tick(1.0)
 	_check_eq(clock.remaining_ms, 179000, "one second elapses")
 
+	clock.tick(-1.0)
+	_check_eq(clock.remaining_ms, 179000, "negative ticks are ignored")
+	clock.tick(INF)
+	_check_eq(clock.remaining_ms, 179000, "non-finite ticks are ignored")
+
 	clock.pause()
 	_check_eq(clock.phase, RoundClock.Phase.PAUSED, "pause enters paused")
 	clock.tick(10.0)
@@ -639,6 +644,28 @@ func _test_score_model() -> void:
 	_check_eq(tie.total(1), tie.total(2), "tied totals are equal")
 	_check_eq(tie.ranking(), [1, 2], "ties break by slot ascending")
 
+	var collision_tie := ScoreModel.new()
+	collision_tie.round_length_ms = 1000
+	collision_tie.register(1)
+	collision_tie.register(2)
+	collision_tie.finish(1, 500)
+	collision_tie.finish(2, 500)
+	collision_tie.set_precision(1, 1.0)
+	collision_tie.record_collision(1)
+	collision_tie.set_precision(2, 0.5)
+	_check_eq(
+		collision_tie.total(1),
+		collision_tie.total(2),
+		"collision tie totals are equal",
+	)
+	_check_eq(collision_tie.ranking(), [2, 1], "ties break by fewer collisions")
+
+	var invalid := ScoreModel.new()
+	invalid.register(0)
+	invalid.register(5)
+	_check(not invalid.has_player(0), "slot 0 is rejected by the score model")
+	_check(not invalid.has_player(5), "slot 5 is rejected by the score model")
+
 	var clamped := ScoreModel.new()
 	clamped.register(3)
 	clamped.set_precision(3, -1.0)
@@ -701,6 +728,20 @@ func _test_hud_scene() -> void:
 		hud.get_node("ResultsPanel/ResultsLabel").text.contains("P1"),
 		"results list players",
 	)
+
+	clock.start()
+	_check(
+		not hud.get_node("ResultsPanel").visible,
+		"starting a round hides old results",
+	)
+	clock.tick(180.0)
+	_check_eq(hud.timer_label.text, "00:00", "the timer shows zero at expiry")
+	_check(
+		hud.get_node("ResultsPanel").visible,
+		"round expiry reveals results automatically",
+	)
+	hud._on_time_changed(-1000)
+	_check_eq(hud.timer_label.text, "00:00", "negative time formats as zero")
 
 	hud.free()
 	clock.free()

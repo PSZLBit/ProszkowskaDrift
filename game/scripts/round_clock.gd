@@ -60,7 +60,7 @@ func show_results() -> void:
 func tick(delta_seconds: float) -> void:
 	if phase != Phase.PLAYING:
 		return
-	if delta_seconds <= 0.0:
+	if delta_seconds <= 0.0 or not is_finite(delta_seconds):
 		return
 	var ms := delta_seconds * 1000.0
 	_remainder_ms += ms

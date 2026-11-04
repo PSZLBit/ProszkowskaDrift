@@ -75,7 +75,11 @@ func _on_time_changed(remaining_ms: int) -> void:
 
 
 func _on_phase_changed(phase: int) -> void:
-	if clock != null and phase == int(RoundClock.Phase.RESULTS):
+	if clock == null:
+		return
+	if phase == int(RoundClock.Phase.PLAYING):
+		hide_results()
+	elif phase == int(RoundClock.Phase.RESULTS):
 		show_results()
 
 
@@ -89,7 +93,7 @@ func update_scores() -> void:
 		return
 	for slot in range(1, 5):
 		var value := 0
-		if scores != null and scores.has_player(slot):
+		if scores.has_player(slot):
 			value = scores.total(slot)
 		if slot - 1 < score_labels.size():
 			score_labels[slot - 1].text = "P%d: %d" % [slot, value]
@@ -123,7 +127,7 @@ func hide_results() -> void:
 
 
 func _format_time(ms: int) -> String:
-	var total_seconds := ms / 1000
+	var total_seconds := maxi(0, ms) / 1000
 	var minutes := total_seconds / 60
 	var seconds := total_seconds % 60
 	return "%02d:%02d" % [minutes, seconds]

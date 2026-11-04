@@ -15,6 +15,8 @@ var _players: Dictionary = {}
 
 
 func register(slot: int) -> void:
+	if slot < 1 or slot > 4:
+		return
 	_players[slot] = {
 		"finish_time_ms": -1,
 		"precision": 0.0,
