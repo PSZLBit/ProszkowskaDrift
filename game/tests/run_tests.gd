@@ -11,6 +11,8 @@ const CarScript := preload("res://scripts/car.gd")
 const ServerInputScript := preload("res://scripts/server_input.gd")
 const ParkingLotArt := preload("res://scripts/parking_lot_art.gd")
 const ParkingLotMapScript := preload("res://scripts/parking_lot_map.gd")
+const RoundClock := preload("res://scripts/round_clock.gd")
+const ScoreModel := preload("res://scripts/score_model.gd")
 
 var _checks := 0
 var _failures := 0
@@ -35,6 +37,9 @@ func _initialize() -> void:
 	_test_parking_lot_tileset()
 	_test_parking_lot_map()
 	_test_parking_lot_art_swap()
+	_test_round_clock()
+	_test_score_model()
+	_test_hud_scene()
 	_test_project_settings()
 
 	if _failures == 0:
@@ -296,6 +301,8 @@ func _test_main_scene() -> void:
 
 	var server_input := scene.find_child("ServerInput", true, false)
 	_check(server_input != null, "the main scene has one server input node")
+	var hud := scene.find_child("Hud", true, false)
+	_check(hud != null, "the main scene has a HUD overlay")
 
 	var slots: Array[int] = []
 	for car in cars:
@@ -537,6 +544,156 @@ func _find_atlas_source(tile_set: TileSet, source_name: String) -> TileSetAtlasS
 		if source != null and source.resource_name == source_name:
 			return source
 	return null
+
+
+func _test_round_clock() -> void:
+	var clock := RoundClock.new()
+	_check_eq(clock.phase, RoundClock.Phase.READY, "the clock starts ready")
+	_check_eq(clock.remaining_ms, 180000, "the clock starts full")
+
+	clock.start()
+	_check_eq(clock.phase, RoundClock.Phase.PLAYING, "start enters playing")
+	_check_eq(clock.remaining_ms, 180000, "start resets the timer")
+
+	clock.tick(1.0)
+	_check_eq(clock.remaining_ms, 179000, "one second elapses")
+
+	clock.pause()
+	_check_eq(clock.phase, RoundClock.Phase.PAUSED, "pause enters paused")
+	clock.tick(10.0)
+	_check_eq(clock.remaining_ms, 179000, "paused time does not elapse")
+
+	clock.resume()
+	_check_eq(clock.phase, RoundClock.Phase.PLAYING, "resume enters playing")
+
+	clock.reset()
+	_check_eq(clock.phase, RoundClock.Phase.READY, "reset returns to ready")
+	_check_eq(clock.remaining_ms, 180000, "reset restores the full time")
+
+	var finished := [false]
+	clock.finished.connect(func() -> void: finished[0] = true)
+	clock.start()
+	clock.tick(180.0)
+	_check_eq(clock.remaining_ms, 0, "the timer clamps at zero")
+	_check_eq(clock.phase, RoundClock.Phase.FINISHED, "expiry enters finished")
+	_check(finished[0], "expiry emits finished")
+
+	clock.show_results()
+	_check_eq(clock.phase, RoundClock.Phase.RESULTS, "finished shows results")
+
+	clock.reset()
+	clock.round_length_ms = 5000
+	clock.start()
+	_check_eq(clock.remaining_ms, 5000, "a custom length is used")
+	clock.tick(10.0)
+	_check_eq(clock.remaining_ms, 0, "oversized ticks clamp at zero")
+
+	clock.free()
+
+
+func _test_score_model() -> void:
+	var scores := ScoreModel.new()
+	scores.register(1)
+	scores.register(2)
+	_check(scores.has_player(1), "player 1 is registered")
+	_check_eq(scores.total(1), 0, "an unfinished player scores zero")
+
+	scores.set_precision(1, 1.5)
+	scores.finish(1, 60000)
+	scores.set_precision(1, 0.8)
+	scores.record_collision(1)
+
+	scores.finish(2, 90000)
+	scores.set_precision(2, 1.0)
+
+	_check_eq(
+		scores.total(1),
+		180000 - 60000 + 80 - 50 + 500,
+		"worked example player 1",
+	)
+	_check_eq(
+		scores.total(2),
+		180000 - 90000 + 100 + 500,
+		"worked example player 2",
+	)
+	_check_eq(scores.ranking(), [1, 2], "ranking orders by total")
+
+	var tie := ScoreModel.new()
+	tie.round_length_ms = 1000
+	tie.register(1)
+	tie.register(2)
+	tie.finish(1, 500)
+	tie.finish(2, 500)
+	tie.set_precision(1, 0.5)
+	tie.set_precision(2, 0.5)
+	_check_eq(tie.total(1), tie.total(2), "tied totals are equal")
+	_check_eq(tie.ranking(), [1, 2], "ties break by slot ascending")
+
+	var clamped := ScoreModel.new()
+	clamped.register(3)
+	clamped.set_precision(3, -1.0)
+	clamped.finish(3, 0)
+	_check_eq(clamped.total(3), 180000 + 0 + 500, "precision clamps at zero")
+
+	_check_eq(scores.total(99), 0, "unknown players score zero")
+
+
+func _test_hud_scene() -> void:
+	var packed := load("res://scenes/ui/hud.tscn") as PackedScene
+	_check(packed != null, "hud.tscn loads")
+	if packed == null:
+		return
+
+	var hud = packed.instantiate()
+	_check(hud.get_node_or_null("TimerLabel") != null, "the HUD has a timer label")
+	_check(hud.get_node_or_null("TaskLabel") != null, "the HUD has a task label")
+	_check(
+		hud.get_node_or_null("ResultsPanel") != null,
+		"the HUD has a results panel",
+	)
+	_check(
+		hud.get_node_or_null("ResultsPanel/ResultsLabel") != null,
+		"the results panel has a label",
+	)
+	var scores_node := hud.get_node_or_null("Scores")
+	_check(scores_node != null, "the HUD has a scores container")
+	if scores_node != null:
+		_check_eq(scores_node.get_child_count(), 4, "the HUD shows four scores")
+
+	var clock := RoundClock.new()
+	var model := ScoreModel.new()
+	model.register(1)
+	model.finish(1, 60000)
+	model.set_precision(1, 0.5)
+	hud.bind(clock, model)
+	hud.set_task_state("Park in bay 2")
+	_check_eq(hud.task_label.text, "Park in bay 2", "task state is shown")
+	hud.update_scores()
+	_check(
+		hud.score_labels[0].text.contains("120550"),
+		"scores are rendered",
+	)
+	clock.remaining_ms = 90000
+	hud._on_time_changed(90000)
+	_check_eq(hud.timer_label.text, "01:30", "timer formats as MM:SS")
+
+	hud.hide_results()
+	_check(
+		not hud.get_node("ResultsPanel").visible,
+		"results start hidden",
+	)
+	hud.show_results()
+	_check(
+		hud.get_node("ResultsPanel").visible,
+		"show_results reveals the panel",
+	)
+	_check(
+		hud.get_node("ResultsPanel/ResultsLabel").text.contains("P1"),
+		"results list players",
+	)
+
+	hud.free()
+	clock.free()
 
 
 func _test_project_settings() -> void:

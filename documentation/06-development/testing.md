@@ -110,6 +110,9 @@ The game scaffold uses a small headless GDScript runner
   and four spawn plus four bay markers.
 - Runtime art swap: a missing purchased folder leaves the committed
   placeholders in place.
+- Round clock: phase transitions, pause/resume, expiry, and custom length.
+- Score model: provisional formula, boundaries, ties, and clamping.
+- HUD scene: timer formatting, score rendering, and results panel.
 - Project settings: main scene, 1920×1080 viewport, and fullscreen mode.
 - Local quit key: `Q` requests quit, while key repeat, key release, other keys,
   and mouse events do not.
@@ -344,6 +347,20 @@ with the purchased folder installed and once without it.
 
 Record: date, Godot version, pass/fail per step. The placeholder render is the
 CI/fresh-clone baseline; the purchased render is the local target look.
+
+### HUD and results overlay (`game/scenes/ui/hud.tscn`)
+
+Run when the HUD scene, its script, or the provisional scoring changes.
+Environment: Godot editor on the target laptop (and the target TV for readability).
+
+| # | Step | Pass condition |
+|---|------|----------------|
+| 1 | Run `game/scenes/main.tscn`. | The HUD shows a running 03:00 timer and four zero scores; the layout does not obscure the cars. |
+| 2 | Let the timer expire (or reduce `round_length_ms` for the check). | The timer shows 00:00 and the results panel can be revealed. |
+| 3 | Inspect from the spectator distance on the target TV. | Timer, scores, and task text are readable; results panel lists all players. |
+
+Record: date, Godot version, pass/fail per step. Scoring values are provisional
+pending #45.
 
 ### Car movement (`game/scripts/car.gd`)
 

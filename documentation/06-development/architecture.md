@@ -115,16 +115,21 @@ Godot 4.7.2 project with:
   shows a 40×22 lot with a kerb, plain ground, four parking bays, four boundary
   collision shapes, and spawn/bay markers; it is a tileset demo and the base for
   #46, not final map geometry.
+- `game/scenes/ui/hud.tscn` plus `game/scripts/hud.gd`, `round_clock.gd`, and
+  `score_model.gd`: a minimal HUD, round timer, and results overlay shell for
+  #47. Scoring values, phase rules, and layout are provisional pending #45 and
+  are covered by headless tests.
 - `game/tests/run_tests.gd`: headless tests for protocol parsing, config
   validation, slot input/timeout, car movement, scene structure, the
-  parking-lot TileSet and demo map, and project settings. CI runs the same
-  commands in `.github/workflows/game.yml`.
+  parking-lot TileSet and demo map, the round clock, score model, HUD scene,
+  and project settings. CI runs the same commands in
+  `.github/workflows/game.yml`.
 
-The scaffold does not implement tasks, parking detection, scoring, HUD, or final
-map geometry. The demo map only proves the prepared tileset; task assignment and
-parking detection remain in #46. The target laptop/TV run, readability, FPS, and
-input-to-visible measurements remain in issue #13 until recorded in
-`06-development/testing.md`.
+The scaffold does not implement tasks, parking detection, or final map geometry.
+A minimal HUD/results shell and provisional scoring exist for #47; final values
+and task integration come from #45 and #46. The target laptop/TV run,
+readability, FPS, and input-to-visible measurements remain in issue #13 until
+recorded in `06-development/testing.md`.
 
 ## Authority and Trust Boundary
 
