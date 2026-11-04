@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-10-21
+Last updated: 2026-11-03
 
 ## Goals
 
@@ -103,6 +103,14 @@ cd controller-android
 ./gradlew :app:testDebugUnitTest
 ```
 
+The spike (issue #11) adds unit tests under
+`app/src/test/java/pszlbit/drift/controller/` that exercise the connection
+state machine with a fake transport that plays the server side. Covered so far:
+hello with device token, welcome handling, input sending at ~25 Hz with
+increasing sequence numbers while `playing`, stopping on phase change, reconnect
+with exponential backoff, and `auth_failed` handling. These tests run on the
+host JVM and do not need a socket or a real server.
+
 Manual check, written down before implementing any controller change:
 
 1. `app-debug.apk` installs on an API 19 tablet.
@@ -110,9 +118,12 @@ Manual check, written down before implementing any controller change:
    screen on.
 3. No crash within one minute of idle.
 
-Status 2026-10-21: the plain-Views scaffold replaced the Compose template; the
-Gradle build and unit tests pass locally. The install/launch check on a real
-tablet is pending (Sprint 0 gate in ADR-0002).
+Status 2026-11-03: the plain-Views scaffold was extended with the WebSocket
+spike — OkHttp 3.12.1 transport, hello/input/reconnect client, and host-JVM
+unit tests with a fake transport. The Gradle build and the unit tests could not
+be run in this environment because the Android SDK is not installed; the
+connection state machine was verified with a standalone Kotlin 2.0.21 compiler
+and JUnit 4.13.2 instead. Install/run on a real tablet is still pending.
 
 ## Android 4.4.2 Hardware Matrix
 

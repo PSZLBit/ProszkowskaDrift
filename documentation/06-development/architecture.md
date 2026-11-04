@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-10-21
+Last updated: 2026-11-03
 
 This document describes the MVP runtime. Decisions are recorded in D-22,
 ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
@@ -43,12 +43,16 @@ or simulate the game.
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
-Controller implementation status (2026-10-21): `controller-android/` builds a
-minimal API 19 app — `minSdk 19` / `targetSdk 19`, landscape, one plain-Views
-`Activity`, keep-screen-on, platform Holo theme — with AGP 9.4.1 and AGP
-built-in Kotlin. Per D-20/ADR-0002 it has no Compose and no AndroidX; the only
-dependency is JUnit for local unit tests. WebSocket connection, device token,
-reconnect, and input sending are not implemented yet.
+Controller implementation status (2026-11-03): `controller-android/` is an API 19
+app — `minSdk 19` / `targetSdk 19`, landscape, one plain-Views `Activity`,
+keep-screen-on, platform Holo theme — built with AGP 9.4.1 and AGP built-in
+Kotlin. Per D-20/ADR-0002 it has no Compose and no AndroidX; dependencies are
+JUnit for local unit tests and OkHttp 3.12.1 for the WebSocket client. The
+WebSocket spike (issue #11) implements `connect` to `/ws/controller`, the
+`hello` device-token handshake, sending `input` at ~25 Hz while the phase is
+`playing`, and reconnect with exponential backoff. The connection state machine
+is covered by unit tests with a fake transport. Real-tablet validation is still
+pending; the production controller is issue #48.
 
 ## Authority and Trust Boundary
 

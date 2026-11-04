@@ -43,7 +43,9 @@ android {
 // in the app; the Maven artifact only backs JVM unit tests, where the android
 // stub throws.
 dependencies {
-    implementation(libs.okhttp)
+    // D-20 / ADR-0002: OkHttp 3.12 is the last line that supports Android API 19;
+    // OkHttp 4 requires API 21 and is not allowed for the controller.
+    implementation("com.squareup.okhttp3:okhttp:3.12.1")
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.json)
