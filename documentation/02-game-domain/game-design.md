@@ -1,7 +1,7 @@
 # Game Design — Proszkowska Drift MVP
 
 Status: Draft
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 This document defines the first playable game. Core rules are agreed in D-19;
 numeric values are initial tuning targets and should be changed only after a
@@ -248,11 +248,16 @@ into the MVP implementation.
 ## Controller Input Scheme (Open, D-14)
 
 D-14 is still `TBD`: the final scheme is chosen by playtesting on the real
-tablets (issue #18). The WebSocket spike (issue #11) does not decide it; it
-only sends `steer`/`throttle` in `[-1, 1]` and leaves the mapping from touch
-to those values to the production controller (issue #48). Candidate schemes to
-playtest on the four Android 4.4.2 tablets, in landscape, with at least four
-people:
+tablets (issue #18). The WebSocket spike (issue #11) does not decide it. The
+spike's `InputPadView` is a temporary four-zone digital mapping (left/right
+steering and forward/reverse throttle) that only proves the network path; it is
+not a product decision. The protocol stays the same for every candidate: the
+controller sends `steer` and `throttle` in `[-1, 1]` at 20–30 Hz (the spike
+client uses 25 Hz), so changing the touch mapping does not change the server or
+game contract.
+
+Candidate schemes to playtest on the four Android 4.4.2 tablets, in landscape,
+with at least four people:
 
 | Scheme | How it maps to `steer`/`throttle` | Pros | Cons / risks |
 |---|---|---|---|
@@ -262,26 +267,41 @@ people:
 | Tilt / accelerometer steering + touch throttle | Sensor X → `steer`; button → `throttle` | Hands-free steering; novel | Sensor quality varies on old tablets; calibration; motion sickness; not accessible while seated |
 | Hybrid: virtual joystick for steering, separate large throttle/brake buttons | Joystick X → `steer`; buttons → `throttle` ±1 | Best precision for steering with reliable throttle | More UI; must avoid overlap with joystick |
 
-Notes for the playtest:
+### Playtest Plan (Issue #18)
 
-- Measure comfort, missed inputs, accidental touches, and readability at arm's
-  length for each scheme.
-- Consider handedness and visitors who have never played.
-- The chosen scheme must not change the protocol: the controller still sends
-  `steer` and `throttle` in `[-1, 1]` at 20–30 Hz.
-- Record the recommendation and the playtest notes in issue #18, then update
-  D-14 in `05-architecture-decisions/decision-log.md` and this section.
+Use the same short course for every scheme so results are comparable: three
+parking tasks, one reverse manoeuvre, and one tight turn. Run each scheme on
+every tablet, not only one, because touch panels and size may differ.
+
+Suggested order, cheapest and most familiar first:
+
+1. Two large touch buttons (digital baseline).
+2. Hybrid joystick + throttle/brake buttons.
+3. Single virtual joystick.
+4. Analog slider + throttle button.
+5. Tilt steering, only if time remains after the touch schemes.
+
+For each scheme and player, record:
+
+- Comfort (1–5) and whether the player would choose it again.
+- Missed inputs and accidental touches per task.
+- Time to complete the course and number of collisions.
+- Readability at arm's length and whether the controls hide the task hint.
+- Handedness, thumb reach, and any accessibility concern.
+- Battery/heat or touch-lag observations on the old tablets.
+
+Decision rule: prefer the scheme with the best comfort and the fewest missed
+or accidental inputs; use course time and collisions as tie-breakers. If two
+schemes are close, prefer the simpler one with fewer on-screen elements. Record
+the recommendation and notes in issue #18, then update D-14 in
+`05-architecture-decisions/decision-log.md` and this section. Do not mark D-14
+decided before those playtests.
 
 ## Open Questions
 
-- Exact control scheme (D-14): buttons, analog slider, or virtual joystick.
-  See the candidate table above and issue #18.
+- Exact control scheme (D-14): buttons, analog slider, virtual joystick, tilt,
+  or a hybrid. See the candidate table and playtest plan above, and issue #18.
 - Exact map layout and the number of spots after the first sketch.
-- Whether a task can be manually skipped by the player in MVP, or only
-  auto-skipped.
-- Whether finished cars should be hidden, ghosted, or parked in a finish area.
-- Whether the display should show a minimap for target finding or only on-map
-  beacons.
 - Whether a task can be manually skipped by the player in MVP, or only
   auto-skipped.
 - Whether finished cars should be hidden, ghosted, or parked in a finish area.

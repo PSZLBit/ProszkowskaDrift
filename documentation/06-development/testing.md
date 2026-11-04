@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 ## Goals
 
@@ -83,8 +83,8 @@ map/spawn/target nodes exist. Visual quality is a manual test.
 
 - A fake game client connects to the Go server, receives `config`, sends
   `game_ready`, and exchanges `host_command`/`phase` messages.
-- Four fake controllers connect, receive slots, send input at 30 Hz, and verify
-  that the server forwards only validated input.
+- Four fake controllers connect, receive slots, send input at 20–30 Hz, and
+  verify that the server forwards only validated input.
 - Reconnect test: drop one controller, reconnect with the same token, verify the
   same slot and resumed input.
 - Host test: a controller cannot start/pause/reset; the server rejects it.
@@ -103,13 +103,23 @@ cd controller-android
 ./gradlew :app:testDebugUnitTest
 ```
 
-The spike (issue #11) adds unit tests under
-`app/src/test/java/pszlbit/drift/controller/` that exercise the connection
-state machine with a fake transport that plays the server side. Covered so far:
-hello with device token, welcome handling, input sending at ~25 Hz with
-increasing sequence numbers while `playing`, stopping on phase change, reconnect
-with exponential backoff, and `auth_failed` handling. These tests run on the
-host JVM and do not need a socket or a real server.
+The spike (issue #11) adds host-JVM tests under
+`app/src/test/java/pszlbit/drift/{net,protocol,input}/`:
+
+- `ControllerClientTest` uses OkHttp MockWebServer as a fake Go server. It
+  checks the `/ws/controller` endpoint, `hello` with the device token and app
+  version, input only while `playing` with increasing sequence numbers,
+  reconnect with the same token after a server drop, fatal `auth_failed`
+  handling, and base-address expansion to `/ws/controller`.
+- `ProtocolTest` covers the version 1 encoder/parser, unknown fields and
+  messages, malformed JSON, and a wrong protocol version.
+- `BackoffTest` covers the reconnect delay: base, doubling, cap, and custom
+  values.
+- `InputTrackerTest` covers the temporary touch mapping: neutral state,
+  opposite zones cancelling, two pointers, release, and clear.
+
+MockWebServer owns a local ephemeral socket and plays the server side; the tests
+do not need the venue network, a Go server, or a tablet.
 
 Manual check, written down before implementing any controller change:
 
@@ -117,13 +127,18 @@ Manual check, written down before implementing any controller change:
 2. The app launches into landscape, shows the status text, and keeps the
    screen on.
 3. No crash within one minute of idle.
+4. With a reachable server, the status shows connected, `hello` assigns a slot,
+   and the diagnostics line reports a send rate inside 20–30 Hz while
+   `playing`.
+5. Force a disconnect (stop the server or disable Wi-Fi), then restore it: the
+   app reconnects with the same device token and reclaims the same slot.
 
-Status 2026-11-03: the plain-Views scaffold was extended with the WebSocket
-spike — OkHttp 3.12.1 transport, hello/input/reconnect client, and host-JVM
-unit tests with a fake transport. The Gradle build and the unit tests could not
-be run in this environment because the Android SDK is not installed; the
-connection state machine was verified with a standalone Kotlin 2.0.21 compiler
-and JUnit 4.13.2 instead. Install/run on a real tablet is still pending.
+Status 2026-11-04: the plain-Views scaffold has the WebSocket spike — OkHttp
+3.12.x, `hello`/input/ping/reconnect client, and 26 host-JVM tests. On this
+machine `:app:testDebugUnitTest` passes (26 tests) and `:app:assembleDebug`
+produces the debug APK. The configured send rate is 25 Hz. Install/run on the
+real tablets, measured latency, and the Kotlin-versus-Java recommendation for
+issue #11 are still pending hardware validation.
 
 ## Android 4.4.2 Hardware Matrix
 

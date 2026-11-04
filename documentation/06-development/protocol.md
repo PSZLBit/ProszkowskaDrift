@@ -1,11 +1,12 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-10-19
+Last updated: 2026-11-04
 
-Protocol version: `1` (MVP). This is a design contract, not implemented yet.
-Changing a field or message requires updating this file and, for breaking
-changes, bumping the protocol version.
+Protocol version: `1` (MVP). This is a design contract. The controller side is
+implemented in the issue #11 spike; the server and game sides are still
+pending. Changing a field or message requires updating this file and, for
+breaking changes, bumping the protocol version.
 
 ## Transport and Endpoints
 
