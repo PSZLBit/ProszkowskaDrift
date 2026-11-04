@@ -1,0 +1,68 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Texture2D" uid="uid://dpkabcrtgg3q3" path="res://assets/image_2024-03-02_131934629.png" id="1_background"]
+[ext_resource type="PackedScene" uid="uid://c0didsv7dx62i" path="res://scenes/sprites/car.tscn" id="2_car"]
+[ext_resource type="PackedScene" uid="uid://cm1oqj54hng44" path="res://scenes/server/server_input.tscn" id="3_server_input"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_horizontal"]
+size = Vector2(1920, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vertical"]
+size = Vector2(20, 1080)
+
+[node name="Main" type="Node2D"]
+
+[node name="Background" type="Sprite2D" parent="."]
+position = Vector2(960, 540)
+scale = Vector2(1.482625, 1.487603)
+texture = ExtResource("1_background")
+
+[node name="Environment" type="StaticBody2D" parent="."]
+collision_layer = 1
+collision_mask = 2
+
+[node name="TopWall" type="CollisionShape2D" parent="Environment"]
+position = Vector2(960, 10)
+shape = SubResource("RectangleShape2D_horizontal")
+
+[node name="BottomWall" type="CollisionShape2D" parent="Environment"]
+position = Vector2(960, 1070)
+shape = SubResource("RectangleShape2D_horizontal")
+
+[node name="LeftWall" type="CollisionShape2D" parent="Environment"]
+position = Vector2(10, 540)
+shape = SubResource("RectangleShape2D_vertical")
+
+[node name="RightWall" type="CollisionShape2D" parent="Environment"]
+position = Vector2(1910, 540)
+shape = SubResource("RectangleShape2D_vertical")
+
+[node name="Car1" parent="." instance=ExtResource("2_car") node_paths=PackedStringArray("input_source")]
+position = Vector2(350, 300)
+slot = 1
+sprite_frame = 16
+label_text = "P1"
+input_source = NodePath("../ServerInput")
+
+[node name="Car2" parent="." instance=ExtResource("2_car") node_paths=PackedStringArray("input_source")]
+position = Vector2(350, 500)
+slot = 2
+sprite_frame = 0
+label_text = "P2"
+input_source = NodePath("../ServerInput")
+
+[node name="Car3" parent="." instance=ExtResource("2_car") node_paths=PackedStringArray("input_source")]
+position = Vector2(350, 700)
+slot = 3
+sprite_frame = 8
+label_text = "P3"
+input_source = NodePath("../ServerInput")
+
+[node name="Car4" parent="." instance=ExtResource("2_car") node_paths=PackedStringArray("input_source")]
+position = Vector2(350, 900)
+slot = 4
+sprite_frame = 24
+label_text = "P4"
+input_source = NodePath("../ServerInput")
+
+[node name="ServerInput" parent="." instance=ExtResource("3_server_input")]

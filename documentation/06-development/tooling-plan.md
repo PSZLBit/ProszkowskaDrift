@@ -1,7 +1,7 @@
 # Tooling and Quality Gate Plan
 
 Status: Draft
-Last updated: 2026-10-21
+Last updated: 2026-11-04
 
 Developer tooling for the project. A tool enters the repository only with a
 **trigger**, an **owner**, and — if it changes the stack or the merge gate — a
@@ -56,7 +56,7 @@ Add per component, when the component exists.
 |-----------|------|---------|-------|
 | Go server | `gofmt`, `go vet`; optionally `golangci-lint` | `server/` scaffold | Start with gofmt + vet; add more linters only if they catch real issues |
 | Kotlin controller | `ktlint` or `detekt` | `controller-android/` scaffold | Versions must work with the chosen AGP/Kotlin; do not add AndroidX/Compose tooling |
-| GDScript | `gdformat` / `gdlint` (gdtoolkit) | `game/` scaffold | Optional; keep Python tooling out of the shipped game |
+| GDScript | `gdformat` / `gdlint` (gdtoolkit) | `game/` scaffold | Optional and not added; the scaffold relies on the Godot parser/import and headless tests. Add only if formatting drift becomes a real problem; keep Python tooling out of the shipped game |
 | Markdown | `markdownlint` + link checker | When the docs volume grows | Keep it fast; optional and not a merge blocker at first |
 | YAML/JSON | Editor/schema validation | With the first config file | Avoid a Node-based toolchain unless it earns its place |
 
@@ -85,17 +85,31 @@ Add per component, when the component exists.
 
 ## CI Quality Gates
 
-Planned for the first component scaffold (M1), free tier only:
+The Go server scaffold (S0-04, 2026-10-21), the game scaffold (S0-05,
+2026-10-26), and the documentation site activated the free-tier gates that do
+not need extra tooling:
 
-1. Go job: `go test -race ./...`, `go vet ./...`, build.
-2. Android job: Gradle `assembleDebug` with cached dependencies; upload the APK.
-3. Godot job: headless logic tests when the test addon is chosen; export only on
-   tags if CI time becomes a problem.
+1. Go job: `go test -race ./...`, `go vet ./...`, build — active in
+   `.github/workflows/server.yml` since the `server/` scaffold.
+2. Android job: Gradle `testDebugUnitTest`, `assembleDebug`, and `lintDebug`
+   with cached dependencies; upload the APK. Trigger met with the
+   `controller-android/` scaffold; the workflow is not added yet, but the
+   commands pass locally.
+3. Godot job: headless import plus `game/tests/run_tests.gd` — active in
+   `.github/workflows/game.yml` since the game scaffold. It pins Godot 4.7.2 and
+   downloads it in CI. Export only on tags if CI time becomes a problem.
 4. Docs job: `mkdocs build --strict` when documentation, the MkDocs config, or
-   its requirements change.
-5. Cache Go modules, Gradle, and Godot downloads where possible.
-6. Required checks for `main`: Go tests/vet and the Android build. Add Godot
-   tests when configured.
+   its requirements change — active in `.github/workflows/docs.yml`.
+5. Cache Go modules, Gradle, and Godot downloads where possible; the Go job
+   caches modules through `actions/setup-go`.
+6. Required checks for `main`: Go tests/vet and the Godot headless tests. The
+   Android build joins when a controller workflow is added. Branch protection
+   is a repository-settings task and is not configured yet.
+
+Pending in the Go job: `govulncheck ./...` (trigger met with the server
+scaffold; wire it pinned to a version). Pending overall: commit-message
+validation — its trigger ("first CI workflow") is now met; add a small script
+run by CI, not a Node tool chain.
 
 No containers, cloud runners, or paid services. If a check cannot run, the PR
 must say so (Definition of Done in `workflow.md`).

@@ -3,6 +3,10 @@
 Status: Draft
 Last updated: 2026-11-04
 
+The MFD subset is being baselined in issue #45 (Sprint 2). The full GDD remains
+issue #32 and is deferred to the MVP stretch/Post-MVP; this document stays Draft
+until those changes land.
+
 This document defines the first playable game. Core rules are agreed in D-19;
 numeric values are initial tuning targets and should be changed only after a
 playtest, with the reason recorded here.

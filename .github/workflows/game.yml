@@ -1,0 +1,49 @@
+name: Game
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "game/**"
+      - ".github/workflows/game.yml"
+  pull_request:
+    paths:
+      - "game/**"
+      - ".github/workflows/game.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        run: |
+          archive="$RUNNER_TEMP/godot.zip"
+          curl -fsSL -o "$archive" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q "$archive" -d "$RUNNER_TEMP/godot"
+          godot="$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          chmod +x "$godot"
+          "$godot" --version
+          echo "GODOT_BIN=$godot" >> "$GITHUB_ENV"
+
+      - name: Import project
+        run: '"$GODOT_BIN" --headless --path game --import'
+
+      - name: Run headless tests
+        run: '"$GODOT_BIN" --headless --path game --script res://tests/run_tests.gd'

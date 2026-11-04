@@ -1,5 +1,7 @@
 # Proszkowska Drift
 
+Last updated: 2026-11-04
+
 Working title for a local multiplayer arcade parking game. One to four players
 use Android tablets as controllers; a laptop runs the game and shows it on a TV
 or monitor. Each round is a short parking time attack on a stylized map of the
@@ -21,12 +23,17 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
 ## Components
 
 - `server/` — Go session server: slots, input validation, reconnects, host
-  commands, game process supervision. (Planned; not scaffolded.)
-- `game/` — Godot 4 game and fullscreen display: map, movement, collisions,
-  parking detection, scoring, HUD. (Planned; not scaffolded.)
-- `controller-android/` — minimal Kotlin Android controller for Android 4.4.2;
-  WebSocket handshake, device token, 25 Hz input loop, reconnect, and
-  fake-server tests are implemented; real-tablet validation is pending.
+  commands, session timers, and recovery signals. Sprint 0 slice: controller
+  and game WebSocket endpoints, in-memory slots, validation, all-disconnected
+  pause, `/healthz`, and fake clients. Game process supervision is not
+  implemented yet. See [`server/README.md`](server/README.md).
+- `game/` — Godot 4 game and fullscreen display. Current scaffold: one game
+  connection, four slot-keyed cars, protocol validation, fullscreen settings,
+  and headless tests. Map, parking detection, scoring, and HUD are next.
+- `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
+  The WebSocket spike is implemented: `/ws/controller` connection, device-token
+  handshake, 25 Hz input, ping, reconnect with backoff, and host-JVM fake-server
+  tests. Real-tablet proof and the production UI remain (#11, #48).
 - `documentation/` — source of truth: vision, game design, requirements,
   decisions, architecture, protocol, testing, roadmap, festival runbook.
 
@@ -46,16 +53,24 @@ and [`adr-0002-legacy-android-controller.md`](documentation/05-architecture-deci
 
 ## Project Status
 
-Planning and Sprint 0. The Android controller scaffold exists with a local
-build and host-JVM fake-server tests; the WebSocket spike is implemented, but
-install/run on the four tablets and the Kotlin-versus-Java recommendation are
-still pending. The server and game are pending. The festival is 2026-11-24 and
-the internal festival-ready target is 2026-11-18. The committed scope is the
-Minimum Festival Demo (MFD); the full MVP is a stretch goal. The next milestone
-is the one-week technical spike: prove the Kotlin app on the four tablets, the
-Go↔Godot connection, input latency, and display readability.
+Sprint 2 (2026-11-02 – 2026-11-08) targets a single-tablet end-to-end vertical
+slice: one real API 19 tablet connects through Go, drives a car, gets one parking
+task, the game detects the park, and a basic score/time/result is visible on the
+target laptop. This follows the D-33 re-baseline after Sprint 1 delivered only
+the game scaffold. The Go session server slice exists: controller and game WebSocket
+endpoints, four slots, input validation, reconnects, heartbeats, the minimal host
+command path, and fake client tools. The Godot scaffold exists: one game
+connection, four slot-keyed cars, protocol validation, fullscreen settings, and
+headless tests. The Android controller WebSocket spike is implemented with
+host-JVM fake-server tests; real-tablet install, latency, and stability remain
+open. Four-player MFD validation moves to Sprint 3, and
+the festival-ready target is 2026-11-18. The Minimum Festival Demo (MFD) is
+committed; the full MVP is a stretch goal. The festival is 2026-11-24.
 
 Work board: <https://github.com/orgs/PSZLBit/projects/1>.
+
+Sprint reviews and plans:
+[`documentation/06-development/sprint-reviews.md`](documentation/06-development/sprint-reviews.md).
 
 See [`documentation/06-development/roadmap.md`](documentation/06-development/roadmap.md).
 
@@ -65,9 +80,19 @@ See [`documentation/06-development/roadmap.md`](documentation/06-development/roa
 
 - Git. On Windows, install Git for Windows. Git Bash is optional for setup; the
   `pre-push` hook runs through Git's bundled shell.
+- Go 1.23 or newer for the `server/` component.
+- Godot 4.7.2 for the `game/` component.
+- Android SDK (compile SDK 37, build tools 37) and JDK 17 or newer for the
+  `controller-android/` component. Set `sdk.dir` in
+  `controller-android/local.properties` or `ANDROID_HOME`.
 
-Go, Godot, and the Android SDK are not required yet; their setup steps will be
-added when those components are scaffolded.
+Build and test the controller:
+
+```sh
+cd controller-android
+./gradlew :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+```
 
 ### Clone and set up
 
@@ -105,6 +130,41 @@ git config --local --get core.hooksPath
 The local hook catches accidental direct pushes. It is not a security boundary:
 GitHub rules for `main` must still require a pull request and review.
 
+### Run the game locally
+
+Start the server in one terminal:
+
+```sh
+cd server
+go run ./cmd/server -game-token dev-token -log-level debug
+```
+
+Start the Godot project in another terminal. `PD_GAME_TOKEN` supplies the
+development token; the project does not commit one:
+
+```powershell
+$env:PD_GAME_TOKEN = "dev-token"
+godot --path game
+```
+
+Connect four fake controllers to exercise all cars:
+
+```sh
+cd server
+go run ./cmd/fakecontroller -clients 4 -duration 60s
+```
+
+Press `Enter` in the game window to start the round and `Q` to quit. For an
+automated smoke run, use `godot --headless --path game -- --dev-auto-start`;
+the flag is development-only.
+
+Run the Godot tests:
+
+```sh
+godot --headless --path game --import
+godot --headless --path game --script res://tests/run_tests.gd
+```
+
 For a local documentation preview, follow the pinned toolchain and commands in
 [`documentation/06-development/testing.md`](documentation/06-development/testing.md#documentation-site-checks).
 
@@ -121,6 +181,7 @@ Start with [`documentation/README.md`](documentation/README.md), then read:
 - [`documentation/06-development/architecture.md`](documentation/06-development/architecture.md)
 - [`documentation/06-development/protocol.md`](documentation/06-development/protocol.md)
 - [`documentation/06-development/workflow.md`](documentation/06-development/workflow.md)
+- [`documentation/06-development/sprint-reviews.md`](documentation/06-development/sprint-reviews.md)
 
 ## Repository History
 

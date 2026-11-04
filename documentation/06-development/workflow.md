@@ -1,21 +1,42 @@
 # Development Workflow
 
 Status: Decided
-Last updated: 2026-10-21
+Last updated: 2026-11-04
 
 ## Monorepo Layout
 
 - `server/` — Go session server, WebSocket endpoints, validation, supervisor,
-  and launcher scripts. (Not yet scaffolded.)
-- `game/` — Godot 4 project: map, simulation, scoring, HUD, display. (Not yet
-  scaffolded.)
-- `controller-android/` — minimal Kotlin Android controller for API 19. Scaffold
-  exists; WebSocket, token, reconnect, and input are pending.
+  and launcher scripts. The Sprint 0 session/input slice is scaffolded; game
+  supervision and the launcher are later work.
+- `game/` — Godot 4 project: one game connection, four slot-keyed cars,
+  placeholder map, fullscreen display settings, and headless tests. Parking
+  detection, scoring, and HUD are later work. `game/scenes/main.tscn` is the
+  main scene.
+- `controller-android/` — minimal Kotlin Android controller for API 19. The
+  WebSocket spike is implemented; real-tablet validation and the production UI
+  are tracked by #11 and #48.
 - `documentation/` — source of truth and decision history.
 - Tests live next to the code they test; no separate top-level test tree.
 
 The four top-level component directories are fixed by D-07. Additional files
 live inside the relevant component.
+
+## Local Commands
+
+Run from the repository root unless a command changes directory.
+
+- Server tests: `cd server`, then `go test -race ./...` and `go vet ./...`.
+- Game tests: `godot --headless --path game --import`, then
+  `godot --headless --path game --script res://tests/run_tests.gd`.
+- Controller tests: `cd controller-android`, then
+  `./gradlew :app:testDebugUnitTest`, `./gradlew :app:assembleDebug`, and
+  `./gradlew :app:lintDebug`.
+- Documentation site: `mkdocs build --strict`.
+- Local run instructions for server, game, and fake controllers are in the root
+  `README.md`.
+
+CI runs the server and game commands in `.github/workflows/server.yml` and
+`.github/workflows/game.yml`; the controller job is not enabled yet.
 
 ## Team and Responsibilities
 
@@ -50,6 +71,9 @@ coordinate testing; code review requires a developer.
 - **Capacity:** record actual availability per sprint for the first two sprints;
   use observed throughput instead of invented velocity.
 
+Sprint reviews and plans are recorded in `06-development/sprint-reviews.md` and
+mirrored in GitHub Discussions.
+
 ## GitHub Projects
 
 Use GitHub Projects as the single work board, with issues and milestones.
@@ -80,9 +104,9 @@ the item is not flagged.
 
 **Milestones:**
 
-- `M0 — Decisions and spikes`
-- `M1 — Vertical slice`
-- `M2 — MVP`
+- `M0 — Decisions and Spikes`
+- `M1 — Vertical Slice`
+- `M2 — Minimum Festival Demo (MFD)`
 - `M3 — Festival-ready`
 - `M4 — Post-MVP`
 
@@ -220,7 +244,8 @@ AI assistance is expected and allowed. The human author remains accountable.
 ## Testing and CI
 
 See `06-development/testing.md` for the strategy and
-`06-development/tooling-plan.md` for the planned tooling and quality gates. The
-planned CI runs Go tests/vet and builds the Android APK; Godot headless tests are
-added once the project exists. Use free-tier GitHub Actions and cache
-dependencies. Report any check that cannot run.
+`06-development/tooling-plan.md` for the planned tooling and quality gates. CI
+runs Go tests/vet, Godot headless tests in `.github/workflows/game.yml`, and
+documentation builds; the Android APK build joins when `controller-android/`
+lands on `main`. Use free-tier GitHub Actions and cache dependencies. Report any
+check that cannot run.

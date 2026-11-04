@@ -37,9 +37,9 @@ or simulate the game.
 
 | Component | Process | Responsibilities |
 |-----------|---------|------------------|
-| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect |
-| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs |
-| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display |
+| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 WebSocket spike is implemented; real-tablet validation and the production UI are #48 |
+| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; supervision is later work |
+| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, placeholder boundaries; no map, parking, or scoring yet |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
@@ -55,6 +55,73 @@ reconnect with exponential backoff. The wire protocol and connection state
 machine are covered by host-JVM tests with OkHttp MockWebServer as the fake
 server. Real-tablet validation is still pending; the production controller is
 issue #48.
+
+## Server Slice
+
+Issue #12 scaffolded the server on 2026-10-21. It is a Go 1.23 module,
+`github.com/PSZLBit/ProszkowskaDrift/server`, using
+`github.com/coder/websocket` v1.8.15. The library choice is provisional until
+the Sprint 0 spikes finish.
+
+- `/ws/controller` accepts controller connections on the configured listen
+  address (default `:8080`).
+- `/ws/game` accepts only loopback connections and requires the per-launch game
+  token as `?token=<value>` or the `X-Game-Token` header.
+- The server owns slots, colors, device-token reconnect, input range/sequence/
+  rate validation, controller heartbeats, and a minimal phase path for
+  `start`, `pause`, `resume`, `reset`, `end`, and `kick`.
+- A server tick loop (250 ms) enforces the controller idle timeout, the
+  all-disconnected pause (10 s grace), and game heartbeat monitoring. Writing
+  is serialized per connection through a bounded queue. Broadcasts close a
+  connection that stops draining, but control messages can still be dropped and
+  the `slow_client` reason is unreliable (#25).
+- Session boundaries are enforced server-side: `host_denied` answers rejected
+  host requests, a kicked device token is blocked for the session, host `end`
+  clears slots and closes controllers gracefully, and `/healthz` reports
+  phase, open controller connections, and game readiness.
+- Session state is in memory. Device tokens are never forwarded to the game.
+- `cmd/fakecontroller` and `cmd/fakegame` provide manual end-to-end checks. The
+  protocol details and current deviations are in `06-development/protocol.md`.
+
+This slice does not launch or supervise Godot (the game heartbeat closes a
+silent game connection already; launching, token rotation per launch, and
+restarts are S0-07), assign tasks, score, implement late join, or provide a
+production controller UI. Those remain later sprint items.
+
+## Game Scaffold
+
+The S0-05 spike was promoted to the production `game/` scaffold (D-32) on
+2026-10-26; issue #13 tracks the remaining target-laptop/TV evidence. It is a
+Godot 4.7.2 project with:
+
+- One `/ws/game` connection owned by the `ServerInput` node. The server replaces
+  the previous game connection, so there is one connection for the whole game,
+  not one per car.
+- A slot-keyed input store (slots 1–4) with a 500 ms per-slot timeout, sequence
+  filtering, and a clear path for `player_left` and `kick`. One car stopping or
+  leaving does not stop the others.
+- Protocol validation before play: the envelope is required, and
+  `game_hello.protocolVersion` plus `config` ranges are checked before
+  `game_ready` is sent. Invalid values close the connection instead of starting
+  a partially configured round.
+- A token from the launcher/configuration. `PD_GAME_TOKEN` is the development
+  path; no token is committed. S0-07 will inject a per-launch token.
+- Fatal handling for `auth_failed`, `kicked`, and `protocol_mismatch` (stop
+  reconnecting) and exponential reconnect backoff from 1 s to 30 s for other
+  disconnects.
+- Host keys `Enter` (start/resume), `P` (pause/resume), and `R` (reset) that
+  send `host_request`. `Q` exits the local game process without a server
+  request. `dev_auto_start_round` is development-only and defaults to `false`.
+- `game/scenes/main.tscn`: placeholder background, boundary walls, and four cars
+  on slots 1–4, configured for a 1920×1080 fullscreen window.
+- `game/tests/run_tests.gd`: headless tests for protocol parsing, config
+  validation, slot input/timeout, car movement, scene structure, and project
+  settings. CI runs the same commands in `.github/workflows/game.yml`.
+
+The scaffold does not implement tasks, parking detection, scoring, HUD, final
+map geometry, or final assets. The target laptop/TV run, readability, FPS, and
+input-to-visible measurements remain in issue #13 until recorded in
+`06-development/testing.md`.
 
 ## Authority and Trust Boundary
 
@@ -73,7 +140,7 @@ issue #48.
 1. The host starts the server (Go binary or festival launcher).
 2. The server loads configuration: port, bind address, Godot executable path,
    round defaults, log path.
-3. The server starts Godot with a one-time game token and the local WebSocket
+3. The server starts Godot with a per-launch game token and the local WebSocket
    URL.
 4. Godot connects to `/ws/game`, sends `game_ready`, and enters `Attract`.
 5. Tablets connect to `/ws/controller`, send `hello`, and receive slots.
@@ -88,7 +155,10 @@ issue #48.
    reconnect automatically.
 
 Development mode may run Go and Godot in separate terminals; the festival mode
-must use the supervisor/launcher so a crash does not require a developer.
+must use the supervisor/launcher so a crash does not require a developer. The
+Sprint 0 server slice and game scaffold implement the game/session sides of
+steps 4–7. The development token is supplied manually; launching and supervising
+Godot (steps 2–3 and 8–9) is not implemented yet.
 
 ## Data Flow
 
@@ -150,7 +220,8 @@ Host keyboard --> Game --host_request--> Server --host_command--> Game
 - `server/ops/`: launch script or small supervisor that starts the server,
   waits for health, starts/stops the game, and restarts on failure. It stays
   inside `server/` to respect the D-07 layout.
-- Development: separate commands for Go and Godot, documented after scaffolding.
+- Development: separate commands for Go and Godot, documented in the root
+  `README.md` and `06-development/workflow.md`.
 - Festival: one folder, one launch action, fullscreen, no developer tools.
 - Version and build info visible in a diagnostics screen/log, not in the player
   UI.
@@ -170,10 +241,13 @@ engine, or architecture. Do not silently add prediction, UDP, or a new runtime.
 
 ## Open Architecture Items
 
-- Android WebSocket library: OkHttp 3.12.x is used in the spike; confirm API 19
-  stability on the real tablets.
+- Final confirmation of the Go WebSocket library after the Sprint 0 spikes.
+  The S0-04 slice uses `github.com/coder/websocket` v1.8.15.
+- Android WebSocket library: OkHttp 3.12.x is used in the controller spike;
+  confirm API 19 stability on the real tablets.
 - Exact process supervisor implementation (Go or shell script).
 - Windows vs Linux festival laptop.
 - Router model and static-IP plan.
-- Map data format and Godot scene structure.
+- Final map data format and task/target scene structure. The scaffold currently
+  has placeholder boundary walls and cars only.
 - Whether the host has a second control device; web host panel is post-MVP.
