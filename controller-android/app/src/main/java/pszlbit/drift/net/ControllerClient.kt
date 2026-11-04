@@ -1,5 +1,6 @@
 package pszlbit.drift.net
 
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -12,6 +13,7 @@ import pszlbit.drift.protocol.ServerMessage
 import java.util.ArrayDeque
 import java.util.Locale
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -40,15 +42,15 @@ data class ClientStats(
 /**
  * Controller WebSocket client.
  *
- * Responsibilities: handshake with `hello`, 30 Hz input while the server phase
- * is `playing`, a 2 s application `ping`, and reconnect with exponential
- * backoff using the same device token (protocol.md, Reconnect).
+ * Responsibilities: handshake with `hello`, input at [DEFAULT_INPUT_HZ] while
+ * the server phase is `playing`, a 2 s application `ping`, and reconnect with
+ * exponential backoff using the same device token (protocol.md, Reconnect).
  *
  * The server counts input outside `playing` as an invalid message and closes
  * the connection after repeated violations, so input is gated on phase.
  *
  * No Android APIs are used here: the client is exercised by JVM tests against
- * OkHttp's MockWebServer.
+ * OkHttp's MockWebServer, which plays the Go server side.
  */
 class ControllerClient(
     private val serverUrl: String,
@@ -57,7 +59,7 @@ class ControllerClient(
     private val inputProvider: () -> InputState,
     private val listener: Listener,
     private val timeSource: () -> Long = { System.nanoTime() / 1_000_000L },
-    private val inputHz: Int = 30,
+    private val inputHz: Int = DEFAULT_INPUT_HZ,
     private val pingIntervalMs: Long = 2_000L,
     private val backoffBaseMs: Long = 500L,
     private val backoffCapMs: Long = 10_000L,
@@ -80,6 +82,7 @@ class ControllerClient(
 
     private val running = AtomicBoolean(false)
     private val started = AtomicBoolean(false)
+    private val reconnectScheduled = AtomicBoolean(false)
 
     @Volatile
     private var socket: WebSocket? = null
@@ -96,14 +99,20 @@ class ControllerClient(
     @Volatile
     private var fatal = false
 
+    @Volatile
     private var attempt = 0
+
+    @Volatile
     private var reconnects = 0
+
+    @Volatile
+    private var lastError: String? = null
+
     private var sentTotal = 0L
     private var sentThisSecond = 0L
     private var measuredHz = 0.0
     private var lastRttMs = -1L
     private val rttSamples = ArrayDeque<Long>()
-    private var lastError: String? = null
 
     fun start() {
         if (!started.compareAndSet(false, true)) return
@@ -132,10 +141,11 @@ class ControllerClient(
     fun stop() {
         if (!running.compareAndSet(true, false)) return
         fatal = true
-        val current = socket
-        socket = null
-        current?.close(CLOSE_NORMAL, "client stopped")
+        reconnectScheduled.set(false)
+        closeSocket(CLOSE_NORMAL, "client stopped")
         scheduler.shutdownNow()
+        httpClient.dispatcher().executorService().shutdown()
+        httpClient.connectionPool().evictAll()
         state = ConnectionState.IDLE
         listener.onStateChanged(state, "stopped")
     }
@@ -143,7 +153,7 @@ class ControllerClient(
     private fun connectNow() {
         if (!running.get()) return
         val request = try {
-            Request.Builder().url(serverUrl).build()
+            Request.Builder().url(controllerEndpoint(serverUrl)).build()
         } catch (e: IllegalArgumentException) {
             fatal = true
             lastError = "Invalid server URL: $serverUrl"
@@ -209,8 +219,17 @@ class ControllerClient(
         listener.onStateChanged(newState, detail)
     }
 
+    private fun closeSocket(code: Int, reason: String) {
+        val current = socket
+        socket = null
+        current?.close(code, reason)
+    }
+
     private fun scheduleReconnect(reason: String) {
         if (!running.get() || fatal) return
+        // OkHttp can report a failed connection through both onClosed and
+        // onFailure; schedule only one retry per drop.
+        if (!reconnectScheduled.compareAndSet(false, true)) return
         lastError = reason
         val delay = Backoff.delayMs(attempt, backoffBaseMs, backoffCapMs)
         attempt++
@@ -219,7 +238,18 @@ class ControllerClient(
             ConnectionState.RECONNECTING,
             String.format(Locale.US, "retry in %d ms: %s", delay, reason),
         )
-        scheduler.schedule({ connectNow() }, delay, TimeUnit.MILLISECONDS)
+        try {
+            scheduler.schedule(
+                {
+                    reconnectScheduled.set(false)
+                    connectNow()
+                },
+                delay,
+                TimeUnit.MILLISECONDS,
+            )
+        } catch (e: RejectedExecutionException) {
+            reconnectScheduled.set(false)
+        }
     }
 
     private fun handleMessage(text: String) {
@@ -234,6 +264,7 @@ class ControllerClient(
                 phase = message.phase
                 sequence = 0L
                 attempt = 0
+                reconnectScheduled.set(false)
                 fatal = false
                 lastError = null
                 setState(ConnectionState.CONNECTED, null)
@@ -254,6 +285,8 @@ class ControllerClient(
                 lastError = "${message.code}: ${message.message}"
                 if (message.code in FATAL_ERRORS) {
                     fatal = true
+                    reconnectScheduled.set(false)
+                    closeSocket(CLOSE_NORMAL, "fatal: ${message.code}")
                     setState(ConnectionState.FATAL, lastError)
                 }
             }
@@ -297,10 +330,40 @@ class ControllerClient(
         }
     }
 
-    private companion object {
-        const val CLOSE_NORMAL = 1000
-        const val RTT_SAMPLES = 10
-        const val PHASE_PLAYING = "playing"
-        val FATAL_ERRORS = setOf("auth_failed", "kicked", "protocol_mismatch")
+    companion object {
+        /** D-23 allows 20–30 Hz; 25 Hz leaves headroom on the old tablets. */
+        const val DEFAULT_INPUT_HZ = 25
+
+        private const val CLOSE_NORMAL = 1000
+        private const val RTT_SAMPLES = 10
+        private const val PHASE_PLAYING = "playing"
+        private val FATAL_ERRORS = setOf("auth_failed", "kicked", "protocol_mismatch")
     }
 }
+
+/**
+ * Accepts a base address such as `ws://192.168.1.10:8080` or a full endpoint.
+ * A base address is expanded to the controller endpoint `/ws/controller`.
+ * `http(s)` input is accepted for tests and converted back to `ws(s)`.
+ */
+internal fun controllerEndpoint(serverUrl: String): String {
+    val trimmed = serverUrl.trim()
+    val secure = trimmed.startsWith("wss:", ignoreCase = true) ||
+        trimmed.startsWith("https:", ignoreCase = true)
+    val httpUrl = when {
+        trimmed.startsWith("ws:", ignoreCase = true) -> "http:" + trimmed.substring(3)
+        trimmed.startsWith("wss:", ignoreCase = true) -> "https:" + trimmed.substring(4)
+        else -> trimmed
+    }
+    val parsed = HttpUrl.parse(httpUrl)
+        ?: throw IllegalArgumentException("Invalid server URL: $serverUrl")
+    val path = if (parsed.encodedPath() == "/") CONTROLLER_PATH else parsed.encodedPath()
+    val normalized = parsed.newBuilder().encodedPath(path).build().toString()
+    return if (secure) {
+        "wss" + normalized.substring("https".length)
+    } else {
+        "ws" + normalized.substring("http".length)
+    }
+}
+
+private const val CONTROLLER_PATH = "/ws/controller"

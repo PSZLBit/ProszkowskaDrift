@@ -1,5 +1,3 @@
-import org.gradle.api.tasks.testing.Test
-
 plugins {
     alias(libs.plugins.android.application)
 }
@@ -45,15 +43,9 @@ android {
 dependencies {
     // D-20 / ADR-0002: OkHttp 3.12 is the last line that supports Android API 19;
     // OkHttp 4 requires API 21 and is not allowed for the controller.
-    implementation("com.squareup.okhttp3:okhttp:3.12.1")
+    implementation(libs.okhttp)
     testImplementation(libs.junit)
+    // MockWebServer plays the Go server side in host-JVM tests.
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.json)
-}
-
-// Opt-in live check against a running Go server:
-//   ./gradlew :app:testDebugUnitTest --tests "*LiveServerTest" \
-//     -Dpsz.liveServerUrl=ws://127.0.0.1:8080/ws/controller
-tasks.withType<Test>().configureEach {
-    systemProperty("psz.liveServerUrl", System.getProperty("psz.liveServerUrl", ""))
 }
