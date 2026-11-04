@@ -1,11 +1,11 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://betaejitbrd4t"]
 
-[ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
+[ext_resource type="Script" uid="uid://dtvugnobfodtt" path="res://scripts/hud.gd" id="1_hud"]
 
-[node name="Hud" type="CanvasLayer"]
+[node name="Hud" type="CanvasLayer" unique_id=803578228]
 script = ExtResource("1_hud")
 
-[node name="TimerLabel" type="Label" parent="."]
+[node name="TimerLabel" type="Label" parent="." unique_id=949673000]
 offset_left = 860.0
 offset_top = 24.0
 offset_right = 1060.0
@@ -14,7 +14,7 @@ theme_override_font_sizes/font_size = 32
 text = "03:00"
 horizontal_alignment = 1
 
-[node name="TaskLabel" type="Label" parent="."]
+[node name="TaskLabel" type="Label" parent="." unique_id=174204117]
 offset_left = 24.0
 offset_top = 24.0
 offset_right = 400.0
@@ -22,35 +22,39 @@ offset_bottom = 64.0
 theme_override_font_sizes/font_size = 24
 text = "Task: -"
 
-[node name="Scores" type="VBoxContainer" parent="."]
-offset_left = 24.0
-offset_top = 80.0
-offset_right = 300.0
-offset_bottom = 400.0
+[node name="Scores" type="VBoxContainer" parent="." unique_id=1184254124]
+offset_left = 1728.0
+offset_top = 12.0
+offset_right = 2004.0
+offset_bottom = 332.0
 
-[node name="Score1" type="Label" parent="Scores"]
+[node name="Score1" type="Label" parent="Scores" unique_id=661587220]
+layout_mode = 2
 text = "P1: 0"
 
-[node name="Score2" type="Label" parent="Scores"]
+[node name="Score2" type="Label" parent="Scores" unique_id=433932582]
+layout_mode = 2
 text = "P2: 0"
 
-[node name="Score3" type="Label" parent="Scores"]
+[node name="Score3" type="Label" parent="Scores" unique_id=875591357]
+layout_mode = 2
 text = "P3: 0"
 
-[node name="Score4" type="Label" parent="Scores"]
+[node name="Score4" type="Label" parent="Scores" unique_id=1998416654]
+layout_mode = 2
 text = "P4: 0"
 
-[node name="ResultsPanel" type="Panel" parent="."]
+[node name="ResultsPanel" type="Panel" parent="." unique_id=1952375315]
 visible = false
 offset_left = 660.0
 offset_top = 300.0
 offset_right = 1260.0
 offset_bottom = 780.0
 
-[node name="ResultsLabel" type="Label" parent="ResultsPanel"]
+[node name="ResultsLabel" type="Label" parent="ResultsPanel" unique_id=1857057577]
+layout_mode = 0
 offset_left = 24.0
 offset_top = 24.0
 offset_right = 576.0
 offset_bottom = 456.0
 theme_override_font_sizes/font_size = 24
-text = ""
