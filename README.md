@@ -1,6 +1,6 @@
 # Proszkowska Drift
 
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 Working title for a local multiplayer arcade parking game. One to four players
 use Android tablets as controllers; a laptop runs the game and shows it on a TV
@@ -172,6 +172,11 @@ Start with [`documentation/README.md`](documentation/README.md), then read:
 - [`documentation/06-development/protocol.md`](documentation/06-development/protocol.md)
 - [`documentation/06-development/workflow.md`](documentation/06-development/workflow.md)
 - [`documentation/06-development/sprint-reviews.md`](documentation/06-development/sprint-reviews.md)
+
+## Assets
+
+Third-party asset sources, licences, and AI disclosures are recorded in
+[`game/assets/CREDITS.md`](game/assets/CREDITS.md).
 
 ## Repository History
 
