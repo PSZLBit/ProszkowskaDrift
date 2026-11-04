@@ -84,9 +84,12 @@ Superseded decisions stay in the log. Do not delete history.
   provenance in `game/assets/CREDITS.md` (D-34).
 - Delivery calendar: festival 2026-11-24; festival-ready target 2026-11-18;
   MFD committed, MVP stretch (D-31).
+- MFD gameplay baseline: one task per player, four-spot map, 180 s round,
+  time/precision/collision score (D-35).
 - Game scaffold promoted from S0-05 (D-32).
 - Sprint 2 re-baselined to a single-tablet vertical slice; four-player MFD
   validation moved to Sprint 3 (D-33).
-- Open: controller input scheme (D-14), map/tuning details, and hardware specs
+- Open: controller input scheme (D-14), MVP map expansion and final tuning
+  after playtests (#32), and hardware specs
   (`06-development/hardware-inventory.md`; static specs collected, hardware
   checks deferred to the Sprint 0 spikes).
