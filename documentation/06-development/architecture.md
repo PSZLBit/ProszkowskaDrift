@@ -1,10 +1,11 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-11-03
+Last updated: 2026-11-09
 
-This document describes the MVP runtime. Decisions are recorded in D-22,
-ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
+This document describes the MVP runtime. Decisions are recorded in D-21, D-22,
+D-24, ADR-0001, ADR-0002, and ADR-0003. Message schemas are in
+`06-development/protocol.md`.
 
 ## Overview
 
@@ -221,23 +222,28 @@ Host keyboard --> Game --host_request--> Server --host_command--> Game
 
 | Metric | Target | Measured in |
 |--------|--------|-------------|
-| Display frame rate | 60 FPS | Sprint 0 and playtests |
-| Controller input rate | 20–30 Hz | Sprint 0 |
-| Input-to-visible response | ≤100 ms | Sprint 0 |
-| Players | 4 | Sprint 0 and rehearsal |
-| Setup time | <15 min | Festival rehearsal |
+| Display frame rate | 60 FPS | #13 and playtests |
+| Controller input rate | 20–30 Hz | #14 |
+| Input-to-visible response | ≤100 ms | #14 |
+| Players | 4 | #49 and rehearsal |
+| Setup time | <15 min | #50 |
 
 If the budget is missed, record a new decision before changing transport,
 engine, or architecture. Do not silently add prediction, UDP, or a new runtime.
 
 ## Open Architecture Items
 
-- Final confirmation of the Go WebSocket library after the Sprint 0 spikes.
-  The S0-04 slice uses `github.com/coder/websocket` v1.8.15; the Android
-  WebSocket library is still open.
-- Exact process supervisor implementation (Go or shell script).
-- Windows vs Linux festival laptop.
-- Router model and static-IP plan.
+Owners and next steps are also recorded in the decision log's
+[Open TBD and Validation Items](../05-architecture-decisions/decision-log.md#open-tbd-and-validation-items).
+
+- WebSocket libraries: the Go slice uses `github.com/coder/websocket` v1.8.15;
+  confirm it in the architecture and select the Android client library. Owner:
+  TracerDS + GreenDude5; #11/#48.
+- Exact process supervisor implementation (Go or shell script). Owner:
+  GreenDude5; #15 (Sprint 3).
+- Windows vs Linux festival laptop. Owner: ZofiaDan; #49/#50.
+- Router model and static-IP plan. Owner: ZofiaDan; #49/#50.
 - Final map data format and task/target scene structure. The scaffold currently
-  has placeholder boundary walls and cars only.
-- Whether the host has a second control device; web host panel is post-MVP.
+  has placeholder boundary walls and cars only. Owner: Brzana; #45/#46.
+- Whether the host has a second control device; web host panel is post-MVP
+  (D-26), so no action for the MFD.

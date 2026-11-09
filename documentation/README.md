@@ -1,7 +1,7 @@
 # Documentation — Source of Truth
 
 Status: Decided
-Last updated: 2026-11-04
+Last updated: 2026-11-09
 
 > All project artifacts are in English. This folder is the source of truth.
 > Code implements what is described here. Chat history does not override this folder.
@@ -70,7 +70,8 @@ Superseded decisions stay in the log. Do not delete history.
 - Stack: Go server + Godot 4 game + minimal Kotlin controller (D-22).
 - Controller: Android 4.4.2, API 19, no Compose/OkHttp 4, AndroidX only if
   proven compatible (D-20).
-- Connection: fixed tablets auto-connect and reclaim slots (D-21).
+- Connection: fixed tablets auto-connect and reclaim slots (D-21); reconnect
+  and recovery behavior is in [ADR-0003](05-architecture-decisions/adr-0003-session-lifecycle-and-recovery.md) (D-24).
 - Real-time: 60 FPS, 20–30 Hz input, ≤100 ms target (D-23).
 - State: in-memory only, no personal data (D-25).
 - Delivery: one-week sprints, GitHub Projects, DoR/DoD, CI (D-27).
@@ -87,6 +88,7 @@ Superseded decisions stay in the log. Do not delete history.
 - Game scaffold promoted from S0-05 (D-32).
 - Sprint 2 re-baselined to a single-tablet vertical slice; four-player MFD
   validation moved to Sprint 3 (D-33).
-- Open: controller input scheme (D-14), map/tuning details, and hardware specs
-  (`06-development/hardware-inventory.md`; static specs collected, hardware
-  checks deferred to the Sprint 0 spikes).
+- Open: controller input scheme and feedback (D-14; #18/#48), MFD map/tuning
+  (#45), and hardware validation (#10/#11/#14/#49). The full register with
+  owners and next steps is in
+  [`05-architecture-decisions/decision-log.md`](05-architecture-decisions/decision-log.md#open-tbd-and-validation-items).

@@ -1,11 +1,12 @@
 # Decision Log
 
 Status: Decided
-Last updated: 2026-11-04
+Last updated: 2026-11-09
 
 Register of all team decisions. Newest entries on top.
 For larger decisions, create an ADR file in this folder using `_templates/adr.md`
-and link it here.
+and link it here. The ADR threshold is defined in
+[`documentation-rules.md`](../00-meta/documentation-rules.md#adr-threshold).
 
 | Date       | ID   | Decision                                                                                                                                  | Status  | Owner |
 | ---------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----- |
@@ -19,17 +20,17 @@ and link it here.
 | 2026-10-19 | D-27 | Delivery uses one-week sprints, a weekly demo and retrospective, GitHub Projects issues/milestones, documented DoR/DoD, peer review, CI, and explicit AI-assistance disclosure. | Decided | Team  |
 | 2026-10-19 | D-26 | Delivery is split into Minimum Festival Demo, MVP, and Post-MVP; racing, drift, extra task types, and a web host panel are Post-MVP. | Decided | Team  |
 | 2026-10-19 | D-25 | The MVP stores session state in memory only, with no accounts, player names, persistent profiles, or personal data; only anonymous in-memory event scores may be shown. | Decided | Team  |
-| 2026-10-19 | D-24 | A disconnected controller's car stops and its slot is reserved for automatic reclaim; all-disconnected pauses the round, late join is between rounds, and game/server crashes restart to Attract with the current round lost. | Decided | Team  |
+| 2026-10-19 | D-24 | A disconnected controller's car stops and its slot is reserved for automatic reclaim; all-disconnected pauses the round, late join is between rounds, and game/server crashes restart to Attract with the current round lost ([ADR-0003](adr-0003-session-lifecycle-and-recovery.md)). | Decided | Team  |
 | 2026-10-19 | D-23 | Real-time targets are 60 FPS display, 20–30 Hz controller input, and at most 100 ms input-to-visible-response latency, to be measured in Sprint 0. | Decided | Team  |
 | 2026-10-19 | D-22 | The MVP stack is Go for the server, Godot 4 for the game/display, and minimal Kotlin for the controller, connected by WebSocket + JSON; the server owns session/input authority and the game owns simulation/scoring, with in-memory state ([ADR-0001](adr-0001-mvp-architecture.md)). | Decided | Team  |
-| 2026-10-19 | D-21 | The four fixed tablets connect automatically to a configured server address, register a random device token, and reclaim their slot after reconnect; QR or manual address entry is only a setup fallback. | Decided | Team  |
+| 2026-10-19 | D-21 | The four fixed tablets connect automatically to a configured server address, register a random device token, and reclaim their slot after reconnect; QR or manual address entry is only a setup fallback ([ADR-0003](adr-0003-session-lifecycle-and-recovery.md)). | Decided | Team  |
 | 2026-10-19 | D-20 | The controller targets Android 4.4.2 (API 19) with a minimal Kotlin app: plain Views, no Compose, no OkHttp 4, and no AndroidX unless a library is proven API 19 compatible; compatibility is validated in Sprint 0, with a minimal Java app as the documented fallback ([ADR-0002](adr-0002-legacy-android-controller.md)). | Decided | Team  |
 | 2026-10-19 | D-19 | The MVP is a top-down 2D parking time attack: 1–4 independent players, one fixed map, 3-minute rounds, five parking tasks per player, environment collisions only, and scoring for time, precision, and collisions ([game design](../02-game-domain/game-design.md)). | Decided | Team  |
 | 2026-10-19 | D-18 | Timeboxed spikes of up to one week are allowed to resolve TBD items; spike code is throwaway, not merged as production, and results are recorded in the decision log. | Decided | Team  |
 | 2026-10-16 | D-17 | Server language, game engine, and controller-to-server transport protocol are not selected yet. Do not introduce them without a decision. | Superseded by D-22 | Team  |
 | 2026-10-16 | D-16 | Latency target and update/tick rate are TBD. Do not invent numbers in code or docs.                                                       | Superseded by D-23 | Team  |
 | 2026-10-16 | D-15 | Disconnect, rejoin, late join, and host-crash handling are TBD.                                                                           | Superseded by D-24 | Team  |
-| 2026-10-16 | D-14 | Controller input set and per-controller feedback are TBD.                                                                                 | TBD     | Team  |
+| 2026-10-16 | D-14 | Controller input set and per-controller feedback are TBD.                                                                                 | TBD     | TracerDS |
 | 2026-10-16 | D-13 | Game concept, rules, and win condition are TBD. Do not implement game logic until `02-game-domain/domain-overview.md` reaches `Decided`.  | Superseded by D-19 | Team  |
 | 2026-10-16 | D-12 | No accounts and no retained personal data. Old account/role/18+/GDPR-DOB model is archived. Sessions hold transient state only.           | Decided | Team  |
 | 2026-10-16 | D-11 | Server and game are separate so the game can be swapped via a stable game interface.                                                      | Decided | Team  |
@@ -51,9 +52,73 @@ and link it here.
 | 2026-10-26 | Godot four-car game scaffold | Partial: four-car slot mapping, protocol/config validation, token/fatal-error handling, reconnect backoff, and headless tests implemented. Target laptop/TV run and FPS/tearing notes still pending (#13). | [`testing.md`](../06-development/testing.md), "Game scaffold input path"; `game/tests/run_tests.gd` |
 | 2026-10-22 | Godot `ServerInput` single-car WebSocket path | Pass for the tested path: handshake, heartbeat, auto-start, forwarded input, input-timeout path, and wired-car movement. Exact timeout boundary and established-connection reconnect were not exercised. | [PR #31](https://github.com/PSZLBit/ProszkowskaDrift/pull/31), single-car spike record |
 
+## Open TBD and Validation Items
+
+Open items are listed with a named owner, the next step, and the tracking issue.
+The list does not change a decision; it records what is still unproven or
+undecided. Hardware checks stay pending until they are run on the real devices.
+
+| Open item | Owner | Next step | Tracking |
+|---|---|---|---|
+| Controller input scheme and feedback (D-14) | TracerDS | Playtest input options on T1–T4 (#18); implement feedback in #48; record the chosen scheme here | #18, #48 |
+| MFD map, task skip, parking tolerance, and tuning | Brzana | Land the MFD baseline in #45; implement #46/#47; full GDD remains #32 | #45, #46, #47, #32 |
+| WebSocket libraries | TracerDS + GreenDude5 | Confirm Go `coder/websocket` v1.8.15 in the architecture; select the Android client library in #11; production in #48 | #11, #48 |
+| Supervisor and festival laptop OS | GreenDude5 + ZofiaDan | Implement the supervisor in #15 (Sprint 3); decide Windows vs Linux in #49/#50 | #15, #49, #50 |
+| Router model and static-IP plan | ZofiaDan | Choose the model and address plan during #49; document it in #50 | #10, #49, #50 |
+| Hardware checks and spares | ZofiaDan | Run Wi-Fi, charging, battery, touch, readability, and spare checks in #10/#11/#14/#49; update the inventory and ADR-0002 | #10, #11, #14, #49 |
+| Latency measurement (D-23) | ZofiaDan | Measure p50/p95 in #14 and record the evidence in `testing.md` | #14 |
+| Protocol task/score messages | GreenDude5 + Brzana | Implement with #46/#47; update protocol coverage and tests | #46, #47 |
+| Second host control device | — | Explicitly Post-MVP (D-26); no action | D-26 |
+
+## ADR Index
+
+| ADR | Decisions | Scope |
+|---|---|---|
+| [ADR-0001](adr-0001-mvp-architecture.md) | D-11, D-22 | Stack, transport, and server/game boundary |
+| [ADR-0002](adr-0002-legacy-android-controller.md) | D-08, D-20 | Android 4.4.2 / API 19 controller |
+| [ADR-0003](adr-0003-session-lifecycle-and-recovery.md) | D-21, D-24 | Session lifecycle, reconnect, and recovery |
+
+## Decision Map
+
+This map links active decisions to their authoritative artifact. Superseded
+decisions D-01, D-02, D-03, D-09, D-13, D-15, D-16, and D-17 remain in the
+table above for history and have no active artifact.
+
+| Artifact | Decisions |
+|---|---|
+| `documentation/README.md`, `00-meta/` | D-04, D-05, D-07 |
+| [Decision log](decision-log.md) | D-06 |
+| [Vision and scope](../01-vision-scope/vision-scope.md) | D-26 |
+| [Game design](../02-game-domain/game-design.md) | D-19 |
+| [Players, sessions, and permissions](../03-players-sessions/roles-sessions.md) | D-10, D-12, D-21, D-24, D-25 |
+| [Product requirements](../04-product/requirements.md) | D-19, D-26 |
+| [ADR-0001](adr-0001-mvp-architecture.md) | D-11, D-22 |
+| [ADR-0002](adr-0002-legacy-android-controller.md) | D-08, D-20 |
+| [ADR-0003](adr-0003-session-lifecycle-and-recovery.md) | D-21, D-24 |
+| [Runtime architecture](../06-development/architecture.md) | D-11, D-21, D-22, D-23, D-24, D-32 |
+| [Protocol](../06-development/protocol.md) | D-21, D-23, D-24, D-32 |
+| [Testing strategy](../06-development/testing.md) | D-23, D-24, D-32 |
+| [Roadmap](../06-development/roadmap.md) | D-26, D-31, D-33 |
+| [Workflow](../06-development/workflow.md) | D-18, D-27, D-28, D-29, D-30 |
+| [Sprint reviews](../06-development/sprint-reviews.md) | D-27, D-31, D-33 |
+| `.gitignore`, `game/assets/CREDITS.md` | D-34 |
+
+## Status Notes
+
+| Date | Related | Note |
+|---|---|---|
+| 2026-11-09 | D-19 | The MFD gameplay baseline is still being defined in #45; the full GDD is #32. The decision is not reopened; `game-design.md` stays Draft until #45 lands. |
+| 2026-11-09 | D-21 | The server token/slot reclaim path is implemented. Controller auto-connect and real-tablet proof remain pending in #11/#48. |
+| 2026-11-09 | D-20 / ADR-0002 | API 19 compatibility validation is pending. Static inventory is merged (#10/PR #44); APK, input, reconnect, and hardware checks remain #11/#48/#49. |
+| 2026-11-09 | D-23 | Latency has not been measured. The targets remain decided, but the evidence is pending in #14. |
+| 2026-11-09 | D-24 / ADR-0003 | The server reconnect and all-disconnected pause path is implemented. Supervisor and crash recovery remain #15; real-hardware proof remains #49. |
+| 2026-11-09 | D-30 | GitHub Pages deployment is live (HTTP 200; Docs run 41847329287). The "first deployment pending" clause is satisfied; no decision change. |
+
 ## Rules
 
 - A `TBD` row blocks implementation of that topic. Timeboxed spikes require an explicit decision entry.
 - Changing a `Decided` row requires a new dated entry, not silent editing.
 - Superseded rows stay in the log; never delete decision history.
 - Link the ADR file in the Decision column when one exists.
+- Keep the Open TBD and Validation Items register current; do not leave an open
+  item without an owner and a next step.
