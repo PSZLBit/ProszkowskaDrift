@@ -1,6 +1,6 @@
 # Proszkowska Drift
 
-Last updated: 2026-11-04
+Last updated: 2026-11-09
 
 Working title for a local multiplayer arcade parking game. One to four players
 use Android tablets as controllers; a laptop runs the game and shows it on a TV
@@ -31,9 +31,10 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
   connection, four slot-keyed cars, protocol validation, fullscreen settings,
   and headless tests. Map, parking detection, scoring, and HUD are next.
 - `controller-android/` — minimal Kotlin Android controller for Android 4.4.2.
-  The WebSocket spike is implemented: `/ws/controller` connection, device-token
-  handshake, 25 Hz input, ping, reconnect with backoff, and host-JVM fake-server
-  tests. Real-tablet proof and the production UI remain (#11, #48).
+  The WebSocket client is promoted after cleanup (D-35): `/ws/controller`
+  connection, device-token handshake, 25 Hz input, ping/pong watchdog, and
+  reconnect with backoff. Host-JVM fake-server tests and controller CI are
+  active; real-tablet proof and the production UI remain (#11, #48).
 - `documentation/` — source of truth: vision, game design, requirements,
   decisions, architecture, protocol, testing, roadmap, festival runbook.
 
@@ -61,9 +62,9 @@ the game scaffold. The Go session server slice exists: controller and game WebSo
 endpoints, four slots, input validation, reconnects, heartbeats, the minimal host
 command path, and fake client tools. The Godot scaffold exists: one game
 connection, four slot-keyed cars, protocol validation, fullscreen settings, and
-headless tests. The Android controller WebSocket spike is implemented with
-host-JVM fake-server tests; real-tablet install, latency, and stability remain
-open. Four-player MFD validation moves to Sprint 3, and
+headless tests. The Android controller WebSocket client is promoted (D-35) with
+host-JVM fake-server tests and controller CI; real-tablet install, latency, and
+stability remain open. Four-player MFD validation moves to Sprint 3, and
 the festival-ready target is 2026-11-18. The Minimum Festival Demo (MFD) is
 committed; the full MVP is a stretch goal. The festival is 2026-11-24.
 
@@ -92,6 +93,7 @@ Build and test the controller:
 cd controller-android
 ./gradlew :app:testDebugUnitTest
 ./gradlew :app:assembleDebug
+./gradlew :app:lintDebug
 ```
 
 ### Clone and set up

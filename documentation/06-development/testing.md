@@ -1,11 +1,12 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-11-04
+Last updated: 2026-11-09
 
-The test-plan update is tracked in issue #17. The controller WebSocket spike is
-implemented with host-JVM tests; install/run on the real tablets and the latency
-measurements remain tracked by #11 and #48.
+The test-plan update is tracked in issue #17. The controller WebSocket client is
+promoted after cleanup (D-35) and covered by host-JVM fake-server tests and a
+controller CI job. Install/run on the real tablets and the latency measurements
+remain tracked by #11 and #48.
 
 ## Goals
 
@@ -31,7 +32,9 @@ measurements remain tracked by #11 and #48.
 - **Coverage:** cover decisions, boundaries, and edge cases that can break a
   round or the festival stand. Do not chase a coverage percentage.
 - **Determinism:** unit and contract tests must not depend on real time, a real
-  network, or a real tablet. Use fakes and fixed clocks.
+  network, or a real tablet. Use fakes and fixed clocks. The controller client
+  tests inject a manual scheduler and monotonic clock for input cadence, ping,
+  and pong-watchdog behavior.
 - **Speed:** keep the PR test suite fast enough to run on every pull request.
 
 ## Test Layers
@@ -41,7 +44,7 @@ measurements remain tracked by #11 and #48.
 | Unit | Game rules, scoring, task assignment, session/slot logic, validation | `game/`, `server/` | Every PR |
 | Contract | Protocol parsing, versioning, error codes | `server/` and a fake game/controller | Every PR |
 | Integration | Go server + fake game + four fake controllers; reconnect; host commands | `server/` | Every PR or nightly |
-| Android build | Kotlin app compiles and APK is produced | CI | Every PR |
+| Android build | Kotlin unit tests pass, lint passes, and APK is produced | CI | Every PR |
 | Hardware | Install, touch, Wi-Fi, latency, charging, kiosk behavior | Real tablets | Sprint 0 and every controller change |
 | Manual game | Map readability, controls, scoring feel, fun | Real laptop + TV + 4 tablets | Every playable increment |
 | Festival rehearsal | Full setup, queue, failure drills | Real venue-like setup | Before the event |
@@ -197,14 +200,18 @@ cd controller-android
 ./gradlew :app:lintDebug
 ```
 
-The spike (issue #11) adds host-JVM tests under
+The controller client (issue #11, promoted by D-35) has host-JVM tests under
 `app/src/test/java/pszlbit/drift/{net,protocol,input}/`:
 
-- `ControllerClientTest` uses OkHttp MockWebServer as a fake Go server. It
-  checks the `/ws/controller` endpoint, `hello` with the device token and app
-  version, input only while `playing` with increasing sequence numbers,
-  reconnect with the same token after a server drop, retry on `session_full`,
-  fatal `auth_failed` handling, and base-address expansion to `/ws/controller`.
+- `ControllerClientTest` uses OkHttp MockWebServer as a fake Go server and a
+  manual scheduler/clock. It checks the `/ws/controller` endpoint, `hello` with
+  the device token and app version, input only while `playing` with increasing
+  sequence numbers, reconnect with the same token and sequence reset,
+  `session_full` and duplicate-token `token_in_use` retries, fatal
+  `auth_failed`/`kicked`/`protocol_mismatch` handling, `game_unavailable`
+  staying connected and gated by `attract`, pong-watchdog reconnect, malformed
+  frame tolerance, stop/leave/restart, and base-address expansion including a
+  bare host.
 - `ProtocolTest` covers the version 1 encoder/parser, unknown fields and
   messages, malformed JSON, and a wrong protocol version.
 - `BackoffTest` covers the reconnect delay: base, doubling, cap, and custom
@@ -212,8 +219,9 @@ The spike (issue #11) adds host-JVM tests under
 - `InputTrackerTest` covers the temporary touch mapping: neutral state,
   opposite zones cancelling, two pointers, release, and clear.
 
-MockWebServer owns a local ephemeral socket and plays the server side; the tests
-do not need the venue network, a Go server, or a tablet.
+MockWebServer owns a local ephemeral socket and plays the server side; timer
+behavior is driven by `ManualScheduler`. The tests do not need the venue
+network, a Go server, or a tablet.
 
 Manual check, written down before implementing any controller change:
 
@@ -226,14 +234,17 @@ Manual check, written down before implementing any controller change:
    `playing`.
 5. Force a disconnect (stop the server or disable Wi-Fi), then restore it: the
    app reconnects with the same device token and reclaims the same slot.
+6. Stop and immediately restart the server while the app is connected: a
+   duplicate-token `token_in_use` response retries with backoff and settles on
+   the same slot without an app restart.
 
-Status 2026-11-04: the plain-Views scaffold has the WebSocket spike — OkHttp
-3.12.x, `hello`/input/ping/reconnect client, and 27 host-JVM tests. On this
-machine `:app:testDebugUnitTest` passes (27 tests), `:app:assembleDebug`
-produces the debug APK, and `:app:lintDebug` passes. The configured send rate is
-25 Hz. Install/run on the real tablets, measured latency, and the
-Kotlin-versus-Java recommendation for issue #11 are still pending hardware
-validation.
+Status 2026-11-09: the plain-Views scaffold has the promoted WebSocket client —
+OkHttp 3.12.x, `hello`/input/ping/reconnect, pong watchdog, and 34 host-JVM
+tests. On this machine `:app:testDebugUnitTest` passes (34 tests),
+`:app:assembleDebug` produces the debug APK, and `:app:lintDebug` passes. The
+configured send rate is 25 Hz. Install/run on the real tablets, measured
+latency, and the Kotlin-versus-Java recommendation for issue #11 are still
+pending hardware validation.
 
 ## Android 4.4.2 Hardware Matrix
 
@@ -407,24 +418,24 @@ must not end up committed; the production path is `ServerInput`.
 
 ## CI Plan
 
-Free-tier GitHub Actions; component jobs start after scaffolding. Tooling
-details, triggers, and the "do not add yet" list live in
+Free-tier GitHub Actions; the available component jobs run on their paths.
+Tooling details, triggers, and the "do not add yet" list live in
 `06-development/tooling-plan.md`.
 
 - `server`: `go test -race ./...`, `go vet ./...`, build.
-- `controller-android`: Gradle `assembleDebug`; cache Gradle; upload APK artifact.
+- `controller-android`: `testDebugUnitTest`, `assembleDebug`, and `lintDebug`
+  with JDK 21, compile SDK 37, build tools 37, and a cached Gradle setup; the
+  debug APK is uploaded as an artifact (`.github/workflows/controller.yml`).
 - `game`: import the project headless and run `game/tests/run_tests.gd`; export
   is manual/tagged if CI is too slow.
 - Docs: `mkdocs build --strict` when documentation, `mkdocs.yml`, or
   `requirements-docs.txt` change.
-- Required for merge when branch protection is enabled: Go tests/vet and Godot
-  headless tests; the Android build joins when `controller-android/` is
-  scaffolded. Branch protection is still a repository-settings task.
+- Required for merge when branch protection is enabled: Go tests/vet, Godot
+  headless tests, and the Android unit test/build/lint job. Branch protection is
+  still a repository-settings task.
 
-The controller CI job is not enabled yet, but `controller-android/` now builds
-and tests locally, so it can be added. Server commands are documented above and
-in `server/README.md`; Godot commands are documented above. Report any check
-that could not run.
+Server commands are documented above and in `server/README.md`; Godot commands
+are documented above. Report any check that could not run.
 
 ## Developer Setup Check
 

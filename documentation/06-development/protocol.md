@@ -1,11 +1,11 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-11-04
+Last updated: 2026-11-09
 
-Protocol version: `1` (MVP). The S0-04 server slice and the controller
-WebSocket spike implement this contract; see the Sprint 0 implementation notes
-at the end. Changing a field or message requires updating this file and, for
+Protocol version: `1` (MVP). The S0-04 server slice and the promoted controller
+WebSocket client (D-35) implement this contract; see the Sprint 0 implementation
+notes at the end. Changing a field or message requires updating this file and, for
 breaking changes, bumping the protocol version.
 
 ## Transport and Endpoints
@@ -133,8 +133,9 @@ own countdown as the source of truth.
 {"v":1,"type":"error","data":{"code":"session_full","message":"No free player slot."}}
 ```
 
-Codes: `auth_failed`, `session_full`, `invalid_input`, `rate_limited`,
-`protocol_mismatch`, `game_unavailable`, `kicked`, `internal_error`.
+Codes: `auth_failed`, `token_in_use`, `session_full`, `invalid_input`,
+`rate_limited`, `protocol_mismatch`, `game_unavailable`, `kicked`,
+`internal_error`.
 
 ### `pong`
 
@@ -290,7 +291,11 @@ Controller            Server                         Game
 2. Server marks the slot disconnected and tells the game to stop the car.
 3. Controller reconnects with `hello` and the same `deviceToken`.
 4. Server reclaims the same slot if the token matches and the session is still
-   active; otherwise it returns `auth_failed` or assigns a free slot.
+   active. An invalid token or an ended session returns `auth_failed` and stays
+   fatal. If the old connection is still marked connected, the server returns
+   `token_in_use`; the controller retries with capped exponential backoff until
+   the server notices the drop. A full session returns `session_full` and is
+   retried the same way.
 5. Server sends `welcome`, current `phase`, and the current task if the round is
    still running.
 6. Controller resumes sending input. The game applies the latest input.
@@ -359,9 +364,10 @@ Implementation choices:
   3 s fallback to an abrupt close. A peer that never answers cannot stall the
   tick loop, broadcasts, or another connection. When the queue is full the close
   frame may not be delivered and the connection is torn down abruptly.
-- A malformed device token, or a token whose slot is still connected, receives
-  `auth_failed`. A syntactically valid unknown token gets a free slot. A full
-  session receives `session_full`; the connection stays open and may retry.
+- A malformed device token receives `auth_failed`. A syntactically valid
+  unknown token gets a free slot. A token whose slot is still connected receives
+  `token_in_use`, which the controller retries with backoff; a full session
+  receives `session_full`, also retryable.
 - The game token is presented as `?token=<value>` on `/ws/game` (the
   `X-Game-Token` header is also accepted). The endpoint rejects non-loopback
   connections before the WebSocket handshake.
@@ -486,3 +492,42 @@ Deviations and open points:
 - Four-car display, TV readability, and FPS/tearing measurements are not
   claimed by the scaffold; they are recorded in `testing.md` after the target
   hardware run (issue #13).
+
+## Controller Implementation Notes (S0-05, 2026-11-09)
+
+The `controller-android/` WebSocket client promoted under D-35 implements the
+controller side with these choices:
+
+- Address normalization accepts a bare `host[:port]`, `ws://`, `wss://`,
+  `http://`, or `https://` input. A base address is expanded to
+  `/ws/controller`; an explicit path is kept.
+- `hello` is sent on every WebSocket open. `welcome` resets the input sequence
+  to 0, matching the server's reconnect reset.
+- Input is sent at 25 Hz only while the phase is `playing`. Timers use
+  fixed-delay scheduling, so a delayed client does not emit a catch-up burst.
+- A `ping` is sent every 2 s. The client tracks the last `pong` and reconnects
+  after 6 s without one, so a half-open socket cannot stay stuck in `CONNECTED`.
+- `auth_failed`, `kicked`, and `protocol_mismatch` are fatal: the socket is
+  closed and no reconnect is attempted. `token_in_use` and `session_full` are
+  retryable with capped exponential backoff (0.5 s to 10 s).
+- `game_unavailable` does not close the socket. The server keeps controllers
+  connected while the game is down and follows the error with `phase: attract`;
+  the client stays connected and phase-gated input stops immediately.
+- Malformed JSON or an unsupported server protocol version is recorded in
+  diagnostics and ignored. The connection stays open because the server owns
+  connection policy; unknown message types are also ignored for forward
+  compatibility.
+- `leave` is sent on a clean client stop, then the socket is closed. `stop()`
+  releases the scheduler and HTTP client, and a later `start()` creates fresh
+  resources.
+
+Deviations and open points:
+
+- The controller does not render the map or simulate the car (FR-C06). Task,
+  score, and phase feedback are plain text; the production controller UI remains
+  #48.
+- Hardware install, touch latency, input-to-visible latency, and Wi-Fi stability
+  are not yet measured on the API 19 tablets (#11).
+- The current client reconnects after any unexpected close with capped backoff.
+  A later supervisor/runbook change may add operator-visible diagnostics, but
+  no new transport or retry policy is implied here.
