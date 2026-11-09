@@ -13,6 +13,7 @@ import pszlbit.drift.input.InputState
 import pszlbit.drift.net.ClientStats
 import pszlbit.drift.net.ConnectionState
 import pszlbit.drift.net.ControllerClient
+import pszlbit.drift.net.controllerEndpoint
 import pszlbit.drift.protocol.ServerMessage
 import pszlbit.drift.storage.DeviceTokenStore
 import pszlbit.drift.storage.ServerSettings
@@ -114,6 +115,11 @@ class MainActivity : Activity(), ControllerClient.Listener {
                     slotView.setTextColor(resources.getColor(colorForSlot(message.color)))
                     phase = message.phase
                     timeLeftSeconds = 0L
+                    // A reconnect starts a fresh server view; do not leave a
+                    // previous task, score, or result on screen.
+                    taskView.text = getString(R.string.task_none)
+                    scoreView.text = getString(R.string.score_format, 0L)
+                    resultView.text = ""
                     renderPhase()
                 }
 
@@ -223,11 +229,17 @@ class MainActivity : Activity(), ControllerClient.Listener {
             .setView(field)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val value = field.text.toString().trim()
-                if (value.isEmpty() || value.startsWith("ws://") || value.startsWith("wss://")) {
+                if (value.isEmpty()) {
                     settings.serverUrl = value
                     restartClient()
                 } else {
-                    resultView.text = getString(R.string.server_invalid)
+                    try {
+                        controllerEndpoint(value)
+                        settings.serverUrl = value
+                        restartClient()
+                    } catch (e: IllegalArgumentException) {
+                        resultView.text = getString(R.string.server_invalid)
+                    }
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)

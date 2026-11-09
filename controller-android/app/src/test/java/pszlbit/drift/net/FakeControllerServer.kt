@@ -94,6 +94,22 @@ class FakeControllerServer : WebSocketListener() {
         )
     }
 
+    fun sendPong(clientTime: Long, serverTime: Long = 1L) {
+        send(
+            envelope(
+                "pong",
+                JSONObject().put("clientTime", clientTime).put("serverTime", serverTime),
+            ),
+        )
+    }
+
+    fun sendRaw(text: String) {
+        val current = socket ?: throw AssertionError("Fake server socket is not open.")
+        if (!current.send(text)) {
+            throw AssertionError("Fake server could not send raw frame: $text")
+        }
+    }
+
     fun awaitMessage(type: String, timeoutMs: Long = TIMEOUT_MS): JSONObject {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
