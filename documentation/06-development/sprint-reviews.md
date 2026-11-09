@@ -1,11 +1,14 @@
 # Sprint Reviews and Plans
 
 Status: Decided
-Last updated: 2026-11-03
+Last updated: 2026-11-09
 
 This file is the canonical record of sprint reviews and plans (D-27). Sprints are
 one week long and end with a demo and retrospective. Each review and plan is
 written here first and mirrored in GitHub Discussions.
+
+Statuses below are a snapshot from 2026-11-03, with factual corrections through
+2026-11-09. The GitHub Project and issues are authoritative for live status.
 
 - Board: <https://github.com/orgs/PSZLBit/projects/1>
 - Sprint 0 review:
@@ -30,15 +33,15 @@ with carry-over.
 | Planned item | Issue | Current owner | Outcome |
 |--------------|-------|---------------|---------|
 | S0-00 Confirm festival date and internal target | #8 | — (closed) | Done 2026-10-21: festival date and delivery calendar recorded (D-31). |
-| S0-01 Audit decisions and ADRs | #9 | ZofiaDan | Open; audit not completed. Carry-over. |
-| S0-02 Collect tablet specs and battery health | #10 | ZofiaDan | Open; hardware inventory PR #44 opened 2026-10-29 and is still open. Carry-over. |
+| S0-01 Audit decisions and ADRs | #9 | ZofiaDan | Open; audit deliverable in review (2026-11-09). Carry-over. |
+| S0-02 Collect tablet specs and battery health | #10 | ZofiaDan | Open; static inventory merged in PR #44 on 2026-11-03; hardware checks pending (#11/#14/#49). |
 | S0-03 Kotlin WebSocket spike on four tablets | #11 | TracerDS | Open; branch only, no WebSocket, no PR, no real-tablet proof. Carry-over. |
 | S0-04 Go WebSocket server with fake controller | #12 | GreenDude5 | Done 2026-10-23 (PR #30): protocol envelope, slots, reconnect, input validation, timers, host command path, fake clients, and CI. |
 | S0-05 Godot renders four rectangles from Go | #13 | ZofiaDan (historically Brzana) | Partial; the four-car game scaffold was merged later as PR #31 in Sprint 1 (D-32). Target laptop/TV evidence is still pending. |
 | S0-06 Measure latency and Wi-Fi stability | #14 | ZofiaDan | Not started. Carry-over. |
 | S0-07 Supervisor starts and restarts Godot | #15 | GreenDude5 | Not started. Carry-over. |
 | S0-08 GitHub project and workflow | #16 | GreenDude5 | Done 2026-10-21: project board, templates, workflow, MkDocs site, and local setup. |
-| S0-09 Test plan and hardware checklist | #17 | ZofiaDan | Open; `testing.md` is still Draft. Carry-over. |
+| S0-09 Test plan and hardware checklist | #17 | ZofiaDan | Open; PR #65 has green Docs CI; merge pending review. |
 | D-14 Choose controller input scheme | #18 | TracerDS | Not started. Carry-over. |
 
 Owner is the current assignee on 2026-11-03. Issue #13 was historically Brzana
@@ -93,7 +96,7 @@ achieved.
 Metrics:
 
 - 1 PR merged: #31.
-- 1 PR open: #44.
+- 1 PR opened in Sprint 1: #44 (merged 2026-11-03).
 - 0 issues closed.
 - 8 commits: 5 game commits by Brzana, 2 hardware-doc commits by ZofiaDan on the
   PR branch, and 1 merge commit.
@@ -134,10 +137,10 @@ is not required this sprint.
 | #45 | Define the MFD gameplay baseline | Brzana | P0 | In Progress |
 | #46 | One parking task with exclusive assignment and detection | Brzana | P0 | Ready |
 | #47 | Score, timer, and results overlay | Brzana | P0 | Ready |
-| #17 | Test plan and hardware checklist | ZofiaDan | P1 | Ready |
+| #17 | Test plan and hardware checklist | ZofiaDan | P1 | In Review |
 | #18 | D-14 choose controller input scheme | TracerDS | P0 | Ready |
-| #25 | Queue backpressure and slow-client close | GreenDude5 | P1 | In Progress |
-| #51 | Reconcile documentation and board drift | GreenDude5 | P1 | Ready |
+| #25 | Queue backpressure and slow-client close | GreenDude5 | P1 | Done (PR #57) |
+| #51 | Reconcile documentation and board drift | GreenDude5 | P1 | Closed (PR #56) |
 
 ### Out of scope
 
@@ -190,11 +193,11 @@ exact time is not fixed in this record.
 
 | Component | Status |
 |-----------|--------|
-| Server | S0-04 is done. Protocol, slots, reconnect, validation, timers, host path, and CI work. Supervisor (#15) is scheduled for Sprint 3. P1 backpressure (#25) and end-phase (#23) bugs remain. |
+| Server | S0-04 is done. Protocol, slots, reconnect, validation, timers, host path, and CI work. Supervisor (#15) is scheduled for Sprint 3. Backpressure (#25) and end-phase (#23) bugs are fixed by PR #57/#58. |
 | Game | Scaffold is merged: four cars, protocol, 101 headless checks, and fullscreen. No map, task assignment, parking detection, scoring, HUD, or results. |
 | Controller | Only a plain-Views API 19 scaffold on an unmerged branch. No WebSocket, token, reconnect, or real-tablet proof. Production work is #48. |
-| Ops | Static hardware inventory is in PR #44 (approved by Brzana; reviewer requested). Latency (#14) and display evidence (#13) are open. Supervisor (#15) is Sprint 3; runbook and rehearsal (#50) are Sprint 4. |
-| Docs | The decision log is strong. `game-design.md`, `testing.md`, `protocol.md`, and `festival-operations.md` are still Draft. Drift is tracked in #51. |
+| Ops | Static hardware inventory is merged in PR #44. Latency (#14) and display evidence (#13) are open. Supervisor (#15) is Sprint 3; runbook and rehearsal (#50) are Sprint 4. |
+| Docs | The decision log is strong. `game-design.md`, `testing.md`, `protocol.md`, and `festival-operations.md` are still Draft. Board drift was closed in #51; the requirements status follow-up is #67. |
 | Board | Sprint 2 is planned. M0 is closed with carry-over. Every open issue has one owner, a milestone, a priority, and a sprint or backlog state. |
 
 ### Critical path
@@ -239,7 +242,7 @@ four-player MFD → festival hardening.
 - `workflow.md` milestone names did not match GitHub; corrected on 2026-11-03.
 - #13 was Done on the board while the issue was open; corrected on 2026-11-03.
 - `feat/controller-scaffold` has no PR; `feat/server-scaffold` is stale.
-- PR #44 was unreviewed; review requested on 2026-11-03.
+- PR #44 was merged on 2026-11-03; the earlier review request is closed.
 
 ### Risks
 
@@ -264,4 +267,5 @@ four-player MFD → festival hardening.
 
 | Date | Change |
 |------|--------|
+| 2026-11-09 | Added the snapshot note and corrected merged/open status for #10, #17, #23, #25, #44, and #51. |
 | 2026-11-03 | Added Sprint 0 and Sprint 1 reviews, Sprint 2 plan, and the D-33 progress review. |
