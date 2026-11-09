@@ -183,6 +183,11 @@ Start with [`documentation/README.md`](documentation/README.md), then read:
 - [`documentation/06-development/workflow.md`](documentation/06-development/workflow.md)
 - [`documentation/06-development/sprint-reviews.md`](documentation/06-development/sprint-reviews.md)
 
+## Assets
+
+Third-party asset sources, licences, and AI disclosures are recorded in
+[`game/assets/CREDITS.md`](game/assets/CREDITS.md).
+
 ## Repository History
 
 The repository started as a Flanki tournament-management web app. On
