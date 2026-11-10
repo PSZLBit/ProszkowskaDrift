@@ -1,7 +1,7 @@
 # Decision Log
 
 Status: Decided
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 Register of all team decisions. Newest entries on top.
 For larger decisions, create an ADR file in this folder using `_templates/adr.md`
@@ -10,11 +10,12 @@ and link it here. The ADR threshold is defined in
 
 | Date       | ID   | Decision                                                                                                                                  | Status  | Owner |
 | ---------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----- |
+| 2026-11-10 | D-35 | ADRs are required when a decision selects or changes the stack, transport, an architecture boundary, a cross-component contract, or a build/runtime interface constraint. Product tuning, performance targets, privacy rules, delivery plans, and process agreements are recorded in their module documents and dated decision-log rows without an ADR. ADR links in decision rows, the ADR index, the decision map, and the open TBD/validation register stay current. | Decided | Team |
 | 2026-11-04 | D-34 | Purchased third-party art assets are kept out of the public Git repository. The "Large Parking Lot" tileset is ignored by `.gitignore`; each team member installs the purchased copy locally, and provenance stays recorded in `game/assets/CREDITS.md`. The ignore rule applies to new commits; existing commits are not rewritten for the MVP. | Decided | Team  |
 | 2026-11-03 | D-33 | Sprint 1 (2026-10-26 – 2026-11-01) did not meet its M1 first-half goal; only the game scaffold landed. Sprint 2 is re-baselined to a single-tablet end-to-end vertical slice, and four-player validation moves to Sprint 3 as the M2/MFD acceptance run. The M1 exit is one complete round with one task type on one real tablet. The MFD (2026-11-15) and festival-ready (2026-11-18) dates do not change; the full MVP remains a stretch. Non-MFD work moves to Sprint 3/4 or Post-MVP. | Decided | Team |
 | 2026-10-26 | D-32 | The S0-05 Godot integration is promoted to the production `game/` scaffold after cleanup. The scaffold keeps one `/ws/game` connection, maps slots 1–4 to four cars with a slot-keyed input store, and validates protocol/config before play. Four-car/TV/FPS evidence remains tracked in issue #13 until the hardware check is recorded. D-18 continues to apply to throwaway prototype logic, not this scaffold. | Decided | Team  |
 | 2026-10-21 | D-31 | The festival date is 2026-11-24, confirmed with the organizers. The internal festival-ready target is 2026-11-18, with 2026-11-19–23 reserved for fixes, setup, and final rehearsal. The Minimum Festival Demo (MFD) is the committed scope and the full MVP is a stretch goal on a five-sprint calendar ([roadmap](../06-development/roadmap.md)). | Decided | Team  |
-| 2026-10-20 | D-30 | Project documentation is published as a read-only MkDocs site on GitHub Pages through GitHub Actions (first deployment pending Pages enablement); `documentation/` remains the source of truth and the in-repo router stays authoritative. MkDocs is pinned in `requirements-docs.txt` and CI runs `mkdocs build --strict`. | Decided | Team  |
+| 2026-10-20 | D-30 | Project documentation is published as a read-only MkDocs site on GitHub Pages through GitHub Actions (deployment enabled 2026-11-09; see [Status Notes](#status-notes)); `documentation/` remains the source of truth and the in-repo router stays authoritative. MkDocs is pinned in `requirements-docs.txt` and CI runs `mkdocs build --strict`. | Decided | Team  |
 | 2026-10-19 | D-29 | On a task branch, commit each coherent step without waiting for a separate instruction; pushing, merging, and opening pull requests still require an explicit request. | Decided | Team  |
 | 2026-10-19 | D-28 | Engineering working agreement: English-only artifacts; small, regular commits using feat/fix/docs/test/chore/spike prefixes; test-first for pure logic; tests or documented manual hardware checks for every behavior change; no direct pushes to main and no history rewrites. | Decided | Team  |
 | 2026-10-19 | D-27 | Delivery uses one-week sprints, a weekly demo and retrospective, GitHub Projects issues/milestones, documented DoR/DoD, peer review, CI, and explicit AI-assistance disclosure. | Decided | Team  |
@@ -33,10 +34,10 @@ and link it here. The ADR threshold is defined in
 | 2026-10-16 | D-14 | Controller input set and per-controller feedback are TBD.                                                                                 | TBD     | TracerDS |
 | 2026-10-16 | D-13 | Game concept, rules, and win condition are TBD. Do not implement game logic until `02-game-domain/domain-overview.md` reaches `Decided`.  | Superseded by D-19 | Team  |
 | 2026-10-16 | D-12 | No accounts and no retained personal data. Old account/role/18+/GDPR-DOB model is archived. Sessions hold transient state only.           | Decided | Team  |
-| 2026-10-16 | D-11 | Server and game are separate so the game can be swapped via a stable game interface.                                                      | Decided | Team  |
+| 2026-10-16 | D-11 | Server and game are separate so the game can be swapped via a stable game interface ([ADR-0001](adr-0001-mvp-architecture.md)).                                                      | Decided | Team  |
 | 2026-10-16 | D-10 | One session hosts 1–4 players, one Android tablet per player.                                                                             | Decided | Team  |
 | 2026-10-16 | D-09 | Local-network only (e.g. shared WiFi). Tablets join via lobby code/QR. No internet play for MVP.                                          | Superseded by D-21 | Team  |
-| 2026-10-16 | D-08 | Controller app is Android-only, Kotlin native, in `controller-android/`.                                                                  | Decided | Team  |
+| 2026-10-16 | D-08 | Controller app is Android-only, Kotlin native, in `controller-android/` ([ADR-0002](adr-0002-legacy-android-controller.md)).                                                                  | Decided | Team  |
 | 2026-10-16 | D-07 | Monorepo layout: `server/`, `game/`, `controller-android/`, `documentation/`.                                                             | Decided | Team  |
 | 2026-10-16 | D-06 | Pivot from the Flanki tournament-management web app to the local real-time play system (controllers + server + swappable game + big-screen display). Old Flanki docs were removed from the working tree; decision history is retained. D-03 is superseded. | Decided | Team  |
 | 2026-10-13 | D-05 | All project artifacts (docs, code, comments, commits) are in English.                                                                     | Decided | Team  |
@@ -62,13 +63,16 @@ undecided. Hardware checks stay pending until they are run on the real devices.
 |---|---|---|---|
 | Controller input scheme and feedback (D-14) | TracerDS | Playtest input options on T1–T4 (#18); implement feedback in #48; record the chosen scheme here | #18, #48 |
 | MFD map, task skip, parking tolerance, and tuning | Brzana | Land the MFD baseline in #45; implement #46/#47; full GDD remains #32 | #45, #46, #47, #32 |
-| WebSocket libraries | TracerDS + GreenDude5 | Confirm Go `coder/websocket` v1.8.15 in the architecture; select the Android client library in #11; production in #48 | #11, #48 |
-| Supervisor and festival laptop OS | GreenDude5 + ZofiaDan | Implement the supervisor in #15 (Sprint 3); decide Windows vs Linux in #49/#50 | #15, #49, #50 |
+| Finished-car rendering (hidden, ghosted, or finish area) | Brzana | Decide with the MFD map/task baseline in #45; implement with the game slice in #47 | #45, #47 |
+| Target-finding UI (minimap vs on-map beacons) | Brzana | Decide in the MFD display baseline in #45; implement in #47 | #45, #47 |
+| WebSocket libraries | TracerDS + GreenDude5 | Confirm Go `coder/websocket` v1.8.15 and OkHttp 3.12.x on API 19 in the architecture; production in #48 | #11, #48 |
+| Supervisor and festival laptop OS | GreenDude5 + ZofiaDan | PR #59 is in review; finish the #15 manual drill. Decide Windows vs Linux in #49/#50 | #15, #49, #50 |
 | Router model and static-IP plan | ZofiaDan | Choose the model and address plan during #49; document it in #50 | #10, #49, #50 |
 | Hardware checks and spares | ZofiaDan | Run Wi-Fi, charging, battery, touch, readability, and spare checks in #10/#11/#14/#49; update the inventory and ADR-0002 | #10, #11, #14, #49 |
 | Latency measurement (D-23) | ZofiaDan | Measure p50/p95 in #14 and record the evidence in `testing.md` | #14 |
 | Protocol task/score messages | GreenDude5 + Brzana | Implement with #46/#47; update protocol coverage and tests | #46, #47 |
-| Second host control device | — | Explicitly Post-MVP (D-26); no action | D-26 |
+
+The second host control device is Post-MVP (D-26) and is not an open item.
 
 ## ADR Index
 
@@ -86,10 +90,10 @@ table above for history and have no active artifact.
 
 | Artifact | Decisions |
 |---|---|
-| `documentation/README.md`, `00-meta/` | D-04, D-05, D-07 |
+| `documentation/README.md`, `00-meta/` | D-04, D-05, D-07, D-35 |
 | [Decision log](decision-log.md) | D-06 |
 | [Vision and scope](../01-vision-scope/vision-scope.md) | D-26 |
-| [Game design](../02-game-domain/game-design.md) | D-19 |
+| [Game design](../02-game-domain/game-design.md) | D-14 (TBD), D-19 |
 | [Players, sessions, and permissions](../03-players-sessions/roles-sessions.md) | D-10, D-12, D-21, D-24, D-25 |
 | [Product requirements](../04-product/requirements.md) | D-19, D-26 |
 | [ADR-0001](adr-0001-mvp-architecture.md) | D-11, D-22 |
@@ -107,12 +111,13 @@ table above for history and have no active artifact.
 
 | Date | Related | Note |
 |---|---|---|
+| 2026-11-09 | D-14 | Owner set to TracerDS; the input scheme remains TBD in #18 and controller feedback is tracked in #48. |
 | 2026-11-09 | D-19 | The MFD gameplay baseline is still being defined in #45; the full GDD is #32. The decision is not reopened; `game-design.md` stays Draft until #45 lands. |
-| 2026-11-09 | D-21 | The server token/slot reclaim path is implemented. Controller auto-connect and real-tablet proof remain pending in #11/#48. |
-| 2026-11-09 | D-20 / ADR-0002 | API 19 compatibility validation is pending. Static inventory is merged (#10/PR #44); APK, input, reconnect, and hardware checks remain #11/#48/#49. |
+| 2026-11-09 | D-21 | The server token/slot reclaim path is implemented. Controller auto-connect is in review (PR #63); real-tablet proof remains pending in #11/#49. |
+| 2026-11-09 | D-20 / ADR-0002 | API 19 compatibility validation is pending. Static inventory is merged (#10/PR #44); APK build is in review (PR #63); install, input, reconnect, and hardware checks remain #11/#48/#49. |
 | 2026-11-09 | D-23 | Latency has not been measured. The targets remain decided, but the evidence is pending in #14. |
-| 2026-11-09 | D-24 / ADR-0003 | The server reconnect and all-disconnected pause path is implemented. Supervisor and crash recovery remain #15; real-hardware proof remains #49. |
-| 2026-11-09 | D-30 | GitHub Pages deployment is live (HTTP 200; Docs run 41847329287). The "first deployment pending" clause is satisfied; no decision change. |
+| 2026-11-09 | D-24 / ADR-0003 | The server reconnect and all-disconnected pause path is implemented. The Godot supervisor is in review (PR #59); the server-crash launcher remains #50; real-hardware proof remains #49. |
+| 2026-11-09 | D-30 | GitHub Pages deployment is live (HTTP 200; Docs run 41847329287). The earlier pending status is resolved; no decision change. |
 
 ## Rules
 
