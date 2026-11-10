@@ -313,6 +313,10 @@ These checks use the S0-04 fake clients. Details and expected output are in
    `resume`, `reset`, `end`, and `kick 2`; a kicked controller receives `error`
    `kicked`, the slot is freed, and the game receives `player_left` with reason
    `kicked`.
+10. Run the server with `-log-level debug` and send input from a controller (or
+    the fake controllers). Confirm one debug log line per validated input with
+    `slot`, `seq`, `steer`, and `throttle`, no device token, and no log line for
+    inputs dropped as out-of-phase, rate-limited, or stale.
 
 10. Stdin EOF does not stop fakegame: `go run ./cmd/fakegame -token dev-token -duration 2s </dev/null`
     stays connected for the full duration and disconnects only when the duration
