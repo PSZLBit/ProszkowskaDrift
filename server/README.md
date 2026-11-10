@@ -118,6 +118,8 @@ This slice implements a subset and records the following choices:
   launcher and manual checks.
 - `player_joined` and `player_left` are sent to the game. Device tokens are never
   forwarded. Logs show only a truncated token reference.
+- Controller input payloads (slot, seq, steer, throttle) are logged at info
+  level for diagnostics and demos. Device tokens are never included.
 
 ### Implemented messages
 
