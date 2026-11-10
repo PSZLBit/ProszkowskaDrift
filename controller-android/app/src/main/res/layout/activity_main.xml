@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="@color/background">
+
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="horizontal">
+
+      <TextView
+        android:id="@+id/status_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+      <TextView
+        android:id="@+id/phase_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp" />
+    </LinearLayout>
+
+    <TextView
+      android:id="@+id/slot_text"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/slot_none"
+      android:textColor="@color/text_primary"
+      android:textSize="20sp"
+      android:textStyle="bold" />
+
+    <TextView
+      android:id="@+id/server_text"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="@string/server_unset"
+      android:textColor="@color/text_secondary"
+      android:textSize="12sp" />
+
+    <TextView
+      android:id="@+id/task_text"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="6dp"
+      android:text="@string/task_none"
+      android:textColor="@color/text_primary"
+      android:textSize="20sp" />
+
+    <TextView
+      android:id="@+id/score_text"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:textColor="@color/text_secondary"
+      android:textSize="16sp" />
+
+    <TextView
+      android:id="@+id/result_text"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:textColor="@color/text_secondary"
+      android:textSize="14sp" />
+
+    <pszlbit.drift.input.InputPadView
+      android:id="@+id/input_pad"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_marginTop="8dp"
+      android:layout_weight="1" />
+
+    <TextView
+      android:id="@+id/stats_text"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:textColor="@color/text_secondary"
+      android:textSize="11sp" />
+  </LinearLayout>
+
+  <TextView
+    android:id="@+id/overlay_text"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#CC000000"
+    android:gravity="center"
+    android:textColor="@color/text_primary"
+    android:textSize="28sp"
+    android:visibility="gone" />
+</FrameLayout>

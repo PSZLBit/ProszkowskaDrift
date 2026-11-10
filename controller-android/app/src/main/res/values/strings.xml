@@ -1,0 +1,36 @@
+<resources>
+  <string name="app_name">Controller</string>
+
+  <string name="status_disconnected">Disconnected</string>
+  <string name="status_connecting">Connecting…</string>
+  <string name="status_connected">Connected</string>
+  <string name="status_reconnecting">Reconnecting</string>
+  <string name="status_stopped">Stopped</string>
+
+  <string name="server_unset">Server not set — long-press to configure</string>
+  <string name="set_server_hint">Long-press the server line to set the address</string>
+  <string name="server_dialog_title">Server address</string>
+  <string name="server_dialog_hint">192.168.1.10:8080 or ws://192.168.1.10:8080</string>
+  <string name="server_invalid">Use a host, ws://, or wss:// address</string>
+
+  <string name="slot_none">—</string>
+  <string name="phase_format">Phase: %1$s</string>
+  <string name="phase_time_format">Phase: %1$s · %2$d s</string>
+  <string name="task_none">Task: —</string>
+  <string name="task_format">Task %1$s (%2$s) · %3$s</string>
+  <string name="score_format">Score: %1$d</string>
+  <string name="result_task_format">+%1$d points (%2$s) · total %3$d</string>
+  <string name="result_round_format">Round %1$d · winner P%2$d</string>
+  <string name="result_error_format">Error %1$s: %2$s</string>
+
+  <string name="overlay_connecting">Connecting…</string>
+  <string name="overlay_reconnecting">Reconnecting…</string>
+  <string name="overlay_stopped">Stopped</string>
+
+  <string name="stats_format">sent %1$d · %2$.1f Hz · RTT %3$d ms · reconnects %4$d · seq %5$d</string>
+
+  <string name="input_left">LEFT</string>
+  <string name="input_right">RIGHT</string>
+  <string name="input_forward">FORWARD</string>
+  <string name="input_reverse">REVERSE</string>
+</resources>

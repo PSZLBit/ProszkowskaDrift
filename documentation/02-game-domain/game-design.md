@@ -1,7 +1,7 @@
 # Game Design — Proszkowska Drift MVP
 
 Status: Draft
-Last updated: 2026-11-03
+Last updated: 2026-11-04
 
 The MFD subset is being baselined in issue #45 (Sprint 2). The full GDD remains
 issue #32 and is deferred to the MVP stretch/Post-MVP; this document stays Draft
@@ -249,9 +249,62 @@ into the MVP implementation.
 | Parked speed threshold | TBD in game code | Controller/game spike |
 | Car max speed | TBD in game code | First map playtest |
 
+## Controller Input Scheme (Open, D-14)
+
+D-14 is still `TBD`: the final scheme is chosen by playtesting on the real
+tablets (issue #18). The WebSocket spike (issue #11) does not decide it. The
+spike's `InputPadView` is a temporary four-zone digital mapping (left/right
+steering and forward/reverse throttle) that only proves the network path; it is
+not a product decision. The protocol stays the same for every candidate: the
+controller sends `steer` and `throttle` in `[-1, 1]` at 20–30 Hz (the spike
+client uses 25 Hz), so changing the touch mapping does not change the server or
+game contract.
+
+Candidate schemes to playtest on the four Android 4.4.2 tablets, in landscape,
+with at least four people:
+
+| Scheme | How it maps to `steer`/`throttle` | Pros | Cons / risks |
+|---|---|---|---|
+| Two large touch buttons (left/right) + two buttons (accelerate/brake) | Discrete: `steer` ±1, `throttle` ±1 or 0 | Easiest to hit on old touch screens; predictable; no accidental drift | Coarse control; precision score may suffer; many fingers needed |
+| Virtual joystick (single pad, X = steer, Y = throttle) | Continuous X/Y → `steer`/`throttle` | Fine-grained control; one thumb; good for precision score | Small target on a 10" tablet; accidental touches; harder for left-handed players |
+| Analog slider / dial for steering + hold button for throttle | Slider X → `steer`; button → `throttle` | Separates axes; reduces accidental steering; good precision | Two hands or two thumbs; more UI elements on screen |
+| Tilt / accelerometer steering + touch throttle | Sensor X → `steer`; button → `throttle` | Hands-free steering; novel | Sensor quality varies on old tablets; calibration; motion sickness; not accessible while seated |
+| Hybrid: virtual joystick for steering, separate large throttle/brake buttons | Joystick X → `steer`; buttons → `throttle` ±1 | Best precision for steering with reliable throttle | More UI; must avoid overlap with joystick |
+
+### Playtest Plan (Issue #18)
+
+Use the same short course for every scheme so results are comparable: three
+parking tasks, one reverse manoeuvre, and one tight turn. Run each scheme on
+every tablet, not only one, because touch panels and size may differ.
+
+Suggested order, cheapest and most familiar first:
+
+1. Two large touch buttons (digital baseline).
+2. Hybrid joystick + throttle/brake buttons.
+3. Single virtual joystick.
+4. Analog slider + throttle button.
+5. Tilt steering, only if time remains after the touch schemes.
+
+For each scheme and player, record:
+
+- Comfort (1–5) and whether the player would choose it again.
+- Missed inputs and accidental touches per task.
+- Time to complete the course and number of collisions.
+- Readability at arm's length and whether the controls hide the task hint.
+- Handedness, thumb reach, and any accessibility concern.
+- Battery/heat or touch-lag observations on the old tablets.
+
+Decision rule: prefer the scheme with the best comfort and the fewest missed
+or accidental inputs; use course time and collisions as tie-breakers. If two
+schemes are close, prefer the simpler one with fewer on-screen elements. Record
+the recommendation and notes in issue #18, then update D-14 in
+`05-architecture-decisions/decision-log.md` and this section. Do not mark D-14
+decided before those playtests.
+
 ## Open Questions
 
-- Exact control scheme (D-14): buttons, analog slider, or virtual joystick.
+- Exact control scheme (D-14): buttons, analog slider, virtual joystick, tilt,
+  or a hybrid. See the candidate table and playtest plan above, and issue #18.
 - Exact map layout and the number of spots after the first sketch.
 - Whether a task can be manually skipped by the player in MVP, or only
   auto-skipped.
