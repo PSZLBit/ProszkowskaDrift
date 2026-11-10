@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-11-04
+Last updated: 2026-11-10
 
 This document describes the MVP runtime. Decisions are recorded in D-22,
 ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
@@ -43,7 +43,7 @@ or simulate the game.
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
-Controller implementation status (2026-11-04): `controller-android/` is an API 19
+Controller implementation status (2026-11-10): `controller-android/` is an API 19
 app — `minSdk 19` / `targetSdk 19`, landscape, one plain-Views `Activity`,
 keep-screen-on, platform Holo theme — built with AGP 9.4.1 and AGP built-in
 Kotlin. Per D-20/ADR-0002 it has no Compose and no AndroidX; dependencies are
@@ -51,10 +51,12 @@ JUnit for local unit tests and OkHttp 3.12.x for the WebSocket client. The
 WebSocket spike (issue #11) implements `connect` to `/ws/controller` (a bare
 host address is expanded to that path), the `hello` device-token handshake,
 `input` at 25 Hz while the phase is `playing`, a 2 s application `ping`, and
-reconnect with exponential backoff. The wire protocol and connection state
-machine are covered by host-JVM tests with OkHttp MockWebServer as the fake
-server. Real-tablet validation is still pending; the production controller is
-issue #48.
+bounded reconnect with exponential backoff (D-34). After three failed reconnect
+attempts the controller stops, clears the configured server address, and returns
+to the idle main screen. The wire protocol and connection state machine are
+covered by host-JVM tests with OkHttp MockWebServer as the fake server.
+Real-tablet validation has been recorded for one tablet; the production
+controller and remaining hardware checks are issue #48.
 
 ## Server Slice
 

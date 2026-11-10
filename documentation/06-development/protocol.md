@@ -1,7 +1,7 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-11-04
+Last updated: 2026-11-10
 
 Protocol version: `1` (MVP). The S0-04 server slice and the controller
 WebSocket spike implement this contract; see the Sprint 0 implementation notes
@@ -294,6 +294,12 @@ Controller            Server                         Game
 5. Server sends `welcome`, current `phase`, and the current task if the round is
    still running.
 6. Controller resumes sending input. The game applies the latest input.
+
+The controller retries a failed connection or retryable server error at most
+three times, using exponential backoff. When the retry budget is exhausted, it
+stops reconnecting, clears the configured server address, and returns to the
+idle controller screen for manual setup. `auth_failed`, `kicked`, and
+`protocol_mismatch` remain fatal without retry.
 
 Slots remain reserved for the session. The host can kick a slot to clear a lost
 or replaced tablet.

@@ -5,6 +5,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -130,6 +131,29 @@ class ControllerClientTest {
 
         Thread.sleep(250L)
         assertEquals(1, server.requestCount)
+        assertFalse(listener.states.contains(ConnectionState.RETRY_EXHAUSTED))
+    }
+
+    @Test
+    fun stopsAfterThreeFailedReconnectAttempts() {
+        // A non-101 response fails the WebSocket upgrade immediately.
+        repeat(4) {
+            server.enqueue(MockResponse().setResponseCode(404))
+        }
+
+        startClient(backoffMs = 20L)
+
+        awaitState(ConnectionState.RETRY_EXHAUSTED)
+
+        // One initial attempt plus exactly three reconnect attempts.
+        assertEquals(4, server.requestCount)
+        assertEquals(
+            3,
+            listener.states.count { it == ConnectionState.RECONNECTING },
+        )
+
+        Thread.sleep(250L)
+        assertEquals("No requests after the retry budget is spent.", 4, server.requestCount)
     }
 
     @Test

@@ -1,7 +1,7 @@
 # Decision Log
 
 Status: Decided
-Last updated: 2026-11-03
+Last updated: 2026-11-10
 
 Register of all team decisions. Newest entries on top.
 For larger decisions, create an ADR file in this folder using `_templates/adr.md`
@@ -9,6 +9,7 @@ and link it here.
 
 | Date       | ID   | Decision                                                                                                                                  | Status  | Owner |
 | ---------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----- |
+| 2026-11-10 | D-34 | Controller reconnect is bounded to three attempts after a failed connection or retryable server error. If all three fail, the client stops, clears the configured server address, and returns to the idle controller screen for manual setup. Fatal auth, kick, and protocol-version errors do not retry and do not clear the address. | Decided | Team |
 | 2026-11-03 | D-33 | Sprint 1 (2026-10-26 – 2026-11-01) did not meet its M1 first-half goal; only the game scaffold landed. Sprint 2 is re-baselined to a single-tablet end-to-end vertical slice, and four-player validation moves to Sprint 3 as the M2/MFD acceptance run. The M1 exit is one complete round with one task type on one real tablet. The MFD (2026-11-15) and festival-ready (2026-11-18) dates do not change; the full MVP remains a stretch. Non-MFD work moves to Sprint 3/4 or Post-MVP. | Decided | Team |
 | 2026-10-26 | D-32 | The S0-05 Godot integration is promoted to the production `game/` scaffold after cleanup. The scaffold keeps one `/ws/game` connection, maps slots 1–4 to four cars with a slot-keyed input store, and validates protocol/config before play. Four-car/TV/FPS evidence remains tracked in issue #13 until the hardware check is recorded. D-18 continues to apply to throwaway prototype logic, not this scaffold. | Decided | Team  |
 | 2026-10-21 | D-31 | The festival date is 2026-11-24, confirmed with the organizers. The internal festival-ready target is 2026-11-18, with 2026-11-19–23 reserved for fixes, setup, and final rehearsal. The Minimum Festival Demo (MFD) is the committed scope and the full MVP is a stretch goal on a five-sprint calendar ([roadmap](../06-development/roadmap.md)). | Decided | Team  |

@@ -23,6 +23,7 @@ enum class ConnectionState {
     CONNECTING,
     CONNECTED,
     RECONNECTING,
+    RETRY_EXHAUSTED,
     FATAL,
 }
 
@@ -43,8 +44,10 @@ data class ClientStats(
  * Controller WebSocket client.
  *
  * Responsibilities: handshake with `hello`, input at [DEFAULT_INPUT_HZ] while
- * the server phase is `playing`, a 2 s application `ping`, and reconnect with
- * exponential backoff using the same device token (protocol.md, Reconnect).
+ * the server phase is `playing`, a 2 s application `ping`, and bounded reconnect
+ * with exponential backoff using the same device token (protocol.md, Reconnect).
+ * After [DEFAULT_MAX_RECONNECT_ATTEMPTS] failures the client emits
+ * [ConnectionState.RETRY_EXHAUSTED] and stops.
  *
  * The server counts input outside `playing` as an invalid message and closes
  * the connection after repeated violations, so input is gated on phase.
@@ -63,6 +66,7 @@ class ControllerClient(
     private val pingIntervalMs: Long = 2_000L,
     private val backoffBaseMs: Long = 500L,
     private val backoffCapMs: Long = 10_000L,
+    private val maxReconnectAttempts: Int = DEFAULT_MAX_RECONNECT_ATTEMPTS,
 ) {
     interface Listener {
         fun onStateChanged(state: ConnectionState, detail: String?)
@@ -144,10 +148,7 @@ class ControllerClient(
         if (!running.compareAndSet(true, false)) return
         fatal = true
         reconnectScheduled.set(false)
-        closeSocket(CLOSE_NORMAL, "client stopped")
-        scheduler.shutdownNow()
-        httpClient.dispatcher().executorService().shutdown()
-        httpClient.connectionPool().evictAll()
+        shutdown("client stopped")
         state = ConnectionState.IDLE
         listener.onStateChanged(state, "stopped")
     }
@@ -227,12 +228,24 @@ class ControllerClient(
         current?.close(code, reason)
     }
 
+    private fun shutdown(closeReason: String) {
+        closeSocket(CLOSE_NORMAL, closeReason)
+        scheduler.shutdownNow()
+        httpClient.dispatcher().executorService().shutdown()
+        httpClient.connectionPool().evictAll()
+    }
+
     private fun scheduleReconnect(reason: String) {
         if (!running.get() || fatal) return
         // OkHttp can report a failed connection through both onClosed and
         // onFailure; schedule only one retry per drop.
         if (!reconnectScheduled.compareAndSet(false, true)) return
         lastError = reason
+        if (attempt >= maxReconnectAttempts) {
+            reconnectScheduled.set(false)
+            failReconnects(reason)
+            return
+        }
         val delay = Backoff.delayMs(attempt, backoffBaseMs, backoffCapMs)
         attempt++
         reconnects++
@@ -252,6 +265,18 @@ class ControllerClient(
         } catch (e: RejectedExecutionException) {
             reconnectScheduled.set(false)
         }
+    }
+
+    private fun failReconnects(reason: String) {
+        if (!running.compareAndSet(true, false)) return
+        fatal = true
+        lastError = reason
+        state = ConnectionState.RETRY_EXHAUSTED
+        listener.onStateChanged(
+            state,
+            "$maxReconnectAttempts reconnect attempts failed",
+        )
+        shutdown("reconnect attempts exhausted")
     }
 
     private fun handleMessage(text: String) {
@@ -342,6 +367,9 @@ class ControllerClient(
     companion object {
         /** D-23 allows 20–30 Hz; 25 Hz leaves headroom on the old tablets. */
         const val DEFAULT_INPUT_HZ = 25
+
+        /** After this many failed reconnects the client stops and asks for setup. */
+        const val DEFAULT_MAX_RECONNECT_ATTEMPTS = 3
 
         private const val CLOSE_NORMAL = 1000
         private const val RTT_SAMPLES = 10

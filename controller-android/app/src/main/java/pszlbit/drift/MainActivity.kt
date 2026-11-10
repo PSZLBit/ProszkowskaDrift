@@ -99,6 +99,11 @@ class MainActivity : Activity(), ControllerClient.Listener {
             when (state) {
                 ConnectionState.CONNECTING -> showOverlay(R.string.overlay_connecting)
                 ConnectionState.RECONNECTING -> showOverlay(R.string.overlay_reconnecting)
+                ConnectionState.RETRY_EXHAUSTED -> {
+                    clearServerAddress()
+                    resetToMainScreen()
+                    overlayView.visibility = View.GONE
+                }
                 ConnectionState.FATAL -> showOverlay(R.string.overlay_stopped)
                 else -> overlayView.visibility = View.GONE
             }
@@ -211,6 +216,23 @@ class MainActivity : Activity(), ControllerClient.Listener {
         newClient.start()
     }
 
+    private fun clearServerAddress() {
+        settings.serverUrl = ""
+        serverView.text = getString(R.string.server_unset)
+    }
+
+    private fun resetToMainScreen() {
+        slotView.text = getString(R.string.slot_none)
+        slotView.setTextColor(resources.getColor(R.color.text_primary))
+        phase = "attract"
+        timeLeftSeconds = 0L
+        phaseView.text = ""
+        taskView.text = getString(R.string.task_none)
+        scoreView.text = ""
+        resultView.text = ""
+        statsView.text = ""
+    }
+
     private fun showServerDialog() {
         val field = EditText(this).apply {
             setText(settings.serverUrl)
@@ -240,6 +262,7 @@ class MainActivity : Activity(), ControllerClient.Listener {
             ConnectionState.CONNECTING -> getString(R.string.status_connecting)
             ConnectionState.CONNECTED -> getString(R.string.status_connected)
             ConnectionState.RECONNECTING -> getString(R.string.status_reconnecting)
+            ConnectionState.RETRY_EXHAUSTED -> getString(R.string.status_reconnect_failed)
             ConnectionState.FATAL -> getString(R.string.status_stopped)
         }
         statusView.text = if (detail.isNullOrEmpty()) label else "$label — $detail"
