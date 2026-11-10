@@ -45,6 +45,12 @@ func main() {
 	flag.BoolVar(&opts.autoStart, "auto-start", false, "send host_request start one second after connecting")
 	flag.Parse()
 
+	// The supervisor injects the resolved game URL (including a non-default port)
+	// through PD_GAME_URL, mirroring the Godot client's override.
+	if envURL := os.Getenv("PD_GAME_URL"); envURL != "" {
+		opts.server = envURL
+	}
+
 	if opts.token == "" {
 		fmt.Fprintln(os.Stderr, "fakegame: -token or PD_GAME_TOKEN is required")
 		os.Exit(2)

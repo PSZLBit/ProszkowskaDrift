@@ -39,7 +39,7 @@ with carry-over.
 | S0-04 Go WebSocket server with fake controller | #12 | GreenDude5 | Done 2026-10-23 (PR #30): protocol envelope, slots, reconnect, input validation, timers, host command path, fake clients, and CI. |
 | S0-05 Godot renders four rectangles from Go | #13 | ZofiaDan (historically Brzana) | Partial; the four-car game scaffold was merged later as PR #31 in Sprint 1 (D-32). Target laptop/TV evidence is still pending. |
 | S0-06 Measure latency and Wi-Fi stability | #14 | ZofiaDan | Not started. Carry-over. |
-| S0-07 Supervisor starts and restarts Godot | #15 | GreenDude5 | Open; PR #59 is in review and is not merged; no manual crash-recovery proof is recorded. Carry-over. |
+| S0-07 Supervisor starts and restarts Godot | #15 | GreenDude5 | Implemented in PR #59 (merged); manual crash-recovery proof still pending (#15). Carry-over. |
 | S0-08 GitHub project and workflow | #16 | GreenDude5 | Done 2026-10-21: project board, templates, workflow, MkDocs site, and local setup. |
 | S0-09 Test plan and hardware checklist | #17 | ZofiaDan | Merged; PR #65 added the MFD test plan and hardware checklist. |
 | D-14 Choose controller input scheme | #18 | TracerDS | Not started. Carry-over. |
@@ -193,10 +193,10 @@ exact time is not fixed in this record.
 
 | Component | Status |
 |-----------|--------|
-| Server | S0-04 is done. Protocol, slots, reconnect, validation, timers, host path, and CI work. Supervisor (#15) is in review (PR #59). Backpressure (#25) and end-phase (#23) bugs are fixed by PR #57/#58. |
+| Server | S0-04 is done. Protocol, slots, reconnect, validation, timers, host path, and CI work. Supervisor (#15) is implemented in PR #59 (merged); manual drill pending. Backpressure (#25) and end-phase (#23) bugs are fixed by PR #57/#58. |
 | Game | Scaffold is merged: four cars, protocol, 101 headless checks, and fullscreen. No map, task assignment, parking detection, scoring, HUD, or results. |
 | Controller | API 19 plain-Views scaffold, WebSocket client, device-token store, and reconnect/backoff are merged (PR #63). Real-tablet proof is pending; production work is #48. |
-| Ops | Static hardware inventory is merged in PR #44. Latency (#14) and display evidence (#13) are open. Supervisor (#15) is in review (PR #59); runbook and rehearsal (#50) are Sprint 4. |
+| Ops | Static hardware inventory is merged in PR #44. Latency (#14) and display evidence (#13) are open. Supervisor (#15) is implemented in PR #59 (merged); runbook and rehearsal (#50) are Sprint 4. |
 | Docs | The decision log is strong. `game-design.md`, `testing.md`, `protocol.md`, and `festival-operations.md` are still Draft. Board drift was closed in #51; the requirements status follow-up is #67. |
 | Board | Sprint 2 ended 2026-11-08; Sprint 3 started 2026-11-09. M0 is closed with carry-over. Every open issue has one owner, a milestone, a priority, and a sprint or backlog state. |
 

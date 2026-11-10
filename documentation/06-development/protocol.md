@@ -410,7 +410,7 @@ Session-boundary choices (this sprint, additive):
   reason `game_heartbeat_timeout`, broadcasts `error` `game_unavailable`,
   resets the session to `attract` (slots stay reserved), and waits for the
   game to reconnect with the configured token. Token rotation per game launch
-  arrives with S0-07 game supervision.
+  is implemented in the optional Go supervisor (PR #59, D-37).
 - `/healthz` (plain HTTP, not WebSocket) returns
   `{status, phase, roundId, controllers, gameReady}` for the launcher and
   manual checks.

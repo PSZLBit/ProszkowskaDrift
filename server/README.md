@@ -48,6 +48,14 @@ it to Godot or the fake game.
 | `-all-disconnected-grace` | `10s` | Pause the round after every controller has been disconnected for this long during a round. |
 | `-game-heartbeat-timeout` | `3s` | Close the game connection when no game message arrives for this long after `game_ready`. |
 | `-log-level` | `info` | `debug`, `info`, `warn`, or `error`. |
+| `-game-binary` | `PD_GAME_BINARY` | Optional Godot/game executable. Enables the in-process supervisor. |
+| `-game-project` | `PD_GAME_PROJECT` | Passed to the game as `--path` (optional). |
+| `-game-args` | `PD_GAME_ARGS` | Comma-separated extra arguments for the game (optional). |
+| `-game-max-restarts` | `5` | Unexpected game exits tolerated before the supervisor stops. |
+
+The supervisor injects `PD_GAME_TOKEN` and `PD_GAME_URL` (resolved listen URL)
+into the game process environment. Godot and fakegame read `PD_GAME_URL` to
+override their default server URL.
 
 ## Protocol behavior in this slice
 

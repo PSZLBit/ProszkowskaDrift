@@ -183,7 +183,7 @@ With four team members, rotate roles every 30–45 minutes to avoid fatigue.
 - [ ] Four-player round with people who have never played.
 - [ ] Disconnect/reconnect one tablet mid-round.
 - [ ] Kill the game process; confirm restart and reconnect.
-- [ ] Kill the server; confirm supervisor restart and reconnect.
+- [ ] Kill the server; the game supervisor does not restart the server, so restart it manually or via the launcher (#50); confirm tablet reconnect.
 - [ ] Simulate router failure; execute the hotspot fallback.
 - [ ] Run continuously for 30–60 minutes; inspect heat, battery, logs.
 - [ ] Reset between groups; confirm scores and tasks are cleared.

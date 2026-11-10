@@ -61,7 +61,7 @@ State transitions must be explicit in code. No silent transitions.
 - Late join: allowed between rounds; not in the middle of a running round.
 - Game process crash: the server restarts it, returns to `Attract`, and the
   current round is lost. Tablets reconnect automatically.
-- Server crash: the supervisor restarts the server and game; tablets reconnect;
+- Server crash: the game supervisor restarts Godot; the server itself is not auto-restarted yet (launcher #50); tablets reconnect;
   the current round is lost.
 - Host pause/resume/reset is always explicit and shown on the display.
 - A player who finishes all tasks waits for the round to end; the display shows
