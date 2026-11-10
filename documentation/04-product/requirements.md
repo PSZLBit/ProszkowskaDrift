@@ -20,6 +20,16 @@ values are in `02-game-domain/game-design.md`; architecture and protocol are in
 
 End-to-end four-tablet MFD evidence is tracked in #49.
 
+The MFD subset is defined in `02-game-domain/game-design.md` ("MFD Baseline",
+D-38). For the MFD, the baseline applies to `FR-G02`, `FR-G03`, `FR-G05`,
+`FR-G06`, and `FR-G09`: 1–4 cars, a shared 180 s timer, one task per player with
+four exclusive target spots, no auto-skip, direct start without a countdown, a
+minimal display HUD, host-started results, and a disconnected car stopping while
+its slot and task stay reserved. The MVP-only parts of those requirements — five
+tasks and the 24-spot pool, auto-skip, finish bonus, ratings, controller
+feedback, countdown, animated attract mode, all-disconnected pause, full
+reset/kick flows, and crash recovery — remain MVP.
+
 ## Controller (`controller-android/`, minimal Kotlin, Android 4.4.2)
 
 - `FR-C01` Connect and register: on launch, connect automatically to the

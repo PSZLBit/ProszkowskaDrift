@@ -1,7 +1,7 @@
 # Vision and Scope
 
 Status: Decided
-Last updated: 2026-10-21
+Last updated: 2026-11-10
 
 ## Vision
 
@@ -80,9 +80,11 @@ spectators, and independent of internet access or accounts.
 ## Open Questions
 
 - Controller input scheme (D-14) — decide by playtesting on the real tablets.
-- Exact map layout, number of spots, and obstacle placement.
+- MVP map expansion beyond the MFD baseline (the MFD four-spot layout is
+  Decided in D-38), and the full obstacle placement.
 - Festival attendance and available setup time (date confirmed: 2026-11-24).
 - Laptop and TV/monitor specifications.
-- Final scoring and round-length tuning after playtests.
+- Final scoring and round-length tuning after playtests; the initial values are
+  Decided in D-38.
 - Whether to show anonymous best scores for the event (D-25 allows only
   anonymous, in-memory scores).
