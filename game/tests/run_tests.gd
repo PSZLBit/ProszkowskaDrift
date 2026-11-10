@@ -965,66 +965,85 @@ func _test_hud_scene() -> void:
 		return
 
 	var hud = packed.instantiate()
+	root.add_child(hud)
 	_check(hud.get_node_or_null("TimerLabel") != null, "the HUD has a timer label")
-	_check(hud.get_node_or_null("TaskLabel") != null, "the HUD has a task label")
+	_check(hud.get_node_or_null("Scores") != null, "the HUD has a scores container")
+	_check(hud.get_node_or_null("StateLabel") != null, "the HUD has a state line")
 	_check(
 		hud.get_node_or_null("ResultsPanel") != null,
 		"the HUD has a results panel",
 	)
 	_check(
-		hud.get_node_or_null("ResultsPanel/ResultsLabel") != null,
-		"the results panel has a label",
+		hud.get_node_or_null("ResultsPanel/TitleLabel") != null,
+		"the results panel has a title",
 	)
-	var scores_node := hud.get_node_or_null("Scores")
-	_check(scores_node != null, "the HUD has a scores container")
-	if scores_node != null:
-		_check_eq(scores_node.get_child_count(), 4, "the HUD shows four scores")
+	_check(
+		hud.get_node_or_null("ResultsPanel/WinnerLabel") != null,
+		"the results panel has a winner line",
+	)
+	_check(
+		hud.get_node_or_null("ResultsPanel/Rows") != null,
+		"the results panel has a rows container",
+	)
+	_check(
+		hud.get_node_or_null("ResultsPanel/PromptLabel") != null,
+		"the results panel has a next-round prompt",
+	)
 
 	var clock := RoundClock.new()
-	var model := ScoreModel.new()
-	model.register(1)
-	model.finish(1, 60000)
-	model.set_precision(1, 0.5)
-	hud.bind(clock, model)
-	hud.set_task_state("Park in bay 2")
-	_check_eq(hud.task_label.text, "Park in bay 2", "task state is shown")
-	hud.update_scores()
+	hud.bind(clock)
+	hud.set_state("Drive to your spot")
+	_check_eq(hud.state_label.text, "Drive to your spot", "state copy is shown")
+	hud.update_board([
+		{"slot": 1, "score": 120, "status": "Parked", "hits": 1},
+		{"slot": 2, "score": 0, "status": "A-02", "hits": 0},
+		{"slot": 3, "score": 0, "status": "Reconnecting", "hits": 2},
+	])
+	_check_eq(hud.scores_box.get_child_count(), 3, "the board lists active slots only")
+	var first_row := hud.scores_box.get_child(0) as HBoxContainer
+	var first_text := (first_row.get_child(1) as Label).text
+	_check(first_text.contains("P1"), "board rows name the slot")
+	_check(first_text.contains("120"), "board rows show the score")
+	_check(first_text.contains("Parked"), "board rows show the status")
+	_check(first_text.contains("1 hit"), "board rows use the singular hit word")
+	var third_row := hud.scores_box.get_child(2) as HBoxContainer
 	_check(
-		hud.score_labels[0].text.contains("120550"),
-		"scores are rendered",
+		(third_row.get_child(1) as Label).text.contains("2 hits"),
+		"board rows use the plural hit word",
 	)
-	clock.remaining_ms = 90000
+
+	hud.flash_notice("P1 parked!")
+	_check_eq(hud.state_label.text, "P1 parked!", "completion flashes a notice")
+	hud._process(1.0)
+	_check_eq(hud.state_label.text, "P1 parked!", "the notice survives one second")
+	hud._process(1.5)
+	_check_eq(
+		hud.state_label.text, "Drive to your spot", "the notice restores the base copy"
+	)
+
 	hud._on_time_changed(90000)
 	_check_eq(hud.timer_label.text, "01:30", "timer formats as MM:SS")
+	hud._on_time_changed(-1000)
+	_check_eq(hud.timer_label.text, "00:00", "negative time formats as zero")
 
-	hud.hide_results()
 	_check(
 		not hud.get_node("ResultsPanel").visible,
 		"results start hidden",
 	)
-	hud.show_results()
+	hud.show_results("Round over", "Winner: P2", ["1. P2   103   Parked   0 hits   12.4 s"])
+	var panel_labels := hud.get_node("ResultsPanel/Rows").get_child_count()
+	_check_eq(panel_labels, 1, "results list one row per player")
+	_check_eq(hud.title_label.text, "Round over", "results show the title")
+	_check_eq(hud.winner_label.text, "Winner: P2", "results show the winner")
 	_check(
 		hud.get_node("ResultsPanel").visible,
 		"show_results reveals the panel",
 	)
-	_check(
-		hud.get_node("ResultsPanel/ResultsLabel").text.contains("P1"),
-		"results list players",
-	)
-
-	clock.start()
+	hud.hide_results()
 	_check(
 		not hud.get_node("ResultsPanel").visible,
-		"starting a round hides old results",
+		"hide_results hides the panel for the next round",
 	)
-	clock.tick(180.0)
-	_check_eq(hud.timer_label.text, "00:00", "the timer shows zero at expiry")
-	_check(
-		hud.get_node("ResultsPanel").visible,
-		"round expiry reveals results automatically",
-	)
-	hud._on_time_changed(-1000)
-	_check_eq(hud.timer_label.text, "00:00", "negative time formats as zero")
 
 	hud.free()
 	clock.free()
