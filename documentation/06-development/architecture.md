@@ -40,7 +40,7 @@ or simulate the game.
 |-----------|---------|------------------|
 | Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold and WebSocket client are merged (#63); production work is #48 |
 | Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, optional game supervision, logs. Sprint 0 slice implemented in `server/`; game-only supervision is implemented (PR #59, D-37); server restart and launcher remain later work
-| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current state: one game connection, four slot-keyed cars, MFD task assignment and parking detection (#46, merged); demo parking-lot tilemap, minimal HUD, and provisional scoring are #47 work in progress on this branch |
+| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current state: one game connection, four slot-keyed cars, MFD task assignment and parking detection (#46, merged); demo parking-lot tilemap plus MFD timer, scoring, HUD, and results (#47, this branch) |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
@@ -132,21 +132,21 @@ Godot 4.7.2 project with:
   grid; RPG Maker autotile rules and per-tile collision polygons are not
   converted yet.
 - `game/scenes/ui/hud.tscn` plus `game/scripts/hud.gd`, `round_clock.gd`, and
-  `score_model.gd`: a minimal HUD, round timer, and results overlay shell for
-  #47. The results panel appears when the round clock expires; scoring values,
-  phase rules, and layout are provisional pending #45 and are covered by
-  headless tests.
+  `score_model.gd`: the MFD HUD, server-driven round timer, MFD scoring, and
+  results overlay (#47). The round starts on the accepted host command, the
+  timer drives expiry and early finish, and results list every active player;
+  all are covered by headless tests including a tree-attached round lifecycle.
 - `game/tests/run_tests.gd`: headless tests for protocol parsing, config
   validation, slot input/timeout, car movement, scene structure, the
-  parking-lot TileSet and demo map, the round clock, score model, HUD scene,
-  and project settings. CI runs the same commands in
-  `.github/workflows/game.yml`.
+  parking-lot TileSet and demo map, the round clock, MFD scoring, the HUD
+  scene, the full round lifecycle, and project settings. CI runs the same
+  commands in `.github/workflows/game.yml`.
 
-The scaffold does not implement tasks, parking detection, or final map geometry.
-A minimal HUD/results shell and provisional scoring exist for #47; final values
-and task integration come from #45 and #46. The target laptop/TV run,
-readability, FPS, and input-to-visible measurements remain in issue #13 until
-recorded in `06-development/testing.md`.
+The scaffold does not implement final map geometry. MFD tasks, parking
+detection, scoring, timer, HUD, and results are implemented (#46, #47); the
+MVP adds five tasks, auto-skip, finish bonus, and controller feedback. The
+target laptop/TV run, readability, FPS, and input-to-visible measurements
+remain in issue #13 until recorded in `06-development/testing.md`.
 
 ## Authority and Trust Boundary
 

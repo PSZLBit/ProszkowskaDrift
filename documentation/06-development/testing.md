@@ -263,8 +263,10 @@ godot --headless --path game --script res://tests/run_tests.gd
 CI runs the same commands on pull requests touching `game/`
 (`.github/workflows/game.yml`).
 
-Still future: time/precision scoring, task assignment, parking detection, round
-transitions, tie-breakers, auto-skip, and a physics-level map/target test.
+Time/precision scoring, exclusive task assignment, parking detection, round
+transitions, and tie-breakers are covered by headless tests (`#46`, `#47`).
+Still future: auto-skip (MVP), a physics-level map/target test, and the final
+art pass.
 
 ## Contract and Integration Tests
 
@@ -622,17 +624,18 @@ CI/fresh-clone baseline; the purchased render is the local target look.
 
 ### HUD and results overlay (`game/scenes/ui/hud.tscn`)
 
-Run when the HUD scene, its script, or the provisional scoring changes.
+Run when the HUD scene, its script, the round lifecycle, or scoring changes.
 Environment: Godot editor on the target laptop (and the target TV for readability).
 
 | # | Step | Pass condition |
 |---|------|----------------|
-| 1 | Run `game/scenes/main.tscn`. | The HUD shows a running 03:00 timer and four zero scores; the layout does not obscure the cars. |
-| 2 | Let the timer expire (or reduce `round_length_ms` for the check). | The timer shows 00:00 and the results panel appears automatically. |
-| 3 | Inspect from the spectator distance on the target TV. | Timer, scores, and task text are readable; results panel lists all players. |
+| 1 | Connect fake controllers, run the game, press `Enter`. No auto-start: before the host starts, the timer shows full time and results stay hidden. | The timer counts down from 03:00, the scoreboard lists connected slots at 0, and the state line reads `Drive to your spot`. |
+| 2 | Let the timer expire without parking. | The timer shows 00:00, the results panel appears automatically with `Winner: none`, and the cars coast to a stop (no input accepted after the round). |
+| 3 | Start a new round, park each car, then let one round expire and finish another early by parking every connected car. | Each park flashes `P1 parked!` and updates the score live; the results panel lists ranked rows with score, state, hits, and time plus the winner and the next-round prompt. |
+| 4 | Inspect from the spectator distance on the target TV. | Timer, scores, state line, results, and target beacons are readable; the beacon color matches the assigned spot label. |
 
-Record: date, Godot version, pass/fail per step. Scoring values are provisional
-pending #45.
+Record: date, Godot version, pass/fail per step. Scoring follows the MFD
+baseline (D-38); the MVP restores five tasks and the finish bonus later.
 
 ### Car movement (`game/scripts/car.gd`)
 
