@@ -622,6 +622,27 @@ func get_input(_slot: int) -> Vector2:
 Record: date, pass/fail per step, Godot version. The scratch keyboard source
 must not end up committed; the production path is `ServerInput`.
 
+### Parking task (`game/scripts/task_manager.gd`)
+
+Status 2026-11-10: automated headless coverage landed with #46
+(`game/tests/run_tests.gd`: map data, rotation/exclusivity, tolerance
+boundaries, hold reset, disconnect/kick, exactly-once completion). The
+hardware drive check below is written but pending: no target laptop/TV run
+yet, so the MFD acceptance matrix row 3 stays Pending.
+
+Run on the target laptop with one fake controller, then repeat with four.
+
+| # | Step | Pass condition |
+|---|------|----------------|
+| 1 | Start the server, connect the fake controllers, run the game, press `Enter`. | Each connected slot is assigned a distinct `A-01`–`A-04` target with a beacon in its slot color; empty slots get nothing. |
+| 2 | Drive (scratch keyboard source or fake input) clearly inside the target, centered and aligned, below the parked speed. | The task completes after 0.5 s; `task_completed` logs once with center offset, angle, and hit count. |
+| 3 | Re-enter the same spot after completion. | No second completion is recorded. |
+| 4 | Leave before 0.5 s, or roll through above 40 px/s, or stop with a corner outside. | No completion; the hold timer resets. |
+| 5 | Disconnect one fake controller mid-round, then reconnect it. | That car stops, its task stays reserved, and reconnecting resumes the same task. |
+
+Record: date, commit, pass/fail per step, Godot version, controller count.
+Do not mark the MFD parking row as passed without the target-hardware run.
+
 ## CI Plan
 
 Free-tier GitHub Actions; component jobs start after scaffolding. Tooling

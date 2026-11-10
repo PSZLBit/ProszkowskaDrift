@@ -206,6 +206,9 @@ func (s *Server) handleHostRequest(conn *gameConn, env protocol.Envelope) bool {
 	if command == session.CommandKick {
 		reply.Slot = result.Slot
 	}
+	if command == session.CommandStart {
+		reply.RoundID = result.RoundID
+	}
 	if !conn.send(protocol.TypeHostCommand, reply) {
 		conn.log.Debug("host_command enqueue failed")
 		return true

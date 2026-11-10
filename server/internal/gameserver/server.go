@@ -64,7 +64,7 @@ func DefaultConfig() Config {
 		RateLimit:            60,
 		RateWindow:           time.Second,
 		RoundDurationMs:      180000,
-		TasksPerPlayer:       5,
+		TasksPerPlayer:       1,
 		ControllerQueueSize:  64,
 		GameQueueSize:        256,
 	}

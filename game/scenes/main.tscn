@@ -1,14 +1,18 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Texture2D" uid="uid://dpkabcrtgg3q3" path="res://assets/image_2024-03-02_131934629.png" id="1_background"]
 [ext_resource type="PackedScene" uid="uid://c0didsv7dx62i" path="res://scenes/sprites/car.tscn" id="2_car"]
 [ext_resource type="PackedScene" uid="uid://cm1oqj54hng44" path="res://scenes/server/server_input.tscn" id="3_server_input"]
+[ext_resource type="Script" path="res://scripts/task_manager.gd" id="4_task_manager"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_horizontal"]
 size = Vector2(1920, 20)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_vertical"]
 size = Vector2(20, 1080)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_planter"]
+size = Vector2(96, 96)
 
 [node name="Main" type="Node2D"]
 
@@ -37,32 +41,47 @@ shape = SubResource("RectangleShape2D_vertical")
 position = Vector2(1910, 540)
 shape = SubResource("RectangleShape2D_vertical")
 
+[node name="PlanterWest" type="CollisionShape2D" parent="Environment"]
+position = Vector2(240, 540)
+shape = SubResource("RectangleShape2D_planter")
+
+[node name="PlanterEast" type="CollisionShape2D" parent="Environment"]
+position = Vector2(1680, 540)
+shape = SubResource("RectangleShape2D_planter")
+
 [node name="Car1" parent="." instance=ExtResource("2_car") node_paths=PackedStringArray("input_source")]
-position = Vector2(350, 300)
+position = Vector2(672, 1000)
+rotation = -1.5707964
 slot = 1
 sprite_frame = 16
 label_text = "P1"
 input_source = NodePath("../ServerInput")
 
 [node name="Car2" parent="." instance=ExtResource("2_car") node_paths=PackedStringArray("input_source")]
-position = Vector2(350, 500)
+position = Vector2(864, 1000)
+rotation = -1.5707964
 slot = 2
 sprite_frame = 0
 label_text = "P2"
 input_source = NodePath("../ServerInput")
 
 [node name="Car3" parent="." instance=ExtResource("2_car") node_paths=PackedStringArray("input_source")]
-position = Vector2(350, 700)
+position = Vector2(1056, 1000)
+rotation = -1.5707964
 slot = 3
 sprite_frame = 8
 label_text = "P3"
 input_source = NodePath("../ServerInput")
 
 [node name="Car4" parent="." instance=ExtResource("2_car") node_paths=PackedStringArray("input_source")]
-position = Vector2(350, 900)
+position = Vector2(1248, 1000)
+rotation = -1.5707964
 slot = 4
 sprite_frame = 24
 label_text = "P4"
 input_source = NodePath("../ServerInput")
+
+[node name="TaskManager" type="Node" parent="."]
+script = ExtResource("4_task_manager")
 
 [node name="ServerInput" parent="." instance=ExtResource("3_server_input")]
