@@ -313,6 +313,10 @@ These checks use the S0-04 fake clients. Details and expected output are in
    `resume`, `reset`, `end`, and `kick 2`; a kicked controller receives `error`
    `kicked`, the slot is freed, and the game receives `player_left` with reason
    `kicked`.
+10. Run the server with `-log-level debug` and send input from a controller (or
+    the fake controllers). Confirm one debug log line per validated input with
+    `slot`, `seq`, `steer`, and `throttle`, no device token, and no log line for
+    inputs dropped as out-of-phase, rate-limited, or stale.
 
 Record the date, commit, commands, and observed result for these checks. A real
 Android controller and the target TV run were not available on 2026-11-04; those

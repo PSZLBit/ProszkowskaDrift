@@ -178,16 +178,6 @@ func (s *Server) handleControllerInput(conn *controllerConn, env protocol.Envelo
 		return s.rejectControllerInvalid(conn, protocol.CodeInvalidInput, "Malformed input payload.")
 	}
 
-	// Log the received payload so input activity is visible in server logs
-	// during demos and manual checks (privacy: device tokens are never logged).
-	conn.log.Info("controller input",
-		"slot", slot,
-		"seq", *env.Seq,
-		"steer", *data.Steer,
-		"throttle", *data.Throttle,
-		"payload", string(env.Data),
-	)
-
 	event, err := s.session.ValidateInput(slot, conn.id, *env.Seq, *data.Steer, *data.Throttle)
 	if err != nil {
 		switch {
@@ -211,6 +201,15 @@ func (s *Server) handleControllerInput(conn *controllerConn, env protocol.Envelo
 			return false
 		}
 	}
+
+	// Log validated input at debug level so normal play does not flood
+	// default-level logs; raw payloads are not logged (see review).
+	conn.log.Debug("controller input",
+		"slot", event.Slot,
+		"seq", event.Seq,
+		"steer", event.Steer,
+		"throttle", event.Throttle,
+	)
 
 	conn.invalid = 0
 	conn.rate = 0
