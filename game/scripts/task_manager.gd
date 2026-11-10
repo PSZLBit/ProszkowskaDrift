@@ -20,13 +20,25 @@ var _connected: Dictionary = {}
 var _running := false
 var _round_id := 0
 var _beacons: Dictionary = {}
+## Process timestamp (same origin as update_tasks now_ms) when the current
+## pause started, or -1 when not paused. Paused intervals are shifted out of
+## every assignedMs on resume so completionMs only counts active round time.
+var _pause_started_ms := -1
 
 
 func _ready() -> void:
 	_wire_cars()
 
 
-func set_running(running: bool) -> void:
+func set_running(running: bool, now_ms: int) -> void:
+	if not running and _running:
+		_pause_started_ms = now_ms
+	elif running and not _running and _pause_started_ms >= 0:
+		var paused_ms := now_ms - _pause_started_ms
+		for slot in _tasks.keys():
+			if str(_tasks[slot]["state"]) != "completed":
+				_tasks[slot]["assignedMs"] = int(_tasks[slot]["assignedMs"]) + paused_ms
+		_pause_started_ms = -1
 	_running = running
 	if not running:
 		for slot in _holds.keys():
@@ -34,7 +46,7 @@ func set_running(running: bool) -> void:
 			hold.reset()
 
 
-func start_round(active_slots: Array, round_id: int, round_duration_ms: int, _now_ms: int) -> void:
+func start_round(active_slots: Array, round_id: int, round_duration_ms: int, now_ms: int) -> void:
 	clear_round()
 	_round_id = round_id
 	var assignments := TaskAssignment.assign(active_slots, round_id, round_duration_ms)
@@ -49,7 +61,7 @@ func start_round(active_slots: Array, round_id: int, round_duration_ms: int, _no
 			"spotFacing": MfdMap.spot_facing_deg(int(assignments[slot]["spotIndex"])),
 			"state": "assigned",
 			"collisions": 0,
-			"assignedMs": Time.get_ticks_msec(),
+			"assignedMs": now_ms,
 		}
 		_holds[slot] = ParkingDetector.Hold.new()
 		_connected[slot] = true
@@ -61,6 +73,7 @@ func clear_round() -> void:
 	_holds.clear()
 	_connected.clear()
 	_round_id = 0
+	_pause_started_ms = -1
 	for slot in _beacons.keys():
 		(_beacons[slot] as Node).queue_free()
 	_beacons.clear()
@@ -193,7 +206,9 @@ func _spawn_beacons() -> void:
 		var rect: Rect2 = _tasks[slot]["spotRect"]
 		beacon.position = rect.get_center()
 		parent.add_child(beacon)
-		parent.move_child(beacon, 0)
+		# Above the fullscreen Background but below the cars: both use the
+		# default Z index, so tree order decides what is visible.
+		parent.move_child(beacon, 1)
 		beacon.setup(
 			str(_tasks[slot]["spotLabel"]),
 			MfdMap.slot_color(int(slot)),

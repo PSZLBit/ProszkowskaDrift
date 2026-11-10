@@ -391,7 +391,7 @@ func _parked_cars(manager, speed: float) -> Dictionary:
 func _test_task_manager() -> void:
 	var manager = TaskManagerScript.new()
 	manager.start_round([1, 2, 3, 4], 1, 180000, 0)
-	manager.set_running(true)
+	manager.set_running(true, 0)
 	_check_eq(manager.task_count(), 4, "four connected slots start with four tasks")
 	_check(manager.get_task(4)["spotLabel"] != manager.get_task(1)["spotLabel"], "tasks stay exclusive")
 
@@ -403,6 +403,7 @@ func _test_task_manager() -> void:
 	_check_eq(completed.size(), 4, "parked cars complete after the hold time")
 	var first: Dictionary = completed[0][1]
 	_check_eq(first["collisions"], 2 if int(first["slot"]) == 1 else 0, "collisions are recorded per slot")
+	_check_eq(first["completionMs"], 12000, "completion time uses the supplied timestamps")
 	manager.update_tasks(0.6, _parked_cars(manager, 0.0), 13000)
 	_check_eq(completed.size(), 4, "a completed task never completes twice")
 	manager.register_collision(int(first["slot"]))
@@ -413,7 +414,7 @@ func _test_task_manager() -> void:
 
 	var early = TaskManagerScript.new()
 	early.start_round([1], 3, 180000, 0)
-	early.set_running(true)
+	early.set_running(true, 0)
 	var early_done: Array = []
 	early.task_completed.connect(func(slot: int, result: Dictionary) -> void: early_done.append(slot))
 	early.update_tasks(0.3, _parked_cars(early, 0.0), 300)
@@ -422,7 +423,7 @@ func _test_task_manager() -> void:
 
 	var slow = TaskManagerScript.new()
 	slow.start_round([2], 1, 180000, 0)
-	slow.set_running(true)
+	slow.set_running(true, 0)
 	var slow_done: Array = []
 	slow.task_completed.connect(func(slot: int, result: Dictionary) -> void: slow_done.append(slot))
 	slow.update_tasks(0.6, _parked_cars(slow, 100.0), 600)
@@ -430,7 +431,7 @@ func _test_task_manager() -> void:
 
 	var held = TaskManagerScript.new()
 	held.start_round([1, 2], 1, 180000, 0)
-	held.set_running(true)
+	held.set_running(true, 0)
 	held.set_slot_connected(2, false)
 	var held_done: Array = []
 	held.task_completed.connect(func(slot: int, result: Dictionary) -> void: held_done.append(slot))
@@ -449,13 +450,35 @@ func _test_task_manager() -> void:
 
 	var paused = TaskManagerScript.new()
 	paused.start_round([1], 1, 180000, 0)
-	paused.set_running(false)
+	paused.set_running(false, 0)
 	var paused_done: Array = []
 	paused.task_completed.connect(func(slot: int, result: Dictionary) -> void: paused_done.append(slot))
 	paused.update_tasks(0.6, _parked_cars(paused, 0.0), 600)
 	_check(paused_done.is_empty(), "no completion is detected while paused")
 
-	for node in [manager, early, slow, held, kicked, paused]:
+	var resumed = TaskManagerScript.new()
+	resumed.start_round([1], 1, 180000, 1000)
+	resumed.set_running(true, 1000)
+	var resumed_done: Array = []
+	var resumed_results: Array = []
+	resumed.task_completed.connect(
+		func(slot: int, result: Dictionary) -> void:
+			resumed_done.append(slot)
+			resumed_results.append(result)
+	)
+	resumed.update_tasks(0.3, _parked_cars(resumed, 0.0), 1300)
+	resumed.set_running(false, 1300)
+	resumed.set_running(true, 5300)
+	resumed.update_tasks(0.5, _parked_cars(resumed, 0.0), 5800)
+	_check_eq(resumed_done, [1], "the task completes after resume with a fresh hold")
+	var resumed_first: Dictionary = resumed_results[0]
+	_check_eq(
+		resumed_first["completionMs"],
+		800,
+		"paused time is excluded from the completion duration",
+	)
+
+	for node in [manager, early, slow, held, kicked, paused, resumed]:
 		(node as Node).free()
 
 

@@ -398,19 +398,19 @@ func _handle_host_command(data: Dictionary) -> void:
 		"pause":
 			_phase = "paused"
 			clear_input()
-			_task_manager_call("set_running", [false])
+			_task_manager_call("set_running", [false, Time.get_ticks_msec()])
 		"resume":
 			_phase = "playing"
-			_task_manager_call("set_running", [true])
+			_task_manager_call("set_running", [true, Time.get_ticks_msec()])
 		"reset":
 			_phase = "ready"
 			clear_input()
-			_task_manager_call("set_running", [false])
+			_task_manager_call("set_running", [false, Time.get_ticks_msec()])
 			_task_manager_call("clear_round", [])
 		"end":
 			_phase = "ended"
 			clear_input()
-			_task_manager_call("set_running", [false])
+			_task_manager_call("set_running", [false, Time.get_ticks_msec()])
 			_task_manager_call("clear_round", [])
 		"kick":
 			_store.clear_slot(slot)
@@ -433,7 +433,7 @@ func _start_task_round() -> void:
 	slots.sort()
 	var duration_ms := int(_config.get("roundDurationMs", 180000))
 	manager.call("start_round", slots, _round_id, duration_ms, Time.get_ticks_msec())
-	manager.call("set_running", [true])
+	manager.call("set_running", true, Time.get_ticks_msec())
 	if not manager.is_connected("task_completed", _on_task_completed):
 		manager.connect("task_completed", _on_task_completed)
 
@@ -554,7 +554,7 @@ func _reset_connection_state() -> void:
 	_store.clear_all()
 	_saw_input.clear()
 	_active_slots.clear()
-	_task_manager_call("set_running", [false])
+	_task_manager_call("set_running", [false, Time.get_ticks_msec()])
 
 
 func _schedule_reconnect(reason: String) -> void:
