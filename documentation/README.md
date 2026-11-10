@@ -85,12 +85,14 @@ Superseded decisions stay in the log. Do not delete history.
   provenance in `game/assets/CREDITS.md` (D-34).
 - Delivery calendar: festival 2026-11-24; festival-ready target 2026-11-18;
   MFD committed, MVP stretch (D-31).
+- MFD gameplay baseline: one task per player, four-spot map, 180 s round,
+  time/precision/collision score (D-38, [ADR-0004](05-architecture-decisions/adr-0004-host-command-roundid.md)).
 - Game scaffold promoted from S0-05 (D-32).
 - Controller WebSocket scaffold promoted from S0-05; real-tablet validation and
   the production UI remain #11/#48 (D-35).
 - Sprint 2 re-baselined to a single-tablet vertical slice; four-player MFD
   validation moved to Sprint 3 (D-33).
-- Open: controller input scheme and feedback (D-14; #18/#48), MFD map/tuning
-  (#45), and hardware validation (#14/#49). The full register with
+- Open: controller input scheme and feedback (D-14; #18/#48), MFD
+  implementation and tuning (#46/#47), and hardware validation (#14/#49). The full register with
   owners and next steps is in
   [`05-architecture-decisions/decision-log.md`](05-architecture-decisions/decision-log.md#open-tbd-and-validation-items).

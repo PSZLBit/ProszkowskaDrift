@@ -10,6 +10,7 @@ and link it here. The ADR threshold is defined in
 
 | Date       | ID   | Decision                                                                                                                                  | Status  | Owner |
 | ---------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----- |
+| 2026-11-10 | D-38 | The Minimum Festival Demo gameplay baseline is Decided: the fixed map `proszkowska-mfd-1` has four 96×144 parking bays (`A-01`–`A-04`) and four spawns; one task per player is assigned exclusively in rotating spot order; a task completes with all four car corners inside the spot, speed ≤40 px/s, and a 0.5 s hold; the 180 s round ends early when all connected players finish; scoring is time 100→10 over 30 s plus center/angle precision 0–40 and −10 per collision (max −30), with no MFD finish bonus; the MFD shows a minimal display HUD and host-started results. Five tasks, auto-skip, finish bonus, controller feedback, countdown, pause/reset, and the 24-spot map remain MVP; D-19 is unchanged ([game design](../02-game-domain/game-design.md), [ADR-0004](adr-0004-host-command-roundid.md)). | Decided | Team  |
 | 2026-11-10 | D-37 | Game process supervision for the MVP is implemented as an optional in-process Go supervisor (`server/internal/supervisor`, enabled with `--game-binary`): it starts Godot with a per-launch token and restarts it after unexpected exits, returning the session to `Attract`. Server restart and the festival launcher/wrapper remain future work. The shell-script launcher option is not used. | Decided | Team  |
 | 2026-11-10 | D-36 | ADRs are required when a decision selects or changes the stack, transport, an architecture boundary, a cross-component contract, or a build/runtime interface constraint. Product tuning, performance targets, privacy rules, delivery plans, and process agreements are recorded in their module documents and dated decision-log rows without an ADR. ADR links in decision rows, the ADR index, the decision map, and the open TBD/validation register stay current. | Decided | Team |
 | 2026-11-09 | D-35 | The S0-05 controller WebSocket spike is promoted to the production `controller-android/` scaffold after cleanup, following the D-32 precedent. The scaffold uses OkHttp 3.12.x, a device-token `hello`, 25 Hz phase-gated input, ping/pong liveness with a bounded watchdog, malformed-frame tolerance, and reconnect with capped backoff; duplicate-token `token_in_use` is retryable while invalid-token `auth_failed` stays fatal. Real-tablet install, latency, and stability evidence remains tracked in issues #11 and #48 until recorded. D-18 continues to apply to throwaway prototype logic, not this scaffold. | Decided | Team  |
@@ -66,9 +67,9 @@ undecided. Hardware checks stay pending until they are run on the real devices.
 | Open item | Owner | Next step | Tracking |
 |---|---|---|---|
 | Controller input scheme and feedback (D-14) | TracerDS | Playtest input options on T1–T4 (#18); implement feedback in #48; record the chosen scheme here | #18, #48 |
-| MFD map, task skip, parking tolerance, and tuning | Brzana | Land the MFD baseline in #45; implement #46/#47; full GDD remains #32 | #45, #46, #47, #32 |
-| Finished-car rendering (hidden, ghosted, or finish area) | Brzana | Decide with the MFD map/task baseline in #45; implement with the game slice in #47 | #45, #47 |
-| Target-finding UI (minimap vs on-map beacons) | Brzana | Decide in the MFD display baseline in #45; implement in #47 | #45, #47 |
+| MFD map, task skip, parking tolerance, and tuning | Brzana | MFD baseline landed as D-38; implement #46/#47; full GDD remains #32 | #46, #47, #32 |
+| Finished-car rendering (hidden, ghosted, or finish area) | Brzana | Rendering is out of the MFD baseline (D-38); decide with the game slice in #47 | #47 |
+| Target-finding UI (minimap vs on-map beacons) | Brzana | On-map beacons are the MFD baseline (D-38); implement in #47 | #47 |
 | WebSocket libraries | TracerDS + GreenDude5 | Confirm Go `coder/websocket` v1.8.15 and OkHttp 3.12.x on API 19 in the architecture; production in #48 | #11, #48 |
 | Supervisor and festival laptop OS | GreenDude5 + ZofiaDan | Game-only supervision implemented in PR #59 (merged, D-37); manual crash drill still pending (#15). Server restart and festival launcher remain #50. Decide Windows vs Linux in #49/#50 | #15, #49, #50 |
 | Router model and static-IP plan | ZofiaDan | Choose the model and address plan during #49; document it in #50 | #49, #50 |
@@ -86,6 +87,7 @@ The second host control device is Post-MVP (D-26) and is not an open item.
 | [ADR-0001](adr-0001-mvp-architecture.md) | D-11, D-22 | Stack, transport, and server/game boundary |
 | [ADR-0002](adr-0002-legacy-android-controller.md) | D-08, D-20 | Android 4.4.2 / API 19 controller |
 | [ADR-0003](adr-0003-session-lifecycle-and-recovery.md) | D-21, D-24 | Session lifecycle, reconnect, and recovery |
+| [ADR-0004](adr-0004-host-command-roundid.md) | D-38 | Server round identifier in `host_command start` |
 
 ## Decision Map
 
@@ -98,14 +100,15 @@ table above for history and have no active artifact.
 | `documentation/README.md`, `00-meta/` | D-04, D-05, D-07, D-36 |
 | [Decision log](decision-log.md) | D-06 |
 | [Vision and scope](../01-vision-scope/vision-scope.md) | D-26 |
-| [Game design](../02-game-domain/game-design.md) | D-14 (TBD), D-19 |
+| [Game design](../02-game-domain/game-design.md) | D-14 (TBD), D-19, D-38 |
 | [Players, sessions, and permissions](../03-players-sessions/roles-sessions.md) | D-10, D-12, D-21, D-24, D-25 |
-| [Product requirements](../04-product/requirements.md) | D-19, D-26 |
+| [Product requirements](../04-product/requirements.md) | D-19, D-26, D-38 |
 | [ADR-0001](adr-0001-mvp-architecture.md) | D-11, D-22 |
 | [ADR-0002](adr-0002-legacy-android-controller.md) | D-08, D-20 |
 | [ADR-0003](adr-0003-session-lifecycle-and-recovery.md) | D-21, D-24 |
+| [ADR-0004](adr-0004-host-command-roundid.md) | D-38 |
 | [Runtime architecture](../06-development/architecture.md) | D-11, D-21, D-22, D-23, D-24, D-32, D-37 |
-| [Protocol](../06-development/protocol.md) | D-21, D-23, D-24, D-32 |
+| [Protocol](../06-development/protocol.md) | D-21, D-23, D-24, D-32, D-38 |
 | [Testing strategy](../06-development/testing.md) | D-23, D-24, D-32 |
 | [Roadmap](../06-development/roadmap.md) | D-26, D-31, D-33 |
 | [Workflow](../06-development/workflow.md) | D-18, D-27, D-28, D-29, D-30 |
@@ -116,8 +119,8 @@ table above for history and have no active artifact.
 
 | Date | Related | Note |
 |---|---|---|
+| 2026-11-10 | D-38 | The MFD gameplay baseline landed; the MFD Baseline section of `game-design.md` is Decided and is the implementation source for #46/#47. The rest of the document stays Draft for the full GDD (#32). |
 | 2026-11-09 | D-14 | Owner set to TracerDS; the input scheme remains TBD in #18 and controller feedback is tracked in #48. |
-| 2026-11-09 | D-19 | The MFD gameplay baseline is still being defined in #45; the full GDD is #32. The decision is not reopened; `game-design.md` stays Draft until #45 lands. |
 | 2026-11-09 | D-21 | The server token/slot reclaim path is implemented. Controller auto-connect is merged (PR #63); real-tablet proof remains pending in #11/#49. |
 | 2026-11-09 | D-20 / ADR-0002 | API 19 compatibility validation is pending. Static inventory is merged (#10/PR #44); APK build is merged (PR #63); install, input, reconnect, and hardware checks remain #11/#48/#49. |
 | 2026-11-09 | D-23 | Latency has not been measured. The targets remain decided, but the evidence is pending in #14. |
