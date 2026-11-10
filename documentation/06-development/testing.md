@@ -397,7 +397,7 @@ running Android 4.4.2 (API 19): the app launches into the landscape
 controller screen, inflates the touch pad, and stays alive while idle. With an
 unreachable server it retries exactly three times, then returns to the main
 controller screen with the server address cleared and the status `Server
-unreachable — address cleared — 3 reconnect attempts failed`; a cold restart
+unreachable — 3 reconnect attempts failed`; a cold restart
 stays disconnected with the address still cleared. This check also exposed and
 verified the fix for the custom-view inflation crash (the view needed a public
 `(Context, AttributeSet)` constructor). Install/run on the remaining three

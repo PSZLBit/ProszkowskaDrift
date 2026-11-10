@@ -235,17 +235,17 @@ class MainActivity : Activity(), ControllerClient.Listener {
         slotView.setTextColor(resources.getColor(R.color.text_primary))
         phase = "attract"
         timeLeftSeconds = 0L
-        phaseView.text = ""
         taskView.text = getString(R.string.task_none)
         scoreView.text = ""
         resultView.text = ""
         statsView.text = ""
+        renderPhase()
     }
 
     private fun showDebugDialog() {
         val details = buildString {
             append("Connection state: ").append(state).append('\n')
-            append("Phase: ").append(phase).append('\n')
+            append("Phase: ").append(displayPhase()).append('\n')
             append("Slot: ").append(slotView.text).append('\n')
             append("Server: ").append(serverView.text).append('\n')
             append("Status: ").append(statusView.text).append('\n')
@@ -300,12 +300,14 @@ class MainActivity : Activity(), ControllerClient.Listener {
         statusView.text = if (detail.isNullOrEmpty()) label else "$label — $detail"
     }
 
+    private fun displayPhase(): String = if (phase == "attract") {
+        getString(R.string.phase_waiting_for_server)
+    } else {
+        phase
+    }
+
     private fun renderPhase() {
-        val displayPhase = if (phase == "attract") {
-            getString(R.string.phase_waiting_for_server)
-        } else {
-            phase
-        }
+        val displayPhase = displayPhase()
         phaseView.text = if (timeLeftSeconds > 0L) {
             getString(R.string.phase_time_format, displayPhase, timeLeftSeconds)
         } else {

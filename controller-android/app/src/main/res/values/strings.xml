@@ -5,7 +5,7 @@
   <string name="status_connecting">Connecting…</string>
   <string name="status_connected">Connected</string>
   <string name="status_reconnecting">Reconnecting</string>
-  <string name="status_reconnect_failed">Server unreachable — address cleared</string>
+  <string name="status_reconnect_failed">Server unreachable</string>
   <string name="status_stopped">Stopped</string>
 
   <string name="server_unset">Server not set — long-press to configure</string>

@@ -234,6 +234,10 @@ class ControllerClient internal constructor(
     fun stop() {
         if (!started.compareAndSet(true, false)) return
         running.set(false)
+        reconnectScheduled.set(false)
+        pendingReconnect?.cancel()
+        pendingReconnect = null
+        generation.incrementAndGet()
 
         val current = socket
         if (current != null) {
@@ -242,7 +246,14 @@ class ControllerClient internal constructor(
             current.close(CLOSE_NORMAL, "client stopped")
         }
 
-        shutdownResources("client stopped")
+        scheduler?.shutdownNow()
+        scheduler = null
+        httpClient?.let { client ->
+            client.dispatcher().executorService().shutdown()
+            client.connectionPool().evictAll()
+        }
+        httpClient = null
+
         state = ConnectionState.IDLE
         listener.onStateChanged(state, "stopped")
     }
