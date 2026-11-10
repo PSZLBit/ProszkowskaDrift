@@ -257,7 +257,7 @@ func TestFourControllersGetSlotsAndInputFlows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode config: %v", err)
 	}
-	if config.RoundDurationMs != 180000 || config.TasksPerPlayer != 5 || config.MaxPlayers != 4 {
+	if config.RoundDurationMs != 180000 || config.TasksPerPlayer != 1 || config.MaxPlayers != 4 {
 		t.Fatalf("config = %+v", config)
 	}
 
@@ -1142,7 +1142,7 @@ func TestConfigJSONShape(t *testing.T) {
 	if err := json.Unmarshal(configEnv.Data, &payload); err != nil {
 		t.Fatalf("unmarshal config: %v", err)
 	}
-	if payload.RoundDurationMs != 180000 || payload.TasksPerPlayer != 5 || payload.MaxPlayers != 4 {
+	if payload.RoundDurationMs != 180000 || payload.TasksPerPlayer != 1 || payload.MaxPlayers != 4 {
 		t.Fatalf("config payload = %+v", payload)
 	}
 }
