@@ -135,6 +135,10 @@ func (s *Server) handleGameMessage(conn *gameConn, env protocol.Envelope) bool {
 		return s.handleHostRequest(conn, env)
 	case protocol.TypePhase:
 		return s.handleGamePhase(conn, env)
+	case protocol.TypeTaskResult:
+		return s.handleGameTaskResult(conn, env)
+	case protocol.TypeRoundResult:
+		return s.handleGameRoundResult(conn, env)
 	case protocol.TypeHeartbeat:
 		s.handleGameHeartbeat(conn, env)
 	default:
@@ -286,6 +290,36 @@ func (s *Server) handleGamePhase(conn *gameConn, env protocol.Envelope) bool {
 	data.RoundID = roundID
 	conn.log.Info("game phase", "phase", data.Phase, "round", data.RoundID, "time_left_ms", data.TimeLeftMs)
 	s.broadcastPhase(data)
+	return false
+}
+
+// handleGameTaskResult validates one completed-task report and broadcasts it
+// to controllers. Scoring stays on the game; the server only routes.
+func (s *Server) handleGameTaskResult(conn *gameConn, env protocol.Envelope) bool {
+	data, err := protocol.DecodeData[protocol.TaskResultData](env)
+	if err != nil {
+		return s.rejectGameInvalid(conn, "Malformed task_result payload.")
+	}
+	if data.Slot < 1 || data.Slot > session.MaxPlayers {
+		return s.rejectGameInvalid(conn, "task_result slot out of range.")
+	}
+	s.broadcast(protocol.TypeTaskResult, data)
+	return false
+}
+
+// handleGameRoundResult validates the round ranking and broadcasts it to
+// controllers.
+func (s *Server) handleGameRoundResult(conn *gameConn, env protocol.Envelope) bool {
+	data, err := protocol.DecodeData[protocol.RoundResultData](env)
+	if err != nil {
+		return s.rejectGameInvalid(conn, "Malformed round_result payload.")
+	}
+	for _, entry := range data.Scores {
+		if entry.Slot < 1 || entry.Slot > session.MaxPlayers {
+			return s.rejectGameInvalid(conn, "round_result slot out of range.")
+		}
+	}
+	s.broadcast(protocol.TypeRoundResult, data)
 	return false
 }
 

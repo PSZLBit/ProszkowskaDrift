@@ -841,6 +841,60 @@ func TestGamePhaseDrivesControllerPhaseAndInput(t *testing.T) {
 	}
 }
 
+func TestGameTaskAndRoundResultsReachControllers(t *testing.T) {
+	env := newTestEnv(t, nil)
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+	game.sendGameReady()
+
+	c := env.dialController(t)
+	c.sendHello("token-results")
+	c.expectWelcome(1)
+	game.readType(protocol.TypePlayerJoined)
+
+	game.send(protocol.TypeTaskResult, nil, protocol.TaskResultData{
+		Slot: 1, TaskID: 11, Points: 103, TimeScore: 63,
+		PrecisionScore: 40, CollisionPenalty: 0, Rating: "perfect", TotalScore: 103,
+	})
+	taskEnv := c.readType(protocol.TypeTaskResult)
+	task, err := protocol.DecodeData[protocol.TaskResultData](taskEnv)
+	if err != nil {
+		t.Fatalf("decode task_result: %v", err)
+	}
+	if task.Slot != 1 || task.TaskID != 11 || task.Points != 103 || task.Rating != "perfect" {
+		t.Fatalf("task_result = %+v", task)
+	}
+
+	game.send(protocol.TypeRoundResult, nil, protocol.RoundResultData{
+		RoundID: 1, WinnerSlot: 1,
+		Scores: []protocol.RoundScoreData{{Slot: 1, Score: 103, Tasks: 1, Collisions: 0}},
+	})
+	roundEnv := c.readType(protocol.TypeRoundResult)
+	round, err := protocol.DecodeData[protocol.RoundResultData](roundEnv)
+	if err != nil {
+		t.Fatalf("decode round_result: %v", err)
+	}
+	if round.RoundID != 1 || round.WinnerSlot != 1 || len(round.Scores) != 1 || round.Scores[0].Score != 103 {
+		t.Fatalf("round_result = %+v", round)
+	}
+}
+
+func TestGameResultWithBadSlotIsRejected(t *testing.T) {
+	env := newTestEnv(t, nil)
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+	game.sendGameReady()
+
+	game.send(protocol.TypeTaskResult, nil, protocol.TaskResultData{Slot: 9, TaskID: 1})
+	if env := game.readType(protocol.TypeError); env.Type != protocol.TypeError {
+		t.Fatalf("unexpected envelope %+v", env)
+	}
+}
+
 func TestGameConnectingAfterControllerGetsPlayerJoined(t *testing.T) {
 	env := newTestEnv(t, nil)
 
