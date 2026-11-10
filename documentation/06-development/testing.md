@@ -1,11 +1,11 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-11-04
+Last updated: 2026-11-10
 
-The test-plan update is tracked in issue #17. As of 2026-11-04 the controller is
-not on `main`; the API 19 scaffold and real-tablet checks are tracked by #11 and
-#48.
+The test-plan update is tracked in issue #17. As of 2026-11-10 the controller is
+not merged; PR #63 is in review. The API 19 scaffold and real-tablet checks are
+tracked by #11 and #48.
 
 ## Goals
 
@@ -56,11 +56,11 @@ until it is run on the target tablets, laptop, TV, and router.
 | Spike | Check | Pass condition | Status |
 |-------|-------|----------------|--------|
 | S0-02 (#10) | Tablet inventory | All four tablets recorded; Wi-Fi, charging, battery, and touch verified | Pending: static specs recorded; hardware checks deferred to S0-03 and S0-06 |
-| S0-03 (#11) | Kotlin controller | APK installs on all four tablets, sends input at 20–30 Hz, and reclaims its slot after reconnect | Pending: controller is not on `main` |
+| S0-03 (#11) | Kotlin controller | APK installs on all four tablets, sends input at 20–30 Hz, and reclaims its slot after reconnect | Pending: controller is not merged; PR #63 is in review |
 | S0-04 (#12) | Go server | Four fake controllers get slots; validation, heartbeat, and reconnect tests pass | Automated pass; real-controller path pending |
 | S0-05 (#13) | Godot integration | Four controller inputs render as four independently moving cars | Headless pass on 2026-10-26; target-display run pending |
 | S0-06 (#14) | Latency and Wi-Fi | p95 input-to-visible ≤100 ms, 20–30 Hz input, stable 30-minute Wi-Fi | Pending |
-| S0-07 (#15) | Supervisor | Starts Godot, detects a crash, and restarts it into `Attract` | Pending: supervisor not implemented |
+| S0-07 (#15) | Supervisor | Starts Godot, detects a crash, and restarts it into `Attract` | Pending: supervisor is not merged; PR #59 is in review |
 | S0-09 (#17) | Test plan and hardware checklist | This document covers the MFD and hardware checks, and the checklist has a dry run on the target hardware | Checklist added; hardware dry run pending |
 
 Automated server and game evidence is in [Go Server Tests](#go-server-tests),
@@ -71,7 +71,7 @@ Tests](#contract-and-integration-tests). Hardware evidence belongs in
 
 ## Minimum Festival Demo (MFD) Test Plan
 
-**Status: pending (2026-11-04).** The target tablets, laptop, TV, and router were
+**Status: pending (2026-11-10).** The target tablets, laptop, TV, and router were
 not available today. Every check below that depends on them is a manual check
 and must be run on the real hardware before MFD sign-off. Do not mark a hardware
 check as passed from fake clients, the Godot editor, or a non-target developer
@@ -80,10 +80,12 @@ is run.
 
 Scope is the committed MFD from [roadmap.md](roadmap.md): four tablets connect,
 four cars move on the shared map, one parking task works, scores are visible,
-reconnect works, and the full setup starts in under 15 minutes. Five tasks,
-full precision/collision scoring, attract mode, and full restart recovery are
-MVP stretch items and are not MFD acceptance criteria unless the roadmap marks
-them as committed.
+reconnect works, and the setup/runbook draft is exercised. The under-15-minute
+setup target and developer-free host operation are M3 checks (#50), not MFD
+acceptance criteria. Five tasks, full precision/collision scoring, attract mode,
+all-disconnected pause, and full restart recovery are MVP stretch items and are
+not MFD acceptance criteria unless a later roadmap revision marks them as
+committed.
 
 ### MFD Acceptance Matrix
 
@@ -93,9 +95,14 @@ them as committed.
 | 2 | Display | Start the game on the target laptop and TV. | Full map is visible at 1920×1080 fullscreen with four labelled cars, the target highlight, scoreboard, and round timer. Text and targets are readable from the intended spectator distance. | Pending |
 | 3 | Parking task | Each player receives and completes one parking task. | The target is exclusive among active players and highlighted in the player's color. Parking completes only when all four car corners are inside the target, speed is below the parked threshold, and both hold for 0.5 s. The score increases once. | Pending |
 | 4 | Score and results | Complete a short MFD round. | Live score is visible; a clean park scores higher than a slow or sloppy park; collisions are counted; the results screen shows the winner and scores; the host can start the next round. | Pending |
-| 5 | Reconnect | Disconnect one tablet during a round, then reconnect it. | That car stops, the other cars continue, the slot stays reserved, and the same tablet reclaims the same slot and color with a reset input sequence. | Pending |
-| 6 | Latency and frame rate | Measure input-to-visible response and display smoothness during play. | Display holds the 60 FPS target without visible stutter or tearing; controller input runs at 20–30 Hz; measured input-to-visible latency is at most 100 ms (record p50/p95). | Pending |
-| 7 | Setup, privacy, and reset | Run the MFD setup and reset between two groups. | Full setup takes under 15 minutes; the checklist is followed without developer help; no names, accounts, photos, personal data, or previous-group scores remain. | Pending |
+| 5 | Reconnect | Disconnect one tablet during a round, then reconnect it. | That car stops, the other cars continue, the slot stays reserved, and the same tablet reclaims the same slot and color; the controller's input sequence restarts from its initial value. | Pending |
+| 6 | Latency and frame rate | Measure input-to-visible response and display smoothness during play. | Display holds the 60 FPS target without visible stutter or tearing; controller input runs at 20–30 Hz; measured input-to-visible latency p95 is at most 100 ms (p50 is recorded for context; the p95 convention is defined below). | Pending |
+| 7 | Setup, reset, and privacy | Run the draft MFD setup and reset between two groups. | Record setup time and any developer intervention; the runbook draft is exercised. No names, accounts, photos, personal data, or previous-group scores remain. | Pending |
+
+The under-15-minute setup target, developer-free host operation, all-disconnected
+pause, and game/server restart recovery are M3 or stretch checks, not MFD
+sign-off. The recovery checks are exercised in [Festival
+Rehearsal](#festival-rehearsal).
 
 ### Reconnect Acceptance Check
 
@@ -105,15 +112,24 @@ Run with all four tablets on the target router and the game in `Playing`.
 |---|------|----------------|
 | 1 | Turn off Wi-Fi on one tablet for at least 5 s, then turn it back on. | Only that car stops; the server keeps the slot reserved; the tablet reconnects with its device token and resumes in the same slot and color. |
 | 2 | Force-stop the controller app on one tablet and reopen it. | The app auto-connects to the configured server and reclaims the same slot without QR or manual entry. |
-| 3 | Disconnect all four tablets and wait past the all-disconnected grace period. | The round pauses as documented; reconnecting the tablets restores control and the host can resume. |
-| 4 | Reconnect a tablet while the game is in `Ready` or `Attract`. | The slot is reclaimed without starting a duplicate player or car. |
+| 3 | Reconnect a tablet while the game is in `Ready` or `Attract`. | The slot is reclaimed without starting a duplicate player or car. |
 
 Record the reconnect time for each case. A reconnect that needs a developer
 action, a manual address entry, or a server restart fails the MFD check.
 
+An input-sequence restart means the controller starts its per-connection input
+counter from the initial value after reconnect; it is not a game reset, round
+reset, or respawn. The all-disconnected pause and restart recovery are M2
+stretch/M3 checks in [Festival Rehearsal](#festival-rehearsal), not MFD
+acceptance criteria.
+
 ### Latency Acceptance Check
 
 Measure on the target tablet, router, laptop, and display, not in the editor.
+
+**Measurement convention:** D-23 sets the ≤100 ms target without a percentile.
+This plan uses p95 as the pass metric and records p50 for context; choosing p95
+does not change D-23.
 
 1. Use a slow-motion phone camera or high-speed capture that shows the tablet
    control and the TV in the same frame.
@@ -151,7 +167,7 @@ Run on the target hardware with at least one real tablet, then repeat with four.
 
 | # | Step | Pass condition |
 |---|------|----------------|
-| 1 | Start a round and read the target on the controller and display. | Both show the same spot number/color; the target is highlighted in the player's color and is not assigned to another active player. |
+| 1 | Start a round and read the target on the controller and display. | The display highlights the same target in the player's color; the controller shows its spot number, color, and direction hint; the target is not assigned to another active player. |
 | 2 | Park clearly inside the target, centered and aligned, below the parked speed. | The task completes after 0.5 s, the score increases once, and a `Perfect`/`Great` result is plausible for the measured precision. |
 | 3 | Park off-center or at an angle inside the target. | The task completes with a lower precision score than the centered park. |
 | 4 | Hit a static obstacle during a task, then park. | The collision is counted and the task score is reduced by the documented penalty, capped at 30 points. |
@@ -302,7 +318,7 @@ hardware checks remain pending in [Hardware Checklist (Manual, Pending)](#hardwa
 
 ## Hardware Checklist (Manual, Pending)
 
-**Status: pending (2026-11-04).** The four tablets, target laptop, TV, and router
+**Status: pending (2026-11-10).** The four tablets, target laptop, TV, and router
 were not available. Every check in this section is a manual check; none may be
 marked passed from an emulator, fake client, or a different machine. Record the
 date, commit, hardware label, and observed result in this file or in
@@ -318,13 +334,13 @@ Android/API level, storage, battery health, and test results) is kept in
 | Check | Pass condition | T1 | T2 | T3 | T4 |
 |-------|----------------|----|----|----|----|
 | Install APK | Installs and launches on API 19 | Pending | Pending | Pending | Pending |
-| Boot behavior | App starts after reboot or is the default home | Pending | Pending | Pending | Pending |
+| Boot behavior | App registers as the default home and starts after reboot | Pending | Pending | Pending | Pending |
 | Touch | Buttons respond; multi-touch works; no stuck touches | Pending | Pending | Pending | Pending |
 | Screen | Landscape, immersive, readable at arm's length | Pending | Pending | Pending | Pending |
 | Keep awake | Screen stays on while charging for 30 minutes | Pending | Pending | Pending | Pending |
 | Wi-Fi | Connects to the dedicated router; no drops in a 30-minute idle test | Pending | Pending | Pending | Pending |
 | Reconnect | Wi-Fi off/on and app restart reclaim the same slot | Pending | Pending | Pending | Pending |
-| Latency | Input-to-display ≤100 ms target; record p50/p95 | Pending | Pending | Pending | Pending |
+| Latency | p95 input-to-display ≤100 ms (D-23 convention); record p50/p95 | Pending | Pending | Pending | Pending |
 | Charging | Tablet charges while the app is running and screen is on | Pending | Pending | Pending | Pending |
 | Heat/battery | No shutdown or severe throttling in a 30-minute session | Pending | Pending | Pending | Pending |
 
@@ -602,6 +618,11 @@ Before the event, run the full checklist from
 7. Run for 30–60 minutes continuously; watch heat, battery, memory, logs.
 8. Reset for the next group; confirm no personal data or scores leak between
    groups.
+
+M3 recovery checks: disconnect all four tablets past the 10 s all-disconnected
+grace period, verify the round pauses, then reconnect and resume. Also verify
+the game/server restart drills above. These are M2 stretch/M3 checks, not MFD
+acceptance criteria.
 
 ## Bug Triage
 
