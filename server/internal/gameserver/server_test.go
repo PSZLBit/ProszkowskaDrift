@@ -257,7 +257,7 @@ func TestFourControllersGetSlotsAndInputFlows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode config: %v", err)
 	}
-	if config.RoundDurationMs != 180000 || config.TasksPerPlayer != 5 || config.MaxPlayers != 4 {
+	if config.RoundDurationMs != 180000 || config.TasksPerPlayer != 1 || config.MaxPlayers != 4 {
 		t.Fatalf("config = %+v", config)
 	}
 
@@ -304,6 +304,9 @@ func TestFourControllersGetSlotsAndInputFlows(t *testing.T) {
 	}
 	if hostCommand.Command != "start" {
 		t.Fatalf("host_command = %+v", hostCommand)
+	}
+	if hostCommand.RoundID != 1 {
+		t.Fatalf("host_command roundId = %d, want 1", hostCommand.RoundID)
 	}
 
 	for i := range controllers {
@@ -416,7 +419,7 @@ func TestReconnectReclaimsSlot(t *testing.T) {
 
 	duplicate := env.dialController(t)
 	duplicate.sendHello("token-reconnect")
-	duplicate.expectError(protocol.CodeAuthFailed)
+	duplicate.expectError(protocol.CodeTokenInUse)
 
 	first.close()
 	waitFor(t, func() bool {
@@ -582,6 +585,9 @@ func TestControllerCannotIssueHostCommands(t *testing.T) {
 	if hostCommand.Command != "start" {
 		t.Fatalf("host_command = %+v", hostCommand)
 	}
+	if hostCommand.RoundID != 1 {
+		t.Fatalf("host_command roundId = %d, want 1", hostCommand.RoundID)
+	}
 }
 
 func TestHostCommandDenied(t *testing.T) {
@@ -611,6 +617,48 @@ func TestHostCommandDenied(t *testing.T) {
 			t.Fatalf("host_denied = %+v, want command %q code %q", denied, tt.command, tt.code)
 		}
 	}
+}
+
+func TestHostCommandStartRoundIDIncrements(t *testing.T) {
+	env := newTestEnv(t, nil)
+
+	game := env.dialGame(t, testGameToken)
+	game.readType(protocol.TypeGameHello)
+	game.readType(protocol.TypeConfig)
+	game.sendGameReady()
+
+	c := env.dialController(t)
+	c.sendHello("token-round-id")
+	c.expectWelcome(1)
+	game.readType(protocol.TypePlayerJoined)
+
+	start := func(want int64) {
+		t.Helper()
+		game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "start"})
+		hostCommandEnv := game.readType(protocol.TypeHostCommand)
+		if !strings.Contains(string(hostCommandEnv.Data), `"roundId":`) {
+			t.Fatalf("host_command data = %s, want a roundId field on the wire", hostCommandEnv.Data)
+		}
+		hostCommand, err := protocol.DecodeData[protocol.HostCommandData](hostCommandEnv)
+		if err != nil {
+			t.Fatalf("decode host_command: %v", err)
+		}
+		if hostCommand.Command != "start" || hostCommand.RoundID != want {
+			t.Fatalf("host_command = %+v, want start with roundId %d", hostCommand, want)
+		}
+		c.readType(protocol.TypePhase)
+	}
+
+	start(1)
+
+	game.send(protocol.TypeHostRequest, nil, protocol.HostRequestData{Command: "reset"})
+	if env := game.readType(protocol.TypeHostCommand); env.Type != protocol.TypeHostCommand {
+		t.Fatalf("unexpected envelope %+v", env)
+	}
+	c.readType(protocol.TypePhase)
+
+	// Reset clears the round identifier, so the next round starts at 1 again.
+	start(1)
 }
 
 func TestHostRequestRequiresGameReady(t *testing.T) {
@@ -677,6 +725,9 @@ func TestKickClosesControllerAndFreesSlot(t *testing.T) {
 	}
 	if hostCommand.Command != "kick" || hostCommand.Slot != 2 {
 		t.Fatalf("host_command = %+v", hostCommand)
+	}
+	if hostCommand.RoundID != 0 {
+		t.Fatalf("host_command kick roundId = %d, want omitted (0)", hostCommand.RoundID)
 	}
 
 	leftEnv := game.readType(protocol.TypePlayerLeft)
@@ -1142,7 +1193,7 @@ func TestConfigJSONShape(t *testing.T) {
 	if err := json.Unmarshal(configEnv.Data, &payload); err != nil {
 		t.Fatalf("unmarshal config: %v", err)
 	}
-	if payload.RoundDurationMs != 180000 || payload.TasksPerPlayer != 5 || payload.MaxPlayers != 4 {
+	if payload.RoundDurationMs != 180000 || payload.TasksPerPlayer != 1 || payload.MaxPlayers != 4 {
 		t.Fatalf("config payload = %+v", payload)
 	}
 }

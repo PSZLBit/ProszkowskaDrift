@@ -1,7 +1,7 @@
 # ADR-0001: MVP Architecture and Stack
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-11-10
 Date: 2026-10-19
 Owner: Team
 
@@ -124,6 +124,21 @@ throwaway spike (D-18):
 
 If any of these fail, record a new dated decision and supersede the affected
 parts of this ADR. Do not silently replace the stack.
+
+## Validation Status (2026-11-09)
+
+The gate above is not yet fully satisfied on target hardware. The decision
+remains accepted; validation is carried over, not reopened.
+
+- Kotlin/API 19 app on all four tablets and real controller input: pending
+  (#11, #48).
+- Godot connected to Go with four moving cars: the headless four-car path is
+  tested; target laptop/TV evidence is pending (#13).
+- Latency, Wi-Fi stability, charging, and readability: pending (#14, #49).
+- Go supervisor start/restart: implemented (PR #59, D-37); manual drill pending (#15).
+
+If a carried-over check fails, record a new dated decision and supersede the
+affected part of this ADR. Do not silently replace the stack.
 
 ## Links
 

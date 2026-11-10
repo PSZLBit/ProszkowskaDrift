@@ -1,10 +1,11 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-11-04
+Last updated: 2026-11-10
 
-This document describes the MVP runtime. Decisions are recorded in D-22,
-ADR-0001, and ADR-0002. Message schemas are in `06-development/protocol.md`.
+This document describes the MVP runtime. Decisions are recorded in D-21, D-22,
+D-24, ADR-0001, ADR-0002, and ADR-0003. Message schemas are in
+`06-development/protocol.md`.
 
 ## Overview
 
@@ -37,15 +38,28 @@ or simulate the game.
 
 | Component | Process | Responsibilities |
 |-----------|---------|------------------|
-| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold is on an unmerged branch; production work is #48 |
-| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; supervision is later work |
-| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, a demo parking-lot tilemap, a minimal HUD, and provisional scoring; no tasks or parking detection yet |
+| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold and WebSocket client are merged (#63); production work is #48 |
+| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, optional game supervision, logs. Sprint 0 slice implemented in `server/`; game-only supervision is implemented (PR #59, D-37); server restart and launcher remain later work
+| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current state: one game connection, four slot-keyed cars, MFD task assignment and parking detection (#46, merged); demo parking-lot tilemap, minimal HUD, and provisional scoring are #47 work in progress on this branch |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
-As of 2026-11-03 the controller production code is not on `main`. The API 19
-scaffold is on `feat/controller-scaffold` and is tracked by #11 and #48; it is not
-implemented production behavior.
+Controller implementation status (2026-11-10): `controller-android/` is an API
+19 app — `minSdk 19` / `targetSdk 19`, landscape, one plain-Views `Activity`,
+keep-screen-on, platform Holo theme — built with AGP 9.4.1 and AGP built-in
+Kotlin. Per D-20/ADR-0002 it has no Compose and no AndroidX; dependencies are
+JUnit for local unit tests and OkHttp 3.12.x for the WebSocket client. The
+controller WebSocket spike is promoted after cleanup (D-35) and merged in
+PR #63. It implements `connect` to `/ws/controller` (a bare host address is
+expanded to that path), the `hello` device-token handshake, `input` at 25 Hz
+while the phase is `playing`, a 2 s application `ping` with a bounded pong
+watchdog, and reconnect with capped exponential backoff. A duplicate token is
+reported as `token_in_use` and retried; `auth_failed` stays permanent.
+`game_unavailable` keeps the socket open and the following `attract` phase
+gates input. Host-JVM tests use OkHttp MockWebServer as the fake server and an
+injected scheduler and clock for deterministic timing. Real-tablet validation is
+still pending; the production controller is issue #48 and the spike evidence is
+issue #11.
 
 ## Server Slice
 
@@ -74,10 +88,12 @@ the Sprint 0 spikes finish.
 - `cmd/fakecontroller` and `cmd/fakegame` provide manual end-to-end checks. The
   protocol details and current deviations are in `06-development/protocol.md`.
 
-This slice does not launch or supervise Godot (the game heartbeat closes a
-silent game connection already; launching, token rotation per launch, and
-restarts are S0-07), assign tasks, score, implement late join, or provide a
-production controller UI. Those remain later sprint items.
+This slice does not restart the server or provide the festival launcher
+(the game heartbeat closes a silent game connection already; game-only
+supervision, per-launch token rotation, and restarts are implemented in the
+optional Go supervisor, PR #59 / D-37; server restart and launcher remain
+S0-07), assign tasks, score, implement late join, or provide a production
+controller UI. Those remain later sprint items.
 
 ## Game Scaffold
 
@@ -166,8 +182,12 @@ recorded in `06-development/testing.md`.
 Development mode may run Go and Godot in separate terminals; the festival mode
 must use the supervisor/launcher so a crash does not require a developer. The
 Sprint 0 server slice and game scaffold implement the game/session sides of
-steps 4–7. The development token is supplied manually; launching and supervising
-Godot (steps 2–3 and 8–9) is not implemented yet.
+steps 4–7. Game-only process supervision is now implemented in the optional Go
+supervisor (`server/internal/supervisor`, enabled with `--game-binary`): it starts
+Godot with a per-launch token and restarts it after an unexpected exit, returning
+the session to `Attract`. The development token can still be supplied manually in
+development mode. Server restart (step 9) and the festival launcher/wrapper remain
+future work (M3 runbook, #50).
 
 ## Data Flow
 
@@ -226,9 +246,10 @@ Host keyboard --> Game --host_request--> Server --host_command--> Game
 
 - `server/`: Go binary, config file, logs directory.
 - `game/`: Godot export (Windows and/or Linux, decided by the laptop OS).
-- `server/ops/`: launch script or small supervisor that starts the server,
-  waits for health, starts/stops the game, and restarts on failure. It stays
-  inside `server/` to respect the D-07 layout.
+- `server/ops/`: optional launch wrapper around the Go server. The MVP
+  supervision path is the in-process Go supervisor (`--game-binary`); a shell
+  wrapper may still orchestrate the server binary itself. It stays inside
+  `server/` to respect the D-07 layout.
 - Development: separate commands for Go and Godot, documented in the root
   `README.md` and `06-development/workflow.md`.
 - Festival: one folder, one launch action, fullscreen, no developer tools.
@@ -239,23 +260,28 @@ Host keyboard --> Game --host_request--> Server --host_command--> Game
 
 | Metric | Target | Measured in |
 |--------|--------|-------------|
-| Display frame rate | 60 FPS | Sprint 0 and playtests |
-| Controller input rate | 20–30 Hz | Sprint 0 |
-| Input-to-visible response | ≤100 ms | Sprint 0 |
-| Players | 4 | Sprint 0 and rehearsal |
-| Setup time | <15 min | Festival rehearsal |
+| Display frame rate | 60 FPS | #13 and playtests |
+| Controller input rate | 20–30 Hz | #14 |
+| Input-to-visible response | ≤100 ms | #14 |
+| Players | 4 | #49 and rehearsal |
+| Setup time | <15 min | #50 |
 
 If the budget is missed, record a new decision before changing transport,
 engine, or architecture. Do not silently add prediction, UDP, or a new runtime.
 
 ## Open Architecture Items
 
-- Final confirmation of the Go WebSocket library after the Sprint 0 spikes.
-  The S0-04 slice uses `github.com/coder/websocket` v1.8.15; the Android
-  WebSocket library is still open.
-- Exact process supervisor implementation (Go or shell script).
-- Windows vs Linux festival laptop.
-- Router model and static-IP plan.
-- Final map data format and task/target scene structure. The scaffold currently
-  has placeholder boundary walls and cars only.
-- Whether the host has a second control device; web host panel is post-MVP.
+Owners and next steps are also recorded in the decision log's
+[Open TBD and Validation Items](../05-architecture-decisions/decision-log.md#open-tbd-and-validation-items).
+
+- WebSocket libraries: the Go slice uses `github.com/coder/websocket` v1.8.15;
+  the controller uses OkHttp 3.12.x (D-35, merged in PR #63). Confirm both in
+  the architecture and on API 19. Owner: TracerDS + GreenDude5; #11/#48.
+- Process supervisor implementation: decided as the in-process Go supervisor
+  (D-37); a shell wrapper remains optional for launching the server binary.
+  Owner: GreenDude5; #15 (PR #59).
+- Windows vs Linux festival laptop. Owner: ZofiaDan; #49/#50.
+- Router model and static-IP plan. Owner: ZofiaDan; #49/#50.
+- Final map data format and task/target scene structure. The MFD map data, exclusive assignment, parking detection, and on-map beacons landed in #46 (`game/scripts/mfd_map.gd`, `task_manager.gd`, `target_spot.gd`); scoring, timer, HUD, and results stay in #47. Owner: Brzana; #46/#47.
+- Whether the host has a second control device; web host panel is post-MVP
+  (D-26), so no action for the MFD.

@@ -1,11 +1,14 @@
 # Sprint Reviews and Plans
 
 Status: Decided
-Last updated: 2026-11-03
+Last updated: 2026-11-10
 
 This file is the canonical record of sprint reviews and plans (D-27). Sprints are
 one week long and end with a demo and retrospective. Each review and plan is
 written here first and mirrored in GitHub Discussions.
+
+Statuses below are a snapshot from 2026-11-03, with factual corrections through
+2026-11-10. The GitHub Project and issues are authoritative for live status.
 
 - Board: <https://github.com/orgs/PSZLBit/projects/1>
 - Sprint 0 review:
@@ -30,15 +33,15 @@ with carry-over.
 | Planned item | Issue | Current owner | Outcome |
 |--------------|-------|---------------|---------|
 | S0-00 Confirm festival date and internal target | #8 | — (closed) | Done 2026-10-21: festival date and delivery calendar recorded (D-31). |
-| S0-01 Audit decisions and ADRs | #9 | ZofiaDan | Open; audit not completed. Carry-over. |
-| S0-02 Collect tablet specs and battery health | #10 | ZofiaDan | Open; hardware inventory PR #44 opened 2026-10-29 and is still open. Carry-over. |
-| S0-03 Kotlin WebSocket spike on four tablets | #11 | TracerDS | Open; branch only, no WebSocket, no PR, no real-tablet proof. Carry-over. |
+| S0-01 Audit decisions and ADRs | #9 | ZofiaDan | Open; audit deliverable in review (PR #68, 2026-11-09). Carry-over. |
+| S0-02 Collect tablet specs and battery health | #10 | ZofiaDan | Done 2026-11-10 (PR #70): static inventory plus the short Wi-Fi/charging check; sensor scope and the last-resort gamepad recorded; 30-minute, latency, touch, and spare checks remain #14/#49. |
+| S0-03 Kotlin WebSocket spike on four tablets | #11 | TracerDS | Open; PR #63 merged with a WebSocket client, device-token store, reconnect/backoff, and 34 host-JVM tests; real-tablet proof is pending. Carry-over. |
 | S0-04 Go WebSocket server with fake controller | #12 | GreenDude5 | Done 2026-10-23 (PR #30): protocol envelope, slots, reconnect, input validation, timers, host command path, fake clients, and CI. |
 | S0-05 Godot renders four rectangles from Go | #13 | ZofiaDan (historically Brzana) | Partial; the four-car game scaffold was merged later as PR #31 in Sprint 1 (D-32). Target laptop/TV evidence is still pending. |
 | S0-06 Measure latency and Wi-Fi stability | #14 | ZofiaDan | Not started. Carry-over. |
-| S0-07 Supervisor starts and restarts Godot | #15 | GreenDude5 | Not started. Carry-over. |
+| S0-07 Supervisor starts and restarts Godot | #15 | GreenDude5 | Implemented in PR #59 (merged); manual crash-recovery proof still pending (#15). Carry-over. |
 | S0-08 GitHub project and workflow | #16 | GreenDude5 | Done 2026-10-21: project board, templates, workflow, MkDocs site, and local setup. |
-| S0-09 Test plan and hardware checklist | #17 | ZofiaDan | Open; `testing.md` is still Draft. Carry-over. |
+| S0-09 Test plan and hardware checklist | #17 | ZofiaDan | Merged; PR #65 added the MFD test plan and hardware checklist. |
 | D-14 Choose controller input scheme | #18 | TracerDS | Not started. Carry-over. |
 
 Owner is the current assignee on 2026-11-03. Issue #13 was historically Brzana
@@ -59,7 +62,7 @@ Metrics:
 ### What did not
 
 - Hardware spikes were not executed.
-- The controller branch never became a PR.
+- The controller branch did not become a PR during Sprint 0.
 - The test plan stayed Draft.
 - M0 was closed late (2026-11-03) with carry-over.
 
@@ -85,7 +88,7 @@ achieved.
 | Four cars and environment collisions | Partial | PR #31: four slot-keyed cars, movement math, and headless tests; no real map or playtest. |
 | One task type and parking detection | Not started | No task assignment or parking detection code. |
 | Scoring, 3-minute timer, HUD, and results | Not started | No scoring, timer, HUD, or results code. |
-| Controller connect, reconnect, and input | Not started | The controller scaffold is on an unmerged branch; no WebSocket, token, or reconnect (#11). |
+| Controller connect, reconnect, and input | Not started | At Sprint 1 end, the controller scaffold was on an unmerged branch; no WebSocket, token, or reconnect (#11). PR #63 opened later. |
 | Host start | Partial | Host keys exist in the game scaffold (PR #31); no start with a real tablet. |
 | Continuous playtest on real hardware | Not started | No demo or playtest record. |
 | Game design baseline (#32) | Not started | Issue #32 was Ready but not started. |
@@ -93,7 +96,7 @@ achieved.
 Metrics:
 
 - 1 PR merged: #31.
-- 1 PR open: #44.
+- 1 PR opened in Sprint 1: #44 (merged 2026-11-03).
 - 0 issues closed.
 - 8 commits: 5 game commits by Brzana, 2 hardware-doc commits by ZofiaDan on the
   PR branch, and 1 merge commit.
@@ -129,15 +132,15 @@ is not required this sprint.
 
 | Issue | Work | Owner | Priority | Status |
 |-------|------|-------|----------|--------|
-| #10 | Tablet specs and battery health | ZofiaDan | P0 | In Progress |
+| #10 | Tablet specs and battery health | ZofiaDan | P0 | Done (PR #70) |
 | #11 | Kotlin WebSocket spike on one tablet | TracerDS | P0 | In Progress |
 | #45 | Define the MFD gameplay baseline | Brzana | P0 | In Progress |
 | #46 | One parking task with exclusive assignment and detection | Brzana | P0 | Ready |
 | #47 | Score, timer, and results overlay | Brzana | P0 | Ready |
-| #17 | Test plan and hardware checklist | ZofiaDan | P1 | Ready |
+| #17 | Test plan and hardware checklist | ZofiaDan | P1 | In Review |
 | #18 | D-14 choose controller input scheme | TracerDS | P0 | Ready |
-| #25 | Queue backpressure and slow-client close | GreenDude5 | P1 | In Progress |
-| #51 | Reconcile documentation and board drift | GreenDude5 | P1 | Ready |
+| #25 | Queue backpressure and slow-client close | GreenDude5 | P1 | Done (PR #57) |
+| #51 | Reconcile documentation and board drift | GreenDude5 | P1 | Closed (PR #56) |
 
 ### Out of scope
 
@@ -190,12 +193,12 @@ exact time is not fixed in this record.
 
 | Component | Status |
 |-----------|--------|
-| Server | S0-04 is done. Protocol, slots, reconnect, validation, timers, host path, and CI work. Supervisor (#15) is scheduled for Sprint 3. P1 backpressure (#25) and end-phase (#23) bugs remain. |
+| Server | S0-04 is done. Protocol, slots, reconnect, validation, timers, host path, and CI work. Supervisor (#15) is implemented in PR #59 (merged); manual drill pending. Backpressure (#25) and end-phase (#23) bugs are fixed by PR #57/#58. |
 | Game | Scaffold is merged: four cars, protocol, 101 headless checks, and fullscreen. No map, task assignment, parking detection, scoring, HUD, or results. |
-| Controller | Only a plain-Views API 19 scaffold on an unmerged branch. No WebSocket, token, reconnect, or real-tablet proof. Production work is #48. |
-| Ops | Static hardware inventory is in PR #44 (approved by Brzana; reviewer requested). Latency (#14) and display evidence (#13) are open. Supervisor (#15) is Sprint 3; runbook and rehearsal (#50) are Sprint 4. |
-| Docs | The decision log is strong. `game-design.md`, `testing.md`, `protocol.md`, and `festival-operations.md` are still Draft. Drift is tracked in #51. |
-| Board | Sprint 2 is planned. M0 is closed with carry-over. Every open issue has one owner, a milestone, a priority, and a sprint or backlog state. |
+| Controller | API 19 plain-Views scaffold, WebSocket client, device-token store, and reconnect/backoff are merged (PR #63). Real-tablet proof is pending; production work is #48. |
+| Ops | Static hardware inventory is merged in PR #44. Latency (#14) and display evidence (#13) are open. Supervisor (#15) is implemented in PR #59 (merged); runbook and rehearsal (#50) are Sprint 4. |
+| Docs | The decision log is strong. `game-design.md`, `testing.md`, `protocol.md`, and `festival-operations.md` are still Draft. Board drift was closed in #51; the requirements status follow-up is #67. |
+| Board | Sprint 2 ended 2026-11-08; Sprint 3 started 2026-11-09. M0 is closed with carry-over. Every open issue has one owner, a milestone, a priority, and a sprint or backlog state. |
 
 ### Critical path
 
@@ -223,7 +226,8 @@ four-player MFD → festival hardening.
 ### Open decisions and unknowns
 
 - D-14 controller input scheme (#18).
-- Android WebSocket library for API 19.
+- OkHttp 3.12.x on API 19; PR #63 is merged, and real-tablet proof is pending
+  (#11, #48).
 - Windows vs Linux festival laptop.
 - Router model and static-IP plan.
 - Final map data format.
@@ -238,13 +242,15 @@ four-player MFD → festival hardening.
   on 2026-11-03.
 - `workflow.md` milestone names did not match GitHub; corrected on 2026-11-03.
 - #13 was Done on the board while the issue was open; corrected on 2026-11-03.
-- `feat/controller-scaffold` has no PR; `feat/server-scaffold` is stale.
-- PR #44 was unreviewed; review requested on 2026-11-03.
+- `feat/controller-scaffold` did not become a PR during Sprint 0; PR #63 opened
+  later on 2026-11-04. `feat/server-scaffold` is stale.
+- PR #44 was merged on 2026-11-03; the earlier review request is closed.
 
 ### Risks
 
 - Game delivery depends on one owner.
-- The controller is not on `main` and has no proven WebSocket path.
+- The controller is merged; PR #63 is merged, and real-tablet WebSocket
+  proof is pending.
 - Hardware behavior, latency, and Wi-Fi are unmeasured.
 - Team capacity is unknown.
 - Scope creep and late integration.
@@ -264,4 +270,6 @@ four-player MFD → festival hardening.
 
 | Date | Change |
 |------|--------|
+| 2026-11-10 | Corrected PR #63/#59 and Sprint 2/Sprint 3 statuses; scoped the Sprint 1 controller outcome to the sprint end. |
+| 2026-11-09 | Added the snapshot note and corrected merged/open status for #10, #17, #23, #25, #44, and #51. |
 | 2026-11-03 | Added Sprint 0 and Sprint 1 reviews, Sprint 2 plan, and the D-33 progress review. |

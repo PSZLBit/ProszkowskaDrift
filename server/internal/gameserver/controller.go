@@ -131,7 +131,7 @@ func (s *Server) handleControllerHello(conn *controllerConn, env protocol.Envelo
 			conn.sendError(protocol.CodeAuthFailed, "Session has ended. Restart the server.")
 		case errors.Is(err, session.ErrDuplicateToken):
 			conn.log.Warn("controller hello rejected: token already connected", "token", truncateToken(data.DeviceToken))
-			conn.sendError(protocol.CodeAuthFailed, "This device token is already connected.")
+			conn.sendError(protocol.CodeTokenInUse, "This device token is already connected; retry after backoff.")
 		case errors.Is(err, session.ErrSessionFull):
 			conn.log.Info("controller hello rejected: session full", "token", truncateToken(data.DeviceToken))
 			conn.sendError(protocol.CodeSessionFull, "No free player slot.")
@@ -201,6 +201,15 @@ func (s *Server) handleControllerInput(conn *controllerConn, env protocol.Envelo
 			return false
 		}
 	}
+
+	// Log validated input at debug level so normal play does not flood
+	// default-level logs; raw payloads are never logged.
+	conn.log.Debug("controller input",
+		"slot", event.Slot,
+		"seq", event.Seq,
+		"steer", event.Steer,
+		"throttle", event.Throttle,
+	)
 
 	conn.invalid = 0
 	conn.rate = 0

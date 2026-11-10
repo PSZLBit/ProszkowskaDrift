@@ -49,6 +49,7 @@ coverage.html
 
 # Purchased third-party art assets stay local; see game/assets/CREDITS.md (D-34).
 /game/assets/Large Parking Lot/
+/game/tilesets/*.local.tres
 
 # Generated tilesets are build artifacts (D-34, D-35); regenerate with
 # game/tools/build_parking_lot_tileset.gd.

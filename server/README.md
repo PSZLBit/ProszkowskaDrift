@@ -6,8 +6,9 @@ reconnect, input validation, rate limiting, heartbeats, and the minimal host
 command path.
 
 This is the Sprint 0 slice (issue #12). It is intentionally small: the full
-cross-round session lifecycle, late join, game process supervision, scoring, and
-round timing are later milestones.
+cross-round session lifecycle, late join, scoring, and round timing are later
+milestones. Optional in-process game process supervision is implemented
+(`--game-binary`); server restart and the festival launcher remain future work.
 
 ## Requirements
 
@@ -47,6 +48,14 @@ it to Godot or the fake game.
 | `-all-disconnected-grace` | `10s` | Pause the round after every controller has been disconnected for this long during a round. |
 | `-game-heartbeat-timeout` | `3s` | Close the game connection when no game message arrives for this long after `game_ready`. |
 | `-log-level` | `info` | `debug`, `info`, `warn`, or `error`. |
+| `-game-binary` | `PD_GAME_BINARY` | Optional Godot/game executable. Enables the in-process supervisor. |
+| `-game-project` | `PD_GAME_PROJECT` | Passed to the game as `--path` (optional). |
+| `-game-args` | `PD_GAME_ARGS` | Comma-separated extra arguments for the game (optional). |
+| `-game-max-restarts` | `5` | Unexpected game exits tolerated before the supervisor stops. |
+
+The supervisor injects `PD_GAME_TOKEN` and `PD_GAME_URL` (resolved listen URL)
+into the game process environment. Godot and fakegame read `PD_GAME_URL` to
+override their default server URL.
 
 ## Protocol behavior in this slice
 
@@ -118,6 +127,9 @@ This slice implements a subset and records the following choices:
   launcher and manual checks.
 - `player_joined` and `player_left` are sent to the game. Device tokens are never
   forwarded. Logs show only a truncated token reference.
+- Validated controller input (slot, seq, steer, throttle) is logged at debug
+  level for diagnostics and demos. Device tokens and raw payloads are never
+  included.
 
 ### Implemented messages
 
@@ -224,13 +236,22 @@ kick 2
 phase playing 120000 7
 quit
 ```
+Stdin EOF is not a quit signal: `fakegame` keeps running until `quit`, a signal,
+or `-duration`. Redirecting stdin from `/dev/null` is safe.
+
+With `-auto-start`, fakegame sends up to 5 `host_request` start commands, one per
+second, starting one second after connecting. A send failure stops the retries;
+otherwise the fixed 5-attempt / ~5-second window is used so controllers that
+connect after the game can still trigger the round. The window is not
+configurable in this slice.
 
 ## Not implemented in this slice
 
 - Full session lifecycle, late join.
-- Game process supervision and per-launch token rotation (S0-07). A game crash
-  or a silent game connection already notifies controllers and accepts a
-  reconnect; the server does not launch or restart Godot itself.
+- Server restart and the festival launcher/wrapper (S0-07). A game crash or a
+  silent game connection already notifies controllers and accepts a reconnect;
+  game-only supervision is available through the optional `--game-binary`
+  supervisor, but the server binary itself is not yet restarted automatically.
 - Countdown, round timer ownership, tasks, scoring, and controller feedback.
 - TLS, persistence, accounts, or any internet-facing deployment.
 

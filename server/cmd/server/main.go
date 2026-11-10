@@ -12,10 +12,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/PSZLBit/ProszkowskaDrift/server/internal/gameserver"
+	"github.com/PSZLBit/ProszkowskaDrift/server/internal/supervisor"
 )
 
 func main() {
@@ -31,6 +33,10 @@ func run() error {
 	controllerTimeout := flag.Duration("controller-timeout", 6*time.Second, "close a silent controller connection after this duration")
 	allDisconnectedGrace := flag.Duration("all-disconnected-grace", 10*time.Second, "pause the round after every controller was disconnected for this duration")
 	gameHeartbeatTimeout := flag.Duration("game-heartbeat-timeout", 3*time.Second, "close the game connection when no game message arrives for this duration")
+	gameBinary := flag.String("game-binary", os.Getenv("PD_GAME_BINARY"), "path to the Godot game binary or runner (optional; enables the supervisor)")
+	gameProject := flag.String("game-project", os.Getenv("PD_GAME_PROJECT"), "path passed to the game as --path (optional)")
+	gameArgs := flag.String("game-args", os.Getenv("PD_GAME_ARGS"), "comma-separated extra arguments for the game (optional)")
+	gameMaxRestarts := flag.Int("game-max-restarts", 5, "maximum unexpected game restarts before the supervisor gives up")
 	logLevel := flag.String("log-level", "info", "log level: debug, info, warn, error")
 	flag.Parse()
 
@@ -90,6 +96,45 @@ func run() error {
 	// The tick loop enforces the controller idle timeout, the
 	// all-disconnected pause, and the game heartbeat timeout.
 	go srv.StartTick(ctx)
+
+	if *gameBinary != "" {
+		args := make([]string, 0, 8)
+		if *gameProject != "" {
+			args = append(args, "--path", *gameProject)
+		}
+		if *gameArgs != "" {
+			for _, part := range strings.Split(*gameArgs, ",") {
+				part = strings.TrimSpace(part)
+				if part != "" {
+					args = append(args, part)
+				}
+			}
+		}
+		var gameSup *supervisor.Supervisor
+		gameSup = supervisor.New(supervisor.Config{
+			Binary: *gameBinary,
+			Args:   args,
+			Env: []string{
+				"PD_GAME_TOKEN=" + token,
+				fmt.Sprintf("PD_GAME_URL=ws://127.0.0.1:%d/ws/game", port),
+			},
+			MaxRestarts:    *gameMaxRestarts,
+			InitialBackoff: time.Second,
+			MaxBackoff:     30 * time.Second,
+			Logger:         logger,
+		})
+		go func() {
+			if err := gameSup.Run(ctx); err != nil {
+				logger.Error("game supervisor stopped", "error", err)
+			}
+		}()
+		defer func() {
+			if gameSup != nil {
+				gameSup.Stop()
+			}
+		}()
+		logger.Info("game supervisor enabled", "binary", *gameBinary, "args", args)
+	}
 
 	select {
 	case <-ctx.Done():

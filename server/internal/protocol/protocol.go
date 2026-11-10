@@ -39,6 +39,7 @@ const (
 // Error codes sent in an error message.
 const (
 	CodeAuthFailed       = "auth_failed"
+	CodeTokenInUse       = "token_in_use"
 	CodeSessionFull      = "session_full"
 	CodeInvalidInput     = "invalid_input"
 	CodeRateLimited      = "rate_limited"
@@ -214,6 +215,9 @@ type ForwardedInputData struct {
 type HostCommandData struct {
 	Command string `json:"command"`
 	Slot    int    `json:"slot,omitempty"`
+	// RoundID is the server's new round identifier for start (ADR-0004).
+	// Other commands omit it. Additive in protocol version 1.
+	RoundID int64 `json:"roundId,omitempty"`
 }
 
 // GameReadyData is sent by the game once it is ready to receive commands.
