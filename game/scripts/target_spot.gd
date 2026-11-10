@@ -16,6 +16,7 @@ func setup(label_text: String, color: Color, size: Vector2) -> void:
 	spot_label = label_text
 	slot_color = color
 	spot_size = size
+	_layout_label()
 	if _label != null:
 		_label.text = spot_label
 	queue_redraw()
@@ -26,16 +27,22 @@ func _ready() -> void:
 	_label.text = spot_label
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_label.offset_left = -spot_size.x
-	_label.offset_top = -spot_size.y
-	_label.offset_right = spot_size.x
-	_label.offset_bottom = spot_size.y
+	_layout_label()
 	_label.add_theme_font_size_override("font_size", 36)
 	_label.add_theme_color_override("font_color", Color.WHITE)
 	_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_label.add_theme_constant_override("outline_size", 8)
 	add_child(_label)
+
+
+## The beacon node sits at the spot center, so the label is a spot-sized
+## rect centered on the local origin. Anchors are viewport-relative under a
+## Node2D parent, so position/size are set directly instead.
+func _layout_label() -> void:
+	if _label == null:
+		return
+	_label.position = -spot_size / 2.0
+	_label.size = spot_size
 
 
 func _draw() -> void:

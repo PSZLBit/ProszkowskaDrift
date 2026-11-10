@@ -89,7 +89,7 @@ func _test_protocol() -> void:
 
 	var config := GameProtocol.validate_config({
 		"roundDurationMs": 180000,
-		"tasksPerPlayer": 5,
+		"tasksPerPlayer": 1,
 		"maxPlayers": 4,
 	})
 	_check(bool(config["ok"]), "valid config is accepted")
@@ -97,13 +97,13 @@ func _test_protocol() -> void:
 
 	var zero_round := GameProtocol.validate_config({
 		"roundDurationMs": 0,
-		"tasksPerPlayer": 5,
+		"tasksPerPlayer": 1,
 		"maxPlayers": 4,
 	})
 	_check(not bool(zero_round["ok"]), "zero round duration is rejected")
 	var too_many_players := GameProtocol.validate_config({
 		"roundDurationMs": 180000,
-		"tasksPerPlayer": 5,
+		"tasksPerPlayer": 1,
 		"maxPlayers": 5,
 	})
 	_check(not bool(too_many_players["ok"]), "more than four players is rejected")

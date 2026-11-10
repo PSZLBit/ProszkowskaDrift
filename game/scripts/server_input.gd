@@ -376,9 +376,16 @@ func _handle_host_command(data: Dictionary) -> void:
 	var command := str(data.get("command", ""))
 	var slot := int(data.get("slot", 0))
 	if command == "start":
-		var round_id := int(data.get("roundId", _round_id + 1))
+		# ADR-0004: the server owns the round identifier. The game never
+		# invents its own counter; without a valid roundId there is no task
+		# assignment, so the round cannot start its tasks.
+		var round_id := int(data.get("roundId", 0))
 		if round_id <= 0:
-			round_id = _round_id + 1
+			push_error("[ServerInput] host_command start without a valid roundId; skipping task assignment.")
+			_phase = "playing"
+			clear_input()
+			host_command_received.emit(command, slot, 0)
+			return
 		_round_id = round_id
 	print("[ServerInput] host_command %s slot=%d round=%d." % [command, slot, _round_id])
 

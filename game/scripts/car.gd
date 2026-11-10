@@ -81,11 +81,15 @@ func _physics_process(delta: float) -> void:
 
 	# Hitting the static environment reduces speed (game-design.md). Never
 	# destroys the car or ends the round. Counting collisions for the current
-	# task is the job of the future task/scoring module, which listens for
+	# task is the job of the task manager, which listens for
 	# collision_started: one count per contact episode, not per frame.
+	# velocity is reduced together with _speed so a same-frame reader (the
+	# task manager uses velocity.length() as its speed source) sees the
+	# post-collision speed instead of a stale pre-collision value.
 	var touching := get_slide_collision_count() > 0
 	if touching:
 		_speed *= 0.5
+		velocity *= 0.5
 	if touching and not _was_touching:
 		collision_started.emit()
 	_was_touching = touching
