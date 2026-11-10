@@ -1,5 +1,7 @@
 # Documentation — Source of Truth
 
+![Proszkowska Drift banner](assets/banner.png)
+
 Status: Decided
 Last updated: 2026-11-10
 
