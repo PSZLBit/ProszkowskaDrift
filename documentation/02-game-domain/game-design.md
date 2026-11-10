@@ -301,6 +301,17 @@ the recommendation and notes in issue #18, then update D-14 in
 `05-architecture-decisions/decision-log.md` and this section. Do not mark D-14
 decided before those playtests.
 
+### Interim Check 2026-11-10 (Partial, D-14 stays TBD)
+
+Single-tablet check on T2 with the spike `InputPadView`: split 2+2 digital
+buttons (LEFT/RIGHT on the left side, FORWARD/REVERSE on the right side) plus
+the header status views (connection status, server address, current task).
+Checked input send, connect, reconnect, and readability at arm's length. No
+comparison data, course timing, collision counts, multi-tablet coverage
+(T1/T3/T4), or accessibility/handedness review was recorded, so this does not
+satisfy the playtest plan above and D-14 remains `TBD`. Full four-person
+playtest on T1–T4 is still required by #18.
+
 ## Open Questions
 
 - Exact control scheme (D-14): buttons, analog slider, virtual joystick, tilt,
