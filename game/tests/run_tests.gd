@@ -824,72 +824,122 @@ func _test_round_clock() -> void:
 
 
 func _test_score_model() -> void:
+	_check_eq(ScoreModel.compute_time_score(0), 100, "zero elapsed time scores 100")
+	_check_eq(ScoreModel.compute_time_score(12400), 63, "12.4 s scores 63")
+	_check_eq(ScoreModel.compute_time_score(18900), 44, "18.9 s scores 44")
+	_check_eq(ScoreModel.compute_time_score(30000), 10, "30 s reaches the time floor")
+	_check_eq(ScoreModel.compute_time_score(60000), 10, "slow parks keep the time floor")
+	_check_eq(ScoreModel.compute_center_score(0.0), 20, "a centered park scores 20")
+	_check_eq(ScoreModel.compute_center_score(48.0), 0, "half-bay offset scores 0")
+	_check_eq(ScoreModel.compute_angle_score(0.0), 20, "aligned facing scores 20")
+	_check_eq(ScoreModel.compute_angle_score(10.0), 20, "10 degrees keeps full angle score")
+	_check_eq(ScoreModel.compute_angle_score(35.0), 0, "35 degrees scores 0")
+	_check_eq(ScoreModel.compute_penalty(0), 0, "a clean park has no penalty")
+	_check_eq(ScoreModel.compute_penalty(1), 10, "one hit costs 10")
+	_check_eq(ScoreModel.compute_penalty(9), 30, "the penalty caps at 30")
+	_check_eq(ScoreModel.rating_for(40), "perfect", "35-40 rates perfect")
+	_check_eq(ScoreModel.rating_for(25), "great", "25-34 rates great")
+	_check_eq(ScoreModel.rating_for(15), "good", "15-24 rates good")
+	_check_eq(ScoreModel.rating_for(0), "parked", "0-14 rates parked")
+
 	var scores := ScoreModel.new()
-	scores.register(1)
-	scores.register(2)
+	_check(not scores.register(0), "slot 0 is rejected by the score model")
+	_check(not scores.register(5), "slot 5 is rejected by the score model")
+	_check(scores.register(1), "slot 1 registers")
+	_check(scores.register(2), "slot 2 registers")
+	_check(scores.register(3), "slot 3 registers")
 	_check(scores.has_player(1), "player 1 is registered")
 	_check_eq(scores.total(1), 0, "an unfinished player scores zero")
+	_check_eq(scores.tasks_completed(1), 0, "an unfinished player has no tasks")
+	_check_eq(scores.total(99), 0, "unknown players score zero")
+	_check(not scores.record_completion(99, 1, 1000, 0.0, 0.0, 0), "unknown slots cannot complete")
 
-	scores.set_precision(1, 1.5)
-	scores.finish(1, 60000)
-	scores.set_precision(1, 0.8)
-	scores.record_collision(1)
+	# Worked examples from the MFD baseline: 103 = 63 time + 40 precision at
+	# 12.4 s, and 74 = 44 time + 40 precision - 10 for one hit at 18.9 s.
+	_check(scores.record_completion(2, 12, 12400, 0.0, 0.0, 0), "a clean centered park records")
+	_check(scores.record_completion(1, 11, 18900, 0.0, 0.0, 1), "a slow park with one hit records")
+	_check_eq(scores.total(2), 103, "worked example: clean park scores 103")
+	_check_eq(scores.total(1), 74, "worked example: slow park with one hit scores 74")
+	_check(not scores.record_completion(2, 12, 13000, 0.0, 0.0, 0), "a completed task records exactly once")
+	_check_eq(scores.total(2), 103, "a repeated completion changes nothing")
 
-	scores.finish(2, 90000)
-	scores.set_precision(2, 1.0)
+	_check_eq(scores.ranking(), [2, 1, 3], "ranking orders completed first, then score")
+	_check_eq(scores.winner_slot(), 2, "the winner is the first ranked completing player")
 
+	var empty := ScoreModel.new()
+	empty.register(1)
+	empty.register(2)
+	_check_eq(empty.ranking(), [1, 2], "unfinished players rank by slot")
+	_check_eq(empty.winner_slot(), 0, "no completing player means no winner")
+
+	var task_payload: Dictionary = scores.task_result_payload(2)
+	_check_eq(task_payload["taskId"], 12, "task payload carries the task id")
+	_check_eq(task_payload["points"], 103, "task payload carries points")
+	_check_eq(task_payload["timeScore"], 63, "task payload carries the time score")
+	_check_eq(task_payload["precisionScore"], 40, "task payload carries precision")
+	_check_eq(task_payload["collisionPenalty"], 0, "task payload carries the penalty")
+	_check_eq(task_payload["rating"], "perfect", "task payload carries the rating")
+	_check_eq(task_payload["totalScore"], 103, "task payload carries the total")
+	_check(scores.task_result_payload(3).is_empty(), "unfinished slots have no task payload")
+
+	var round_payload: Dictionary = scores.round_result_payload(7)
+	_check_eq(round_payload["roundId"], 7, "round payload carries the round id")
+	_check_eq(round_payload["winnerSlot"], 2, "round payload carries the winner")
 	_check_eq(
-		scores.total(1),
-		180000 - 60000 + 80 - 50 + 500,
-		"worked example player 1",
+		round_payload["scores"],
+		[
+			{"slot": 2, "score": 103, "tasks": 1, "collisions": 0},
+			{"slot": 1, "score": 74, "tasks": 1, "collisions": 1},
+			{"slot": 3, "score": 0, "tasks": 0, "collisions": 0},
+		],
+		"round payload lists every registered slot in rank order",
 	)
-	_check_eq(
-		scores.total(2),
-		180000 - 90000 + 100 + 500,
-		"worked example player 2",
-	)
-	_check_eq(scores.ranking(), [1, 2], "ranking orders by total")
 
-	var tie := ScoreModel.new()
-	tie.round_length_ms = 1000
-	tie.register(1)
-	tie.register(2)
-	tie.finish(1, 500)
-	tie.finish(2, 500)
-	tie.set_precision(1, 0.5)
-	tie.set_precision(2, 0.5)
-	_check_eq(tie.total(1), tie.total(2), "tied totals are equal")
-	_check_eq(tie.ranking(), [1, 2], "ties break by slot ascending")
+	var ties := ScoreModel.new()
+	ties.register(1)
+	ties.register(2)
+	ties.record_completion(1, 11, 5000, 0.0, 0.0, 1)
+	ties.record_completion(2, 12, 5000, 0.0, 0.0, 0)
+	_check_eq(ties.ranking(), [2, 1], "equal scores rank fewer collisions first")
 
-	var collision_tie := ScoreModel.new()
-	collision_tie.round_length_ms = 1000
-	collision_tie.register(1)
-	collision_tie.register(2)
-	collision_tie.finish(1, 500)
-	collision_tie.finish(2, 500)
-	collision_tie.set_precision(1, 1.0)
-	collision_tie.record_collision(1)
-	collision_tie.set_precision(2, 0.5)
-	_check_eq(
-		collision_tie.total(1),
-		collision_tie.total(2),
-		"collision tie totals are equal",
-	)
-	_check_eq(collision_tie.ranking(), [2, 1], "ties break by fewer collisions")
+	var timing := ScoreModel.new()
+	timing.register(1)
+	timing.register(2)
+	timing.record_completion(1, 11, 9000, 0.0, 0.0, 0)
+	timing.record_completion(2, 12, 9000, 24.0, 20.0, 1)
+	# Slot 1: time 73 + precision 40 = 113. Slot 2: time 73 + center 10 +
+	# angle 12 - 10 = 85. Faster completion must not outrank a higher score.
+	_check_eq(timing.total(1), 113, "centered fast park scores 113")
+	_check_eq(timing.total(2), 85, "off-center park with a hit scores 85")
+	_check_eq(timing.ranking(), [1, 2], "higher score outranks faster completion")
+
+	var incomplete_last := ScoreModel.new()
+	incomplete_last.register(1)
+	incomplete_last.register(2)
+	incomplete_last.register(3)
+	incomplete_last.record_completion(3, 13, 29000, 47.0, 34.0, 9)
+	# Slot 3: time max(10, 100-87)=13, center 20-floor(19.58)=1, angle
+	# floor(20*1/25)=0, precision 1, penalty 30 -> max(0, 13+1-30)=0.
+	# Completed with 0 points still outranks unfinished players.
+	_check_eq(incomplete_last.total(3), 0, "a sloppy park can score zero")
+	_check_eq(incomplete_last.tasks_completed(3), 1, "a zero-point park still completed")
+	_check_eq(incomplete_last.ranking()[0], 3, "a completed task outranks unfinished players")
 
 	var invalid := ScoreModel.new()
-	invalid.register(0)
-	invalid.register(5)
-	_check(not invalid.has_player(0), "slot 0 is rejected by the score model")
-	_check(not invalid.has_player(5), "slot 5 is rejected by the score model")
+	invalid.register(1)
+	_check(not invalid.record_completion(1, 11, -5, 0.0, 0.0, 0), "negative time is rejected")
+	_check(not invalid.record_completion(1, 11, 1000, INF, 0.0, 0), "infinite offset is rejected")
+	_check(not invalid.record_completion(1, 11, 1000, 0.0, NAN, 0), "NaN angle is rejected")
+	_check(not invalid.record_completion(1, 11, 1000, 0.0, 0.0, -1), "negative collisions are rejected")
+	_check_eq(invalid.total(1), 0, "rejected completions score nothing")
 
-	var clamped := ScoreModel.new()
-	clamped.register(3)
-	clamped.set_precision(3, -1.0)
-	clamped.finish(3, 0)
-	_check_eq(clamped.total(3), 180000 + 0 + 500, "precision clamps at zero")
-
-	_check_eq(scores.total(99), 0, "unknown players score zero")
+	var kicked := ScoreModel.new()
+	kicked.register(1)
+	kicked.register(2)
+	kicked.record_completion(1, 11, 5000, 0.0, 0.0, 0)
+	kicked.unregister(2)
+	_check(not kicked.has_player(2), "a kicked slot leaves the model")
+	_check_eq(kicked.ranking(), [1], "a kicked slot is excluded from results")
 
 
 func _test_hud_scene() -> void:
