@@ -119,13 +119,16 @@ Godot 4.7.2 project with:
 - Host keys `Enter` (start/resume), `P` (pause/resume), and `R` (reset) that
   send `host_request`. `Q` exits the local game process without a server
   request. `dev_auto_start_round` is development-only and defaults to `false`.
-- `game/scenes/main.tscn`: placeholder background, boundary walls, and four cars
-  on slots 1–4, configured for a 1920×1080 fullscreen window.
+- `game/scenes/main.tscn`: placeholder background, boundary walls, two
+  planters, four cars on MFD spawns (slots 1–4), the task manager, and the
+  HUD, configured for a 1920×1080 fullscreen window.
 - `game/tilesets/` (generated, gitignored): `parking_lot.tres` is built from the
   committed placeholder sheets by `game/tools/build_parking_lot_tileset.gd` (via
   `ParkingLotTilesetBuilder`); `parking_lot.local.tres` is also built from the
-  purchased sheets when they are installed and is preferred by the map. The demo
-  map regenerates the committed-path TileSet on demand when it is missing. The
+  purchased sheets when they are installed and is preferred by the map only
+  when the purchased sheets are present and the file loads (a stale local
+  TileSet is ignored). The demo map regenerates the committed-path TileSet on
+  demand when it is missing. The
   map shows a 40×22 lot with a kerb, plain ground, four parking bays, four
   boundary collision shapes, and spawn/bay markers; it is a tileset demo and the
   base for #46, not final map geometry. All source tiles are available on the
