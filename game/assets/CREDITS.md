@@ -24,6 +24,18 @@ This file records the source and licence of third-party assets under
 - Purchase record: held by the project team. Do not commit receipts or personal
   data.
 
+## Controller App Logo and Banner
+
+- Source: assets supplied for PR #79.
+- Licence: project-owned/team-provided; no third-party source or redistribution
+  restriction is recorded for these files.
+- AI disclosure: not specified in the PR.
+- Files: `controller-android/app/src/main/res/drawable/logo.png`,
+  `controller-android/app/src/main/res/drawable/banner.png`,
+  density-specific `mipmap-*/ic_launcher*.png`,
+  `documentation/assets/banner.png`, and `documentation/assets/favicon.ico`
+  (derived from the logo).
+
 ## Pending provenance
 
 These files predate this record and still need source and licence details; see

@@ -16,6 +16,8 @@ import pszlbit.drift.R
  * D-14 is still TBD: the final scheme must be chosen by playtesting on the real
  * tablets, so treat this as a throwaway mapping, not a product decision.
  */
+// LayoutInflater requires this (Context, AttributeSet) constructor for XML
+// inflation. Keep @JvmOverloads so the view can still be created from code.
 class InputPadView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
