@@ -124,8 +124,8 @@ func run(opts options) error {
 	counter := &inputCounter{logger: logger}
 	go readLoop(ctx, conn, logger, counter, cancel)
 	go func() {
-		// cancel on return so a quit or stdin EOF ends the heartbeat and
-		// closes the connection.
+		// The heartbeat stops when the context is cancelled by a quit command,
+		// a signal, or -duration. Stdin EOF no longer cancels the run.
 		defer cancel()
 		heartbeatLoop(ctx, send)
 	}()
