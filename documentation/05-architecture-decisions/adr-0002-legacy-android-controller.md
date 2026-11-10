@@ -98,7 +98,7 @@ accepted; validation is carried over, not reopened.
 - Static inventory for all four tablets is recorded (#10, PR #44). Wi-Fi,
   charging, battery health, touch, readability, and spare checks are pending
   (#10, #14, #49).
-- APK build is covered by PR #63 (`assembleDebug`; in review). Install, boot,
+- APK build is covered by PR #63 (`assembleDebug`; merged). Install, boot,
   input, and reconnect on the tablets are pending (#11, #48).
 - The minimal Java fallback remains available but is not triggered.
 

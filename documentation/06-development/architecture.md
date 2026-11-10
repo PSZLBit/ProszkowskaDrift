@@ -38,16 +38,15 @@ or simulate the game.
 
 | Component | Process | Responsibilities |
 |-----------|---------|------------------|
-| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold and WebSocket client are in review (#63); production work is #48 |
+| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold and WebSocket client are merged (#63); production work is #48 |
 | Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; Godot supervision is in review (#59) |
 | Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, placeholder boundaries; no map, parking, or scoring yet |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
-As of 2026-11-10 the controller production code is not merged. PR #63 is in
-review with the API 19 scaffold, WebSocket client, device-token store,
-reconnect/backoff, and host-JVM tests; real-tablet proof and production work are
-tracked by #11 and #48.
+As of 2026-11-10 the controller production code is merged in PR #63 (API 19
+scaffold, WebSocket client, device-token store, reconnect/backoff, and host-JVM
+tests). Real-tablet proof and production work are tracked by #11 and #48.
 
 ## Server Slice
 

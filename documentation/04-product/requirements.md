@@ -13,7 +13,7 @@ values are in `02-game-domain/game-design.md`; architecture and protocol are in
 
 | Area | Status | Evidence |
 |---|---|---|
-| Controller | API 19 plain-Views scaffold, WebSocket client, device-token store, and reconnect/backoff are in review (#63); real-tablet proof is pending. | #11, #48, #49 |
+| Controller | API 19 plain-Views scaffold, WebSocket client, device-token store, and reconnect/backoff are merged (#63); real-tablet proof is pending. | #11, #48, #49 |
 | Server | Core slice implemented: configuration, controller/game endpoints, slots, input validation, heartbeat/reconnect, host command path, session end, diagnostics, and offline operation. Godot launch and supervision are in review (PR #59). | `server/`, #15 |
 | Game | Scaffold only: one game connection, four cars, and placeholder boundaries. Map, tasks, parking detection, scoring, HUD, and results are pending. | `game/`, #13, #45, #46, #47 |
 | Post-MVP | Not implemented | D-26 |

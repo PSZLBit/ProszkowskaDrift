@@ -10,7 +10,7 @@ and link it here. The ADR threshold is defined in
 
 | Date       | ID   | Decision                                                                                                                                  | Status  | Owner |
 | ---------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----- |
-| 2026-11-10 | D-35 | ADRs are required when a decision selects or changes the stack, transport, an architecture boundary, a cross-component contract, or a build/runtime interface constraint. Product tuning, performance targets, privacy rules, delivery plans, and process agreements are recorded in their module documents and dated decision-log rows without an ADR. ADR links in decision rows, the ADR index, the decision map, and the open TBD/validation register stay current. | Decided | Team |
+| 2026-11-10 | D-36 | ADRs are required when a decision selects or changes the stack, transport, an architecture boundary, a cross-component contract, or a build/runtime interface constraint. Product tuning, performance targets, privacy rules, delivery plans, and process agreements are recorded in their module documents and dated decision-log rows without an ADR. ADR links in decision rows, the ADR index, the decision map, and the open TBD/validation register stay current. | Decided | Team |
 | 2026-11-04 | D-34 | Purchased third-party art assets are kept out of the public Git repository. The "Large Parking Lot" tileset is ignored by `.gitignore`; each team member installs the purchased copy locally, and provenance stays recorded in `game/assets/CREDITS.md`. The ignore rule applies to new commits; existing commits are not rewritten for the MVP. | Decided | Team  |
 | 2026-11-03 | D-33 | Sprint 1 (2026-10-26 – 2026-11-01) did not meet its M1 first-half goal; only the game scaffold landed. Sprint 2 is re-baselined to a single-tablet end-to-end vertical slice, and four-player validation moves to Sprint 3 as the M2/MFD acceptance run. The M1 exit is one complete round with one task type on one real tablet. The MFD (2026-11-15) and festival-ready (2026-11-18) dates do not change; the full MVP remains a stretch. Non-MFD work moves to Sprint 3/4 or Post-MVP. | Decided | Team |
 | 2026-10-26 | D-32 | The S0-05 Godot integration is promoted to the production `game/` scaffold after cleanup. The scaffold keeps one `/ws/game` connection, maps slots 1–4 to four cars with a slot-keyed input store, and validates protocol/config before play. Four-car/TV/FPS evidence remains tracked in issue #13 until the hardware check is recorded. D-18 continues to apply to throwaway prototype logic, not this scaffold. | Decided | Team  |
@@ -90,7 +90,7 @@ table above for history and have no active artifact.
 
 | Artifact | Decisions |
 |---|---|
-| `documentation/README.md`, `00-meta/` | D-04, D-05, D-07, D-35 |
+| `documentation/README.md`, `00-meta/` | D-04, D-05, D-07, D-36 |
 | [Decision log](decision-log.md) | D-06 |
 | [Vision and scope](../01-vision-scope/vision-scope.md) | D-26 |
 | [Game design](../02-game-domain/game-design.md) | D-14 (TBD), D-19 |
@@ -113,8 +113,8 @@ table above for history and have no active artifact.
 |---|---|---|
 | 2026-11-09 | D-14 | Owner set to TracerDS; the input scheme remains TBD in #18 and controller feedback is tracked in #48. |
 | 2026-11-09 | D-19 | The MFD gameplay baseline is still being defined in #45; the full GDD is #32. The decision is not reopened; `game-design.md` stays Draft until #45 lands. |
-| 2026-11-09 | D-21 | The server token/slot reclaim path is implemented. Controller auto-connect is in review (PR #63); real-tablet proof remains pending in #11/#49. |
-| 2026-11-09 | D-20 / ADR-0002 | API 19 compatibility validation is pending. Static inventory is merged (#10/PR #44); APK build is in review (PR #63); install, input, reconnect, and hardware checks remain #11/#48/#49. |
+| 2026-11-09 | D-21 | The server token/slot reclaim path is implemented. Controller auto-connect is merged (PR #63); real-tablet proof remains pending in #11/#49. |
+| 2026-11-09 | D-20 / ADR-0002 | API 19 compatibility validation is pending. Static inventory is merged (#10/PR #44); APK build is merged (PR #63); install, input, reconnect, and hardware checks remain #11/#48/#49. |
 | 2026-11-09 | D-23 | Latency has not been measured. The targets remain decided, but the evidence is pending in #14. |
 | 2026-11-09 | D-24 / ADR-0003 | The server reconnect and all-disconnected pause path is implemented. The Godot supervisor is in review (PR #59); the server-crash launcher remains #50; real-hardware proof remains #49. |
 | 2026-11-09 | D-30 | GitHub Pages deployment is live (HTTP 200; Docs run 41847329287). The earlier pending status is resolved; no decision change. |

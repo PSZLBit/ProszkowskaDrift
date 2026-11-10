@@ -35,13 +35,13 @@ with carry-over.
 | S0-00 Confirm festival date and internal target | #8 | — (closed) | Done 2026-10-21: festival date and delivery calendar recorded (D-31). |
 | S0-01 Audit decisions and ADRs | #9 | ZofiaDan | Open; audit deliverable in review (PR #68, 2026-11-09). Carry-over. |
 | S0-02 Collect tablet specs and battery health | #10 | ZofiaDan | Open; static inventory merged in PR #44 on 2026-11-03; hardware checks pending (#11/#14/#49). |
-| S0-03 Kotlin WebSocket spike on four tablets | #11 | TracerDS | Open; PR #63 is in review with a WebSocket client, device-token store, reconnect/backoff, and 27 host-JVM tests; real-tablet proof is pending. Carry-over. |
+| S0-03 Kotlin WebSocket spike on four tablets | #11 | TracerDS | Open; PR #63 merged with a WebSocket client, device-token store, reconnect/backoff, and 34 host-JVM tests; real-tablet proof is pending. Carry-over. |
 | S0-04 Go WebSocket server with fake controller | #12 | GreenDude5 | Done 2026-10-23 (PR #30): protocol envelope, slots, reconnect, input validation, timers, host command path, fake clients, and CI. |
 | S0-05 Godot renders four rectangles from Go | #13 | ZofiaDan (historically Brzana) | Partial; the four-car game scaffold was merged later as PR #31 in Sprint 1 (D-32). Target laptop/TV evidence is still pending. |
 | S0-06 Measure latency and Wi-Fi stability | #14 | ZofiaDan | Not started. Carry-over. |
 | S0-07 Supervisor starts and restarts Godot | #15 | GreenDude5 | Open; PR #59 is in review and is not merged; no manual crash-recovery proof is recorded. Carry-over. |
 | S0-08 GitHub project and workflow | #16 | GreenDude5 | Done 2026-10-21: project board, templates, workflow, MkDocs site, and local setup. |
-| S0-09 Test plan and hardware checklist | #17 | ZofiaDan | Open; PR #65 has green Docs CI; merge pending review. |
+| S0-09 Test plan and hardware checklist | #17 | ZofiaDan | Merged; PR #65 added the MFD test plan and hardware checklist. |
 | D-14 Choose controller input scheme | #18 | TracerDS | Not started. Carry-over. |
 
 Owner is the current assignee on 2026-11-03. Issue #13 was historically Brzana
@@ -195,7 +195,7 @@ exact time is not fixed in this record.
 |-----------|--------|
 | Server | S0-04 is done. Protocol, slots, reconnect, validation, timers, host path, and CI work. Supervisor (#15) is in review (PR #59). Backpressure (#25) and end-phase (#23) bugs are fixed by PR #57/#58. |
 | Game | Scaffold is merged: four cars, protocol, 101 headless checks, and fullscreen. No map, task assignment, parking detection, scoring, HUD, or results. |
-| Controller | API 19 plain-Views scaffold, WebSocket client, device-token store, and reconnect/backoff are in review (PR #63). Real-tablet proof is pending; production work is #48. |
+| Controller | API 19 plain-Views scaffold, WebSocket client, device-token store, and reconnect/backoff are merged (PR #63). Real-tablet proof is pending; production work is #48. |
 | Ops | Static hardware inventory is merged in PR #44. Latency (#14) and display evidence (#13) are open. Supervisor (#15) is in review (PR #59); runbook and rehearsal (#50) are Sprint 4. |
 | Docs | The decision log is strong. `game-design.md`, `testing.md`, `protocol.md`, and `festival-operations.md` are still Draft. Board drift was closed in #51; the requirements status follow-up is #67. |
 | Board | Sprint 2 ended 2026-11-08; Sprint 3 started 2026-11-09. M0 is closed with carry-over. Every open issue has one owner, a milestone, a priority, and a sprint or backlog state. |
@@ -226,7 +226,7 @@ four-player MFD → festival hardening.
 ### Open decisions and unknowns
 
 - D-14 controller input scheme (#18).
-- OkHttp 3.12.x on API 19; PR #63 is in review, and real-tablet proof is pending
+- OkHttp 3.12.x on API 19; PR #63 is merged, and real-tablet proof is pending
   (#11, #48).
 - Windows vs Linux festival laptop.
 - Router model and static-IP plan.
@@ -249,7 +249,7 @@ four-player MFD → festival hardening.
 ### Risks
 
 - Game delivery depends on one owner.
-- The controller is not merged; PR #63 is in review, and real-tablet WebSocket
+- The controller is merged; PR #63 is merged, and real-tablet WebSocket
   proof is pending.
 - Hardware behavior, latency, and Wi-Fi are unmeasured.
 - Team capacity is unknown.

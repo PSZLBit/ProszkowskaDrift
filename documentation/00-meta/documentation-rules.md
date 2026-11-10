@@ -32,7 +32,7 @@ Last updated: YYYY-MM-DD
 
 ## ADR Threshold
 
-D-35 sets the threshold: use an ADR when a decision selects or changes the
+D-36 sets the threshold: use an ADR when a decision selects or changes the
 stack, transport, an architecture boundary, a cross-component contract, or a
 build/runtime interface constraint that changes how components are built or
 interact. Link the ADR from the decision-log row.

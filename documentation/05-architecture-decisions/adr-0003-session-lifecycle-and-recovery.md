@@ -71,7 +71,7 @@ D-24. It does not change their behavior.
 - Server token/slot reclaim and the all-disconnected pause path are implemented
   and covered by server tests.
 - Controller auto-connect, token persistence, and reconnect are not merged; they
-  are in review in PR #63 and tracked by #11 and #48.
+  are merged in PR #63 and tracked by #11 and #48.
 - The Godot supervisor is in review in PR #59; the server-crash launcher remains
   M3 work in #50. Neither is proven by a manual crash drill yet.
 - Real-tablet reconnect, Wi-Fi loss, and charging behavior have not been tested;
