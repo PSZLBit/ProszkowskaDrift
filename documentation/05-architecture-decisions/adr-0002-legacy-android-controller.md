@@ -95,11 +95,12 @@ or moving to a web controller.
 The gate above is not yet fully satisfied on real hardware. The decision remains
 accepted; validation is carried over, not reopened.
 
-- Static inventory for all four tablets is recorded (#10, PR #44). Wi-Fi,
-  charging, battery health, touch, readability, and spare checks are pending
-  (#10, #14, #49).
+- Static inventory for all four tablets is recorded (#10, PR #44). The short
+  S0-02 connectivity and charging check passed on 2026-11-10 (#10); the
+  30-minute Wi-Fi, touch/readability, latency, and spare checks are still pending
+  (#14, #49).
 - APK build is covered by PR #63 (`assembleDebug`; merged). Install, boot,
-  input, and reconnect on the tablets are pending (#11, #48).
+  input, and reconnect on the tablets are pending (#48, #49).
 - The minimal Java fallback remains available but is not triggered.
 
 If a carried-over check fails, record a new dated decision before changing the

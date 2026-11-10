@@ -70,12 +70,13 @@ D-24. It does not change their behavior.
 
 - Server token/slot reclaim and the all-disconnected pause path are implemented
   and covered by server tests.
-- Controller auto-connect, token persistence, and reconnect are not merged; they
-  are merged in PR #63 and tracked by #11 and #48.
+- Controller auto-connect, token persistence, and reconnect are merged in PR #63
+  and tracked by #48.
 - The Godot supervisor is in review in PR #59; the server-crash launcher remains
   M3 work in #50. Neither is proven by a manual crash drill yet.
-- Real-tablet reconnect, Wi-Fi loss, and charging behavior have not been tested;
-  they are tracked by #10, #14, and #49.
+- Real-tablet reconnect and 30-minute Wi-Fi/charging behavior have not been
+  tested; they are tracked by #14, #48, and #49. The S0-02 short
+  connectivity/charging check passed on 2026-11-10 (#10).
 
 The decision remains accepted while validation is carried over. If a hardware
 or supervisor check fails, record a new dated decision; do not silently replace

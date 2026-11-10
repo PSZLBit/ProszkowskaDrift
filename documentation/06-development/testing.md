@@ -56,8 +56,8 @@ until it is run on the target tablets, laptop, TV, and router.
 
 | Spike | Check | Pass condition | Status |
 |-------|-------|----------------|--------|
-| S0-02 (#10) | Tablet inventory | All four tablets recorded; Wi-Fi, charging, battery, and touch verified | Pending: static specs recorded; hardware checks deferred to S0-03 and S0-06 |
-| S0-03 (#11) | Kotlin controller | APK installs on all four tablets, sends input at 20–30 Hz, and reclaims its slot after reconnect | Pending: controller is not merged; PR #63 is in review |
+| S0-02 (#10) | Tablet inventory | All four tablets recorded; short Wi-Fi and charging check passed; fields the app does not use (camera, sensors, battery-health telemetry) recorded as not required | Pass 2026-11-10 (reported): static specs plus short connectivity/charging check; 30-minute stability, touch/readability, and latency remain in S0-06 (#14) and #49 |
+| S0-03 (#11) | Kotlin controller | APK installs on all four tablets, sends input at 20–30 Hz, and reclaims its slot after reconnect | Merged in PR #63 (fake-server tests pass); real-tablet install/input/reconnect evidence pending (#48, #49) |
 | S0-04 (#12) | Go server | Four fake controllers get slots; validation, heartbeat, and reconnect tests pass | Automated pass; real-controller path pending |
 | S0-05 (#13) | Godot integration | Four controller inputs render as four independently moving cars | Headless pass on 2026-10-26; target-display run pending |
 | S0-06 (#14) | Latency and Wi-Fi | p95 input-to-visible ≤100 ms, 20–30 Hz input, stable 30-minute Wi-Fi | Pending |
@@ -72,12 +72,13 @@ Tests](#contract-and-integration-tests). Hardware evidence belongs in
 
 ## Minimum Festival Demo (MFD) Test Plan
 
-**Status: pending (2026-11-10).** The target tablets, laptop, TV, and router were
-not available today. Every check below that depends on them is a manual check
-and must be run on the real hardware before MFD sign-off. Do not mark a hardware
-check as passed from fake clients, the Godot editor, or a non-target developer
-machine. Record the date, commit, hardware set, and observed result when a check
-is run.
+**Status: pending (2026-11-10).** The target laptop, TV, and router were not
+available today. The tablets were available only for the S0-02 short
+connectivity/charging check; every check below that depends on the full hardware
+set is a manual check and must be run on the real hardware before MFD sign-off.
+Do not mark a hardware check as passed from fake clients, the Godot editor, or a
+non-target developer machine. Record the date, commit, hardware set, and observed
+result when a check is run.
 
 Scope is the committed MFD from [roadmap.md](roadmap.md): four tablets connect,
 four cars move on the shared map, one parking task works, scores are visible,
@@ -379,12 +380,15 @@ pending hardware validation.
 
 ## Hardware Checklist (Manual, Pending)
 
-**Status: pending (2026-11-10).** The four tablets, target laptop, TV, and router
-were not available. Every check in this section is a manual check; none may be
-marked passed from an emulator, fake client, or a different machine. Record the
-date, commit, hardware label, and observed result in this file or in
-[hardware-inventory.md](hardware-inventory.md). The static tablet inventory is
-not test evidence.
+**Status: partial (2026-11-10).** The S0-02 short connectivity and charging check
+ran on T1–T4 on 2026-11-10 and is recorded in
+[hardware-inventory.md](hardware-inventory.md). The 30-minute Wi-Fi, reconnect,
+touch, readability, latency, kiosk, laptop, TV, and router checks are still
+pending; the target laptop, TV, and router were not available. Every check in
+this section is a manual check; none may be marked passed from an emulator, fake
+client, or a different machine. Record the date, commit, hardware label, and
+observed result in this file or in [hardware-inventory.md](hardware-inventory.md).
+The static tablet inventory is not test evidence.
 
 ### Tablets (T1–T4)
 
@@ -399,10 +403,10 @@ Android/API level, storage, battery health, and test results) is kept in
 | Touch | Buttons respond; multi-touch works; no stuck touches | Pending | Pending | Pending | Pending |
 | Screen | Landscape, immersive, readable at arm's length | Pending | Pending | Pending | Pending |
 | Keep awake | Screen stays on while charging for 30 minutes | Pending | Pending | Pending | Pending |
-| Wi-Fi | Connects to the dedicated router; no drops in a 30-minute idle test | Pending | Pending | Pending | Pending |
+| Wi-Fi | Connects to the dedicated router; no drops in a 30-minute idle test | Short check pass; 30 min pending | Short check pass; 30 min pending | Short check pass; 30 min pending | Short check pass; 30 min pending |
 | Reconnect | Wi-Fi off/on and app restart reclaim the same slot | Pending | Pending | Pending | Pending |
 | Latency | p95 input-to-display ≤100 ms (D-23 convention); record p50/p95 | Pending | Pending | Pending | Pending |
-| Charging | Tablet charges while the app is running and screen is on | Pending | Pending | Pending | Pending |
+| Charging | Tablet charges while the app is running and screen is on | Pass (short check, reported) | Pass (short check, reported) | Pass (short check, reported) | Pass (short check, reported) |
 | Heat/battery | No shutdown or severe throttling in a 30-minute session | Pending | Pending | Pending | Pending |
 
 ### Laptop
@@ -444,6 +448,7 @@ Android/API level, storage, battery health, and test results) is kept in
 | Date | Hardware set | Commit | Result | Notes |
 |------|--------------|--------|--------|-------|
 | 2026-11-04 | None available | — | Pending | Checklist added; hardware checks not run. |
+| 2026-11-10 | T1–T4 tablets | — | Partial: S0-02 short Wi-Fi and charging check passed (reported) | No commit recorded. 30-minute Wi-Fi, reconnect, touch, readability, latency, kiosk, laptop, TV, and router checks remain pending. |
 
 Record each run instead of overwriting history. A check with no real-hardware
 result stays `Pending`; do not use `Pass` for an assumption.
