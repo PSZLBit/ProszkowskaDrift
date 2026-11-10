@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#FF0E1116</color>
+    <color name="surface">#FF1A2029</color>
+    <color name="accent_pressed">#FF2E7D32</color>
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FFB0BEC5</color>
+    <color name="slot_blue">#FF2196F3</color>
+    <color name="slot_red">#FFF44336</color>
+    <color name="slot_green">#FF4CAF50</color>
+    <color name="slot_yellow">#FFFFEB3B</color>
+</resources>
