@@ -356,8 +356,9 @@ The controller client (issue #11, promoted by D-35) has host-JVM tests under
   `session_full` and duplicate-token `token_in_use` retries, fatal
   `auth_failed`/`kicked`/`protocol_mismatch` handling, `game_unavailable`
   staying connected and gated by `attract`, pong-watchdog reconnect, malformed
-  frame tolerance, stop/leave/restart, and base-address expansion including a
-  bare host.
+  frame tolerance, stop/leave/restart, base-address expansion including a
+  bare host, and the three-attempt reconnect limit with `RETRY_EXHAUSTED`
+  after the budget is spent.
 - `ProtocolTest` covers the version 1 encoder/parser, unknown fields and
   messages, malformed JSON, and a wrong protocol version.
 - `BackoffTest` covers the reconnect delay: base, doubling, cap, and custom
@@ -383,14 +384,25 @@ Manual check, written down before implementing any controller change:
 6. Stop and immediately restart the server while the app is connected: a
    duplicate-token `token_in_use` response retries with backoff and settles on
    the same slot without an app restart.
+7. Use an unreachable server address: after exactly three reconnect attempts,
+   the app returns to the main controller screen, clears the server address,
+   and makes no further connection attempts.
 
-Status 2026-11-09: the plain-Views scaffold has the promoted WebSocket client —
-OkHttp 3.12.x, `hello`/input/ping/reconnect, pong watchdog, and 34 host-JVM
-tests. On this machine `:app:testDebugUnitTest` passes (34 tests),
+Status 2026-11-10: the plain-Views scaffold has the promoted WebSocket client —
+OkHttp 3.12.x, `hello`/input/ping/reconnect, pong watchdog, and 35 host-JVM
+tests. On this machine `:app:testDebugUnitTest` passes (35 tests),
 `:app:assembleDebug` produces the debug APK, and `:app:lintDebug` passes. The
-configured send rate is 25 Hz. Install/run on the real tablets, measured
-latency, and the Kotlin-versus-Java recommendation for issue #11 are still
-pending hardware validation.
+configured send rate is 25 Hz. A debug APK was installed on one SM-T210
+running Android 4.4.2 (API 19): the app launches into the landscape
+controller screen, inflates the touch pad, and stays alive while idle. With an
+unreachable server it retries exactly three times, then returns to the main
+controller screen with the server address cleared and the status `Server
+unreachable — 3 reconnect attempts failed`; a cold restart
+stays disconnected with the address still cleared. This check also exposed and
+verified the fix for the custom-view inflation crash (the view needed a public
+`(Context, AttributeSet)` constructor). Install/run on the remaining three
+tablets, measured latency, and the Kotlin-versus-Java recommendation for issue
+#11 are still pending hardware validation.
 
 ## Hardware Checklist (Manual, Pending)
 

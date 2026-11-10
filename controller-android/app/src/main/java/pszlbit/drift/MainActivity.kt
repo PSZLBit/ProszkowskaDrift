@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import pszlbit.drift.input.InputPadView
@@ -42,7 +43,7 @@ class MainActivity : Activity(), ControllerClient.Listener {
     private lateinit var statsView: TextView
     private lateinit var overlayView: TextView
     private lateinit var inputPad: InputPadView
-
+    private lateinit var debugButton: Button
     private var state = ConnectionState.IDLE
     private var phase = "attract"
     private var timeLeftSeconds = 0L
@@ -63,8 +64,10 @@ class MainActivity : Activity(), ControllerClient.Listener {
         statsView = findViewById(R.id.stats_text)
         overlayView = findViewById(R.id.overlay_text)
         inputPad = findViewById(R.id.input_pad)
+        debugButton = findViewById(R.id.debug_button)
 
         inputPad.onInputChanged = { input = it }
+        debugButton.setOnClickListener { showDebugDialog() }
         serverView.setOnLongClickListener {
             showServerDialog()
             true
@@ -100,6 +103,11 @@ class MainActivity : Activity(), ControllerClient.Listener {
             when (state) {
                 ConnectionState.CONNECTING -> showOverlay(R.string.overlay_connecting)
                 ConnectionState.RECONNECTING -> showOverlay(R.string.overlay_reconnecting)
+                ConnectionState.RETRY_EXHAUSTED -> {
+                    clearServerAddress()
+                    resetToMainScreen()
+                    overlayView.visibility = View.GONE
+                }
                 ConnectionState.FATAL -> showOverlay(R.string.overlay_stopped)
                 else -> overlayView.visibility = View.GONE
             }
@@ -217,6 +225,40 @@ class MainActivity : Activity(), ControllerClient.Listener {
         newClient.start()
     }
 
+    private fun clearServerAddress() {
+        settings.serverUrl = ""
+        serverView.text = getString(R.string.server_unset)
+    }
+
+    private fun resetToMainScreen() {
+        slotView.text = getString(R.string.slot_none)
+        slotView.setTextColor(resources.getColor(R.color.text_primary))
+        phase = "attract"
+        timeLeftSeconds = 0L
+        taskView.text = getString(R.string.task_none)
+        scoreView.text = ""
+        resultView.text = ""
+        statsView.text = ""
+        renderPhase()
+    }
+
+    private fun showDebugDialog() {
+        val details = buildString {
+            append("Connection state: ").append(state).append('\n')
+            append("Phase: ").append(displayPhase()).append('\n')
+            append("Slot: ").append(slotView.text).append('\n')
+            append("Server: ").append(serverView.text).append('\n')
+            append("Status: ").append(statusView.text).append('\n')
+            append("Stats: ").append(statsView.text).append('\n')
+            append("Input enabled: ").append(inputPad.isEnabled)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.debug_dialog_title)
+            .setMessage(details)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
     private fun showServerDialog() {
         val field = EditText(this).apply {
             setText(settings.serverUrl)
@@ -252,16 +294,24 @@ class MainActivity : Activity(), ControllerClient.Listener {
             ConnectionState.CONNECTING -> getString(R.string.status_connecting)
             ConnectionState.CONNECTED -> getString(R.string.status_connected)
             ConnectionState.RECONNECTING -> getString(R.string.status_reconnecting)
+            ConnectionState.RETRY_EXHAUSTED -> getString(R.string.status_reconnect_failed)
             ConnectionState.FATAL -> getString(R.string.status_stopped)
         }
         statusView.text = if (detail.isNullOrEmpty()) label else "$label — $detail"
     }
 
+    private fun displayPhase(): String = if (phase == "attract") {
+        getString(R.string.phase_waiting_for_server)
+    } else {
+        phase
+    }
+
     private fun renderPhase() {
+        val displayPhase = displayPhase()
         phaseView.text = if (timeLeftSeconds > 0L) {
-            getString(R.string.phase_time_format, phase, timeLeftSeconds)
+            getString(R.string.phase_time_format, displayPhase, timeLeftSeconds)
         } else {
-            getString(R.string.phase_format, phase)
+            getString(R.string.phase_format, displayPhase)
         }
     }
 

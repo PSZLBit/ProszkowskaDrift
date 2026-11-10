@@ -5,6 +5,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -146,6 +147,36 @@ class ControllerClientTest {
 
     @Test
     fun protocolMismatchIsFatalAndDoesNotReconnect() = assertFatalError("protocol_mismatch")
+
+    @Test
+    fun stopsAfterThreeFailedReconnectAttempts() {
+        // A non-101 response fails the WebSocket upgrade immediately.
+        repeat(4) {
+            server.enqueue(MockResponse().setResponseCode(404))
+        }
+
+        startClient(backoffMs = 20L)
+
+        val deadline = System.currentTimeMillis() + 5_000L
+        while (listener.state != ConnectionState.RETRY_EXHAUSTED &&
+            System.currentTimeMillis() < deadline
+        ) {
+            scheduler.advanceBy(20L)
+            Thread.sleep(20L)
+        }
+        awaitState(ConnectionState.RETRY_EXHAUSTED, 1_000L)
+
+        // One initial attempt plus exactly three reconnect attempts.
+        assertEquals(4, server.requestCount)
+        assertEquals(
+            3,
+            listener.states.count { it == ConnectionState.RECONNECTING },
+        )
+
+        scheduler.advanceBy(100L)
+        Thread.sleep(100L)
+        assertEquals("No requests after the retry budget is spent.", 4, server.requestCount)
+    }
 
     @Test
     fun sessionFullRetriesInsteadOfSticking() {
@@ -361,6 +392,7 @@ class ControllerClientTest {
 
         scheduler.advanceBy(1_000L)
         assertEquals(1, server.requestCount)
+        assertFalse(listener.states.contains(ConnectionState.RETRY_EXHAUSTED))
     }
 
     private fun startClient(

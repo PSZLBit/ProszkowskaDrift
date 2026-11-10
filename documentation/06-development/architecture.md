@@ -56,10 +56,13 @@ while the phase is `playing`, a 2 s application `ping` with a bounded pong
 watchdog, and reconnect with capped exponential backoff. A duplicate token is
 reported as `token_in_use` and retried; `auth_failed` stays permanent.
 `game_unavailable` keeps the socket open and the following `attract` phase
-gates input. Host-JVM tests use OkHttp MockWebServer as the fake server and an
-injected scheduler and clock for deterministic timing. Real-tablet validation is
-still pending; the production controller is issue #48 and the spike evidence is
-issue #11.
+gates input. Reconnect is bounded to three attempts (D-39); after that the
+controller stops, clears the configured server address, and returns to the
+idle main screen. Host-JVM tests use OkHttp MockWebServer as the fake server
+and an injected scheduler and clock for deterministic timing. Real-tablet
+validation has been recorded for one tablet for startup and bounded retry;
+the production controller and remaining hardware checks are issue #48 and
+#11.
 
 ## Server Slice
 
