@@ -1,6 +1,7 @@
 package pszlbit.drift.input
 
 import android.content.Context
+import android.util.AttributeSet
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
@@ -15,7 +16,11 @@ import pszlbit.drift.R
  * D-14 is still TBD: the final scheme must be chosen by playtesting on the real
  * tablets, so treat this as a throwaway mapping, not a product decision.
  */
-class InputPadView(context: Context) : View(context) {
+class InputPadView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0,
+) : View(context, attrs, defStyleAttr) {
     private val tracker = InputTracker()
     private val zoneRects = HashMap<Zone, RectF>()
 
