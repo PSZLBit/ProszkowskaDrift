@@ -3,9 +3,10 @@
 Status: Draft
 Last updated: 2026-11-10
 
-The test-plan update is tracked in issue #17. As of 2026-11-10 the controller is
-not merged; PR #63 is in review. The API 19 scaffold and real-tablet checks are
-tracked by #11 and #48.
+The test-plan update is tracked in issue #17. The controller WebSocket client is
+promoted after cleanup (D-35) and covered by host-JVM fake-server tests and a
+controller CI job. Install/run on the real tablets and the latency measurements
+remain tracked by #11 and #48.
 
 ## Goals
 
@@ -315,6 +316,66 @@ These checks use the S0-04 fake clients. Details and expected output are in
 Record the date, commit, commands, and observed result for these checks. A real
 Android controller and the target TV run were not available on 2026-11-04; those
 hardware checks remain pending in [Hardware Checklist (Manual, Pending)](#hardware-checklist-manual-pending).
+
+## Android Controller Build Checks
+
+The controller is in `controller-android/`. It is a minimal API 19 app with no
+Compose and no AndroidX (D-20, ADR-0002).
+
+Commands:
+
+```sh
+cd controller-android
+./gradlew :app:testDebugUnitTest
+./gradlew :app:assembleDebug        # APK under app/build/outputs/apk/debug/
+./gradlew :app:lintDebug
+```
+
+The controller client (issue #11, promoted by D-35) has host-JVM tests under
+`app/src/test/java/pszlbit/drift/{net,protocol,input}/`:
+
+- `ControllerClientTest` uses OkHttp MockWebServer as a fake Go server and a
+  manual scheduler/clock. It checks the `/ws/controller` endpoint, `hello` with
+  the device token and app version, input only while `playing` with increasing
+  sequence numbers, reconnect with the same token and sequence reset,
+  `session_full` and duplicate-token `token_in_use` retries, fatal
+  `auth_failed`/`kicked`/`protocol_mismatch` handling, `game_unavailable`
+  staying connected and gated by `attract`, pong-watchdog reconnect, malformed
+  frame tolerance, stop/leave/restart, and base-address expansion including a
+  bare host.
+- `ProtocolTest` covers the version 1 encoder/parser, unknown fields and
+  messages, malformed JSON, and a wrong protocol version.
+- `BackoffTest` covers the reconnect delay: base, doubling, cap, and custom
+  values.
+- `InputTrackerTest` covers the temporary touch mapping: neutral state,
+  opposite zones cancelling, two pointers, release, and clear.
+
+MockWebServer owns a local ephemeral socket and plays the server side; timer
+behavior is driven by `ManualScheduler`. The tests do not need the venue
+network, a Go server, or a tablet.
+
+Manual check, written down before implementing any controller change:
+
+1. `app-debug.apk` installs on an API 19 tablet.
+2. The app launches into landscape, shows the status text, and keeps the
+   screen on.
+3. No crash within one minute of idle.
+4. With a reachable server, the status shows connected, `hello` assigns a slot,
+   and the diagnostics line reports a send rate inside 20–30 Hz while
+   `playing`.
+5. Force a disconnect (stop the server or disable Wi-Fi), then restore it: the
+   app reconnects with the same device token and reclaims the same slot.
+6. Stop and immediately restart the server while the app is connected: a
+   duplicate-token `token_in_use` response retries with backoff and settles on
+   the same slot without an app restart.
+
+Status 2026-11-09: the plain-Views scaffold has the promoted WebSocket client —
+OkHttp 3.12.x, `hello`/input/ping/reconnect, pong watchdog, and 34 host-JVM
+tests. On this machine `:app:testDebugUnitTest` passes (34 tests),
+`:app:assembleDebug` produces the debug APK, and `:app:lintDebug` passes. The
+configured send rate is 25 Hz. Install/run on the real tablets, measured
+latency, and the Kotlin-versus-Java recommendation for issue #11 are still
+pending hardware validation.
 
 ## Hardware Checklist (Manual, Pending)
 
