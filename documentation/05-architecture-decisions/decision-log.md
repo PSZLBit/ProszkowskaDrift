@@ -69,8 +69,9 @@ undecided. Hardware checks stay pending until they are run on the real devices.
 | Target-finding UI (minimap vs on-map beacons) | Brzana | Decide in the MFD display baseline in #45; implement in #47 | #45, #47 |
 | WebSocket libraries | TracerDS + GreenDude5 | Confirm Go `coder/websocket` v1.8.15 and OkHttp 3.12.x on API 19 in the architecture; production in #48 | #11, #48 |
 | Supervisor and festival laptop OS | GreenDude5 + ZofiaDan | PR #59 is in review; finish the #15 manual drill. Decide Windows vs Linux in #49/#50 | #15, #49, #50 |
-| Router model and static-IP plan | ZofiaDan | Choose the model and address plan during #49; document it in #50 | #10, #49, #50 |
-| Hardware checks and spares | ZofiaDan | Run Wi-Fi, charging, battery, touch, readability, and spare checks in #10/#11/#14/#49; update the inventory and ADR-0002 | #10, #11, #14, #49 |
+| Router model and static-IP plan | ZofiaDan | Choose the model and address plan during #49; document it in #50 | #49, #50 |
+| Hardware checks and spares | ZofiaDan | S0-02 short Wi-Fi/charging check passed 2026-11-10 (#10); run the 30-minute Wi-Fi, reconnect, latency, touch/readability, and spare checks in #14/#49; update the inventory and ADR-0002 | #14, #49 |
+| Gamepad fallback input (last resort) | ZofiaDan | Xbox 360/PC gamepad is the identified last-resort option only; do not implement without a decision, because the server accepts controller WebSocket connections only | #49 |
 | Latency measurement (D-23) | ZofiaDan | Measure p50/p95 in #14 and record the evidence in `testing.md` | #14 |
 | Protocol task/score messages | GreenDude5 + Brzana | Implement with #46/#47; update protocol coverage and tests | #46, #47 |
 

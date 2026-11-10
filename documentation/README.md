@@ -1,7 +1,7 @@
 # Documentation — Source of Truth
 
 Status: Decided
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 > All project artifacts are in English. This folder is the source of truth.
 > Code implements what is described here. Chat history does not override this folder.
@@ -91,6 +91,6 @@ Superseded decisions stay in the log. Do not delete history.
 - Sprint 2 re-baselined to a single-tablet vertical slice; four-player MFD
   validation moved to Sprint 3 (D-33).
 - Open: controller input scheme and feedback (D-14; #18/#48), MFD map/tuning
-  (#45), and hardware validation (#10/#11/#14/#49). The full register with
+  (#45), and hardware validation (#14/#49). The full register with
   owners and next steps is in
   [`05-architecture-decisions/decision-log.md`](05-architecture-decisions/decision-log.md#open-tbd-and-validation-items).

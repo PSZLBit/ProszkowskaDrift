@@ -1,7 +1,7 @@
 # Festival Operations Runbook
 
 Status: Draft
-Last updated: 2026-10-28
+Last updated: 2026-11-10
 
 This is the operational plan for running Proszkowska Drift at a science-club
 festival stand. The game must work without a developer at the keyboard.
@@ -39,6 +39,15 @@ Per-device specs and test results are recorded in
 - [ ] Printed quick instructions and a QR/link to this runbook (optional).
 - [ ] Small toolkit, labels, and a notepad for issues.
 - [ ] Backup monitor if the TV is not reliable.
+
+### Last-Resort Input Fallback
+
+An Xbox 360/PC gamepad is the identified last-resort input option if the tablets
+cannot be used. It is not implemented and is not part of the MVP: the server
+accepts controller WebSocket connections only, so a gamepad path needs a
+decision plus a host-side input bridge or a server change, and a hardware test.
+Tablets remain the primary controller; do not plan the stand around the
+fallback.
 
 ## Network
 
