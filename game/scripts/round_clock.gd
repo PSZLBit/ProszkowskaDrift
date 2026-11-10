@@ -67,7 +67,9 @@ func reset() -> void:
 
 
 func show_results() -> void:
-	if phase == Phase.FINISHED:
+	# Both the timer expiry and the all-completed early finish land here; the
+	# round controller stops the clock first either way.
+	if phase in [Phase.FINISHED, Phase.PLAYING]:
 		_set_phase(Phase.RESULTS)
 
 

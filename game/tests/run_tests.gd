@@ -48,6 +48,7 @@ func _initialize() -> void:
 	_test_round_clock()
 	_test_score_model()
 	_test_hud_scene()
+	_test_main_round_lifecycle()
 	_test_project_settings()
 
 	if _failures == 0:
@@ -846,6 +847,12 @@ func _test_round_clock() -> void:
 	clock.show_results()
 	_check_eq(clock.phase, RoundClock.Phase.RESULTS, "finished shows results")
 
+	var early_clock := RoundClock.new()
+	early_clock.start()
+	early_clock.show_results()
+	_check_eq(early_clock.phase, RoundClock.Phase.RESULTS, "an early finish shows results")
+	early_clock.free()
+
 	clock.reset()
 	clock.round_length_ms = 5000
 	clock.start()
@@ -1064,6 +1071,83 @@ func _test_hud_scene() -> void:
 
 	hud.free()
 	clock.free()
+
+
+func _test_main_round_lifecycle() -> void:
+	OS.set_environment("PD_GAME_TOKEN", "test-lifecycle")
+	var packed := load("res://scenes/main.tscn") as PackedScene
+	_check(packed != null, "main.tscn loads for the lifecycle test")
+	if packed == null:
+		return
+
+	# Adding the scene to the tree runs every _ready: cars wire to the
+	# shared input, the task manager wires car collisions, and the server
+	# input creates its clock, scores, and HUD binding.
+	var main = packed.instantiate()
+	root.add_child(main)
+	var si = main.get_node("ServerInput")
+	var tm = main.get_node("TaskManager")
+	var hud = main.get_node("Hud")
+	_check(si._clock != null, "the game owns a round clock")
+	_check_eq(si._clock.phase, RoundClock.Phase.READY, "the clock starts ready")
+	_check_eq(hud.timer_label.text, "03:00", "the timer starts full")
+	_check_eq(hud.state_label.text, "Press Enter to start", "attract shows the start prompt")
+	_check(
+		not hud.get_node("ResultsPanel").visible,
+		"results start hidden in the scene",
+	)
+
+	si._handle_player_joined({"slot": 1, "label": "P1", "color": "red"})
+	si._handle_player_joined({"slot": 2, "label": "P2", "color": "blue"})
+	si._handle_host_command({"command": "start", "roundId": 1})
+	_check_eq(si._phase, "playing", "host start enters playing")
+	_check(si._clock.phase == RoundClock.Phase.PLAYING, "host start runs the clock")
+	_check_eq(hud.state_label.text, "Drive to your spot", "playing shows the drive prompt")
+	_check_eq(si._scores.ranking(), [1, 2], "round 1 registers both slots")
+	_check(
+		tm.get_task(1)["spotIndex"] != tm.get_task(2)["spotIndex"],
+		"round 1 targets are exclusive",
+	)
+	_check_eq(hud.scores_box.get_child_count(), 2, "the board lists both slots")
+
+	# Both park centered at 12.4 s: 63 time + 40 precision = 103 each.
+	tm.update_tasks(0.6, _parked_cars(tm, 0.0), 12400)
+	_check_eq(si._scores.total(1), 103, "slot 1 scores the parked task")
+	_check_eq(si._scores.total(2), 103, "slot 2 scores the parked task")
+	_check_eq(hud.state_label.text, "P2 parked!", "the last completion flashes")
+	_check(hud.get_node("ResultsPanel").visible, "all-completed ends the round early")
+	_check_eq(hud.winner_label.text, "Winner: P1", "equal scores break by slot")
+	_check_eq(si._phase, "results", "the game reports results")
+	_check(si._clock.phase == RoundClock.Phase.RESULTS, "the clock stops in results")
+
+	# Reset returns to lobby with a zeroed board; a new round rotates targets.
+	si._handle_host_command({"command": "reset"})
+	_check_eq(si._phase, "ready", "host reset returns to ready")
+	_check(not hud.get_node("ResultsPanel").visible, "reset hides results")
+	_check_eq(si._clock.remaining_ms, 180000, "reset restores the timer")
+	_check_eq(hud.timer_label.text, "03:00", "the timer shows full after reset")
+	_check_eq(hud.scores_box.get_child_count(), 2, "the lobby keeps connected rows")
+	si._handle_host_command({"command": "start", "roundId": 2})
+	_check(tm.get_task(1)["spotIndex"] != 0, "round 2 rotates the starting spot")
+
+	# Expiry with no park: zero scores, no winner, every active slot listed.
+	si._clock.tick(180.0)
+	_check_eq(hud.timer_label.text, "00:00", "expiry zeroes the timer")
+	_check(hud.get_node("ResultsPanel").visible, "expiry shows results")
+	_check_eq(hud.winner_label.text, "Winner: none", "no completing player means no winner")
+	_check_eq(si._scores.total(1), 0, "an unparked player scores zero")
+
+	# Round 3: slot 2 disconnects but keeps its task; slot 1 parks and the
+	# round ends early without waiting for the timer.
+	si._handle_host_command({"command": "start", "roundId": 3})
+	si._handle_player_left({"slot": 2, "reason": "disconnect"})
+	tm.update_tasks(0.6, _parked_cars(tm, 0.0), 8000)
+	_check(hud.get_node("ResultsPanel").visible, "one connected park ends the round early")
+	_check_eq(si._scores.winner_slot(), 1, "the connected park wins")
+	_check_eq(si._scores.tasks_completed(2), 0, "the disconnected slot keeps no score")
+	_check_eq(si._scores.total(2), 0, "the disconnected slot scores zero")
+
+	main.free()
 
 
 func _test_project_settings() -> void:

@@ -604,12 +604,18 @@ func _show_paused() -> void:
 	_hud_call("set_state", ["Paused"])
 
 
-## Rebuilds the scoreboard rows for every registered slot: score, current
-## spot or Parked, and hit count. Reconnecting players keep their row.
+## Rebuilds the scoreboard rows: score, current spot or Parked, and hit count.
+## Rows cover connected slots plus registered-but-disconnected ones, so a
+## reconnecting player keeps their row and the lobby shows zeroes.
 func _refresh_board() -> void:
 	var rows: Array = []
 	var manager := _task_manager()
+	var shown: Array = _connected_slots()
 	for slot in _scores.ranking():
+		if not shown.has(slot):
+			shown.append(slot)
+	shown.sort()
+	for slot in shown:
 		var status := ""
 		var hits := _scores.collisions(slot)
 		if _scores.tasks_completed(slot) > 0:
