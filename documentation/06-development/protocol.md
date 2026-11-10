@@ -114,6 +114,8 @@ own countdown as the source of truth.
 - Sent when a task is assigned.
 - `spotLabel` is visible on the map; `hint` is a short direction aid.
 - Do not send map geometry to controllers.
+- In the MFD, a task is assigned once at round start and `deadlineMs` is the
+  remaining round time; there is no per-task auto-skip (D-38).
 
 ### `task_result`
 
@@ -121,11 +123,17 @@ own countdown as the source of truth.
 {"v":1,"type":"task_result","data":{"taskId":12,"points":86,"timeScore":62,"precisionScore":34,"collisionPenalty":10,"rating":"great","totalScore":240}}
 ```
 
+In the MFD, `totalScore` is the same as `points` for the single task. `rating`
+may be present but is not displayed (D-38).
+
 ### `round_result`
 
 ```json
 {"v":1,"type":"round_result","data":{"roundId":7,"winnerSlot":2,"scores":[{"slot":1,"score":620,"tasks":5,"collisions":1},{"slot":2,"score":710,"tasks":5,"collisions":0}]}}
 ```
+
+In the MFD, `tasks` is 0 or 1, scores follow the MFD ranking, and `winnerSlot`
+is 0 when no player completed a task (D-38).
 
 ### `error`
 
@@ -157,10 +165,14 @@ authenticated by a per-launch token passed at startup.
 ### `config`
 
 ```json
-{"v":1,"type":"config","data":{"roundDurationMs":180000,"tasksPerPlayer":5,"maxPlayers":4}}
+{"v":1,"type":"config","data":{"roundDurationMs":180000,"tasksPerPlayer":1,"maxPlayers":4}}
 ```
 
 Sent once when the game connects. The game validates values.
+
+For the MFD baseline (D-38), `roundDurationMs` is 180000 and `tasksPerPlayer`
+is 1. The server currently defaults to 5; the MFD implementation must change the
+default and its tests to 1, and the MVP restores 5.
 
 ### `player_joined` / `player_left`
 
@@ -183,11 +195,15 @@ slot and applies it each frame.
 ### `host_command`
 
 ```json
-{"v":1,"type":"host_command","data":{"command":"start"}}
+{"v":1,"type":"host_command","data":{"command":"start","roundId":7}}
 {"v":1,"type":"host_command","data":{"command":"kick","slot":3}}
 ```
 
 Commands: `start`, `pause`, `resume`, `reset`, `end`, `kick`.
+For `start`, `roundId` is the server's new round identifier; the game uses it
+for task assignment and results (D-38). The field is additive in protocol
+version 1. Other commands may omit it.
+
 The server is the authority. The game must apply commands only when received
 from the server, not when the host key is pressed locally.
 
@@ -198,6 +214,8 @@ from the server, not when the host key is pressed locally.
 ```json
 {"v":1,"type":"game_ready","data":{"gameVersion":"0.1.0","mapVersion":"proszkowska-1"}}
 ```
+
+The MFD map version is `proszkowska-mfd-1` (D-38).
 
 ### `host_request`
 

@@ -155,7 +155,7 @@ parking and score content. The MFD display check passes only when:
 - the whole map, all active cars, and the target spot are visible at once;
 - player labels, colors, targets, score, and timer are readable from the
   spectator distance;
-- the target highlight is unambiguous and matches the controller hint;
+- the target highlight is unambiguous and matches the assigned spot label;
 - no debug overlays, cursor, or window chrome are visible;
 - the display holds the target frame rate without tearing or visible stutter.
 
@@ -169,7 +169,7 @@ Run on the target hardware with at least one real tablet, then repeat with four.
 
 | # | Step | Pass condition |
 |---|------|----------------|
-| 1 | Start a round and read the target on the controller and display. | The display highlights the same target in the player's color; the controller shows its spot number, color, and direction hint; the target is not assigned to another active player. |
+| 1 | Start a round and read the target on the display. | The display highlights the assigned target in the player's color with its spot label; the target is not assigned to another active player. Controller task display is MVP (#48), not MFD acceptance. |
 | 2 | Park clearly inside the target, centered and aligned, below the parked speed. | The task completes after 0.5 s, the score increases once, and a `Perfect`/`Great` result is plausible for the measured precision. |
 | 3 | Park off-center or at an angle inside the target. | The task completes with a lower precision score than the centered park. |
 | 4 | Hit a static obstacle during a task, then park. | The collision is counted and the task score is reduced by the documented penalty, capped at 30 points. |
