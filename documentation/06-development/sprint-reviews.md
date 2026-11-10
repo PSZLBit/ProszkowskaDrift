@@ -34,7 +34,7 @@ with carry-over.
 |--------------|-------|---------------|---------|
 | S0-00 Confirm festival date and internal target | #8 | — (closed) | Done 2026-10-21: festival date and delivery calendar recorded (D-31). |
 | S0-01 Audit decisions and ADRs | #9 | ZofiaDan | Open; audit deliverable in review (PR #68, 2026-11-09). Carry-over. |
-| S0-02 Collect tablet specs and battery health | #10 | ZofiaDan | Open; static inventory merged in PR #44 on 2026-11-03; hardware checks pending (#11/#14/#49). |
+| S0-02 Collect tablet specs and battery health | #10 | ZofiaDan | Done 2026-11-10 (PR #70): static inventory plus the short Wi-Fi/charging check; sensor scope and the last-resort gamepad recorded; 30-minute, latency, touch, and spare checks remain #14/#49. |
 | S0-03 Kotlin WebSocket spike on four tablets | #11 | TracerDS | Open; PR #63 merged with a WebSocket client, device-token store, reconnect/backoff, and 34 host-JVM tests; real-tablet proof is pending. Carry-over. |
 | S0-04 Go WebSocket server with fake controller | #12 | GreenDude5 | Done 2026-10-23 (PR #30): protocol envelope, slots, reconnect, input validation, timers, host command path, fake clients, and CI. |
 | S0-05 Godot renders four rectangles from Go | #13 | ZofiaDan (historically Brzana) | Partial; the four-car game scaffold was merged later as PR #31 in Sprint 1 (D-32). Target laptop/TV evidence is still pending. |
@@ -132,7 +132,7 @@ is not required this sprint.
 
 | Issue | Work | Owner | Priority | Status |
 |-------|------|-------|----------|--------|
-| #10 | Tablet specs and battery health | ZofiaDan | P0 | In Progress |
+| #10 | Tablet specs and battery health | ZofiaDan | P0 | Done (PR #70) |
 | #11 | Kotlin WebSocket spike on one tablet | TracerDS | P0 | In Progress |
 | #45 | Define the MFD gameplay baseline | Brzana | P0 | In Progress |
 | #46 | One parking task with exclusive assignment and detection | Brzana | P0 | Ready |

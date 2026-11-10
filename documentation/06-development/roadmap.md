@@ -1,7 +1,7 @@
 # Delivery Roadmap
 
 Status: Decided
-Last updated: 2026-11-03
+Last updated: 2026-11-10
 
 Festival: Tuesday 2026-11-24, confirmed with the organizers on 2026-10-21.
 Internal festival-ready target: Wednesday 2026-11-18. The days from 2026-11-19
@@ -182,7 +182,7 @@ exit criteria, and risks are in [`sprint-reviews.md`](sprint-reviews.md).
 
 | Issue | Work | Owner | Priority | Status |
 |-------|------|-------|----------|--------|
-| #10 | Tablet specs and battery health | ZofiaDan | P0 | In Progress |
+| #10 | Tablet specs and battery health | ZofiaDan | P0 | Done (PR #70) |
 | #11 | Kotlin WebSocket spike on one tablet | TracerDS | P0 | In Progress |
 | #45 | Define the MFD gameplay baseline | Brzana | P0 | In Progress |
 | #46 | One parking task with exclusive assignment and detection | Brzana | P0 | Ready |
