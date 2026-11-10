@@ -1,0 +1,114 @@
+name: Sample Environments
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "server/**"
+      - ".github/workflows/sample-environments.yml"
+  pull_request:
+    paths:
+      - "server/**"
+      - ".github/workflows/sample-environments.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sample-environments-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server-sample:
+    name: Server sample environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: server
+        shell: bash
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+
+      - name: Build server
+        run: go build -o "$RUNNER_TEMP/proszkowska-drift-server" ./cmd/server
+
+      - name: Start server sample
+        run: |
+          "$RUNNER_TEMP/proszkowska-drift-server" -addr :8080 -log-level warn &
+          echo $! > "$RUNNER_TEMP/server.pid"
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/healthz >/dev/null; then
+              echo "server is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server did not become ready" >&2
+          exit 1
+
+      - name: Check server health
+        run: curl -fsS http://127.0.0.1:8080/healthz
+
+      - name: Stop server sample
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/server.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/server.pid")" || true
+            wait "$(cat "$RUNNER_TEMP/server.pid")" || true
+          fi
+
+  controller-sample:
+    name: Controller sample environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: server
+        shell: bash
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+
+      - name: Build server and fake controller
+        run: |
+          go build -o "$RUNNER_TEMP/proszkowska-drift-server" ./cmd/server
+          go build -o "$RUNNER_TEMP/proszkowska-drift-fakecontroller" ./cmd/fakecontroller
+
+      - name: Start server
+        run: |
+          "$RUNNER_TEMP/proszkowska-drift-server" -addr :8080 -log-level warn &
+          echo $! > "$RUNNER_TEMP/server.pid"
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/healthz >/dev/null; then
+              echo "server is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server did not become ready" >&2
+          exit 1
+
+      - name: Run controller sample
+        run: '"$RUNNER_TEMP/proszkowska-drift-fakecontroller" -server ws://127.0.0.1:8080/ws/controller -clients 2 -duration 5s'
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/server.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/server.pid")" || true
+            wait "$(cat "$RUNNER_TEMP/server.pid")" || true
+          fi

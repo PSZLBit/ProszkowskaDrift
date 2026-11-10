@@ -634,6 +634,9 @@ details, triggers, and the "do not add yet" list live in
   is manual/tagged if CI is too slow.
 - Docs: `mkdocs build --strict` when documentation, `mkdocs.yml`, or
   `requirements-docs.txt` change.
+- Sample environments: build the Go server and `fakecontroller`, start the
+  server, check `/healthz`, and run a two-client, five-second controller
+  sample — `.github/workflows/sample-environments.yml`.
 - Required for merge when branch protection is enabled: Go tests/vet and Godot
   headless tests; the Android build joins when `controller-android/` is
   scaffolded. Branch protection is still a repository-settings task.
