@@ -1,7 +1,7 @@
 # Product Requirements
 
 Status: Draft
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 Implementation status is summarized by area below. Per-item reconciliation is
 tracked in [#67](https://github.com/PSZLBit/ProszkowskaDrift/issues/67); items
@@ -9,14 +9,16 @@ are planned unless the summary or the item says otherwise. Game rules and tuning
 values are in `02-game-domain/game-design.md`; architecture and protocol are in
 `06-development/architecture.md` and `06-development/protocol.md`.
 
-## Implementation Status (2026-11-09)
+## Implementation Status (2026-11-10)
 
 | Area | Status | Evidence |
 |---|---|---|
-| Controller | Planned; API 19 plain-Views scaffold is on an unmerged branch | #11, #48 |
-| Server | Core slice implemented: configuration, controller/game endpoints, slots, input validation, heartbeat/reconnect, host command path, session end, diagnostics, and offline operation. Godot launch and supervision are pending. | `server/`, #15 |
+| Controller | API 19 plain-Views scaffold, WebSocket client, device-token store, and reconnect/backoff are in review (#63); real-tablet proof is pending. | #11, #48, #49 |
+| Server | Core slice implemented: configuration, controller/game endpoints, slots, input validation, heartbeat/reconnect, host command path, session end, diagnostics, and offline operation. Godot launch and supervision are in review (PR #59). | `server/`, #15 |
 | Game | Scaffold only: one game connection, four cars, and placeholder boundaries. Map, tasks, parking detection, scoring, HUD, and results are pending. | `game/`, #13, #45, #46, #47 |
 | Post-MVP | Not implemented | D-26 |
+
+End-to-end four-tablet MFD evidence is tracked in #49.
 
 ## Controller (`controller-android/`, minimal Kotlin, Android 4.4.2)
 

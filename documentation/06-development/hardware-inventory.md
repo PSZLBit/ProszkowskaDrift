@@ -1,7 +1,7 @@
 # Hardware Inventory
 
 Status: Draft
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 Inventory of the four festival tablets and any spares, collected for Sprint 0
 (S0-02, issue #10). Devices are labelled `T1`–`T4`; slot labels `P1`–`P4` are
@@ -27,7 +27,7 @@ controller spike (#11), measurements (#14), and the four-player MFD run (#49).
    identical hardware and software.
 3. Record assumptions explicitly; do not present untested behavior as verified.
 4. Defer Wi-Fi, charging, battery-health, touch, and readability checks to the
-   spike that needs them (#11, #14, #17).
+   spike that needs them (#11, #14, #49).
 5. Mark unknown values `TBD`; never guess.
 
 Tools used: Settings, device specification. Optional ADB commands for later
