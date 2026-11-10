@@ -314,6 +314,11 @@ These checks use the S0-04 fake clients. Details and expected output are in
    `kicked`, the slot is freed, and the game receives `player_left` with reason
    `kicked`.
 
+10. Stdin EOF does not stop fakegame: `go run ./cmd/fakegame -token dev-token -duration 2s </dev/null`
+    stays connected for the full duration and disconnects only when the duration
+    expires. Auto-start retries: `go run ./cmd/fakegame -token dev-token -auto-start`
+    sends up to 5 start attempts over ~5 s (documented in `server/README.md`).
+
 Record the date, commit, commands, and observed result for these checks. A real
 Android controller and the target TV run were not available on 2026-11-04; those
 hardware checks remain pending in [Hardware Checklist (Manual, Pending)](#hardware-checklist-manual-pending).

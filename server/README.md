@@ -224,6 +224,14 @@ kick 2
 phase playing 120000 7
 quit
 ```
+Stdin EOF is not a quit signal: `fakegame` keeps running until `quit`, a signal,
+or `-duration`. Redirecting stdin from `/dev/null` is safe.
+
+With `-auto-start`, fakegame sends up to 5 `host_request` start commands, one per
+second, starting one second after connecting. A send failure stops the retries;
+otherwise the fixed 5-attempt / ~5-second window is used so controllers that
+connect after the game can still trigger the round. The window is not
+configurable in this slice.
 
 ## Not implemented in this slice
 
