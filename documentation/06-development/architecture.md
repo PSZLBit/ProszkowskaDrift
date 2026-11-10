@@ -267,7 +267,6 @@ Owners and next steps are also recorded in the decision log's
   Owner: GreenDude5; #15 (PR #59).
 - Windows vs Linux festival laptop. Owner: ZofiaDan; #49/#50.
 - Router model and static-IP plan. Owner: ZofiaDan; #49/#50.
-- Final map data format and task/target scene structure. The scaffold currently
-  has placeholder boundary walls and cars only. Owner: Brzana; #45/#46.
+- Final map data format and task/target scene structure. The MFD map data, exclusive assignment, parking detection, and on-map beacons landed in #46 (`game/scripts/mfd_map.gd`, `task_manager.gd`, `target_spot.gd`); scoring, timer, HUD, and results stay in #47. Owner: Brzana; #46/#47.
 - Whether the host has a second control device; web host panel is post-MVP
   (D-26), so no action for the MFD.

@@ -9,6 +9,10 @@ const GameProtocol := preload("res://scripts/game_protocol.gd")
 const SlotInputStore := preload("res://scripts/slot_input_store.gd")
 const CarScript := preload("res://scripts/car.gd")
 const ServerInputScript := preload("res://scripts/server_input.gd")
+const MfdMap := preload("res://scripts/mfd_map.gd")
+const TaskAssignment := preload("res://scripts/task_assignment.gd")
+const ParkingDetector := preload("res://scripts/parking_detector.gd")
+const TaskManagerScript := preload("res://scripts/task_manager.gd")
 
 var _checks := 0
 var _failures := 0
@@ -29,6 +33,10 @@ func _initialize() -> void:
 	_test_input_store()
 	_test_car_movement()
 	_test_quit_key()
+	_test_mfd_map()
+	_test_task_assignment()
+	_test_parking_detector()
+	_test_task_manager()
 	_test_main_scene()
 	_test_project_settings()
 
@@ -81,7 +89,7 @@ func _test_protocol() -> void:
 
 	var config := GameProtocol.validate_config({
 		"roundDurationMs": 180000,
-		"tasksPerPlayer": 5,
+		"tasksPerPlayer": 1,
 		"maxPlayers": 4,
 	})
 	_check(bool(config["ok"]), "valid config is accepted")
@@ -89,13 +97,13 @@ func _test_protocol() -> void:
 
 	var zero_round := GameProtocol.validate_config({
 		"roundDurationMs": 0,
-		"tasksPerPlayer": 5,
+		"tasksPerPlayer": 1,
 		"maxPlayers": 4,
 	})
 	_check(not bool(zero_round["ok"]), "zero round duration is rejected")
 	var too_many_players := GameProtocol.validate_config({
 		"roundDurationMs": 180000,
-		"tasksPerPlayer": 5,
+		"tasksPerPlayer": 1,
 		"maxPlayers": 5,
 	})
 	_check(not bool(too_many_players["ok"]), "more than four players is rejected")
@@ -279,6 +287,201 @@ func _test_quit_key() -> void:
 	)
 
 
+func _test_mfd_map() -> void:
+	_check_eq(MfdMap.MAP_VERSION, "proszkowska-mfd-1", "MFD map version is set")
+	_check_eq(MfdMap.spot_count(), 4, "MFD map has four spots")
+	_check_eq(
+		[MfdMap.spot_label(0), MfdMap.spot_label(1), MfdMap.spot_label(2), MfdMap.spot_label(3)],
+		["A-01", "A-02", "A-03", "A-04"],
+		"spot labels are A-01 to A-04",
+	)
+	_check_eq(MfdMap.spot_rect(0).get_center(), Vector2(384, 540), "A-01 center matches the baseline")
+	_check_eq(MfdMap.spot_rect(3).get_center(), Vector2(1536, 540), "A-04 center matches the baseline")
+	_check_eq(MfdMap.spot_rect(1).size, Vector2(96, 144), "parking bays are 96x144")
+	_check_eq(MfdMap.spawn_pos(1), Vector2(672, 1000), "S1 spawn matches the baseline")
+	_check_eq(MfdMap.spawn_pos(4), Vector2(1248, 1000), "S4 spawn matches the baseline")
+	_check_eq(MfdMap.planter_rects().size(), 2, "MFD map has two planters")
+	var colors := [
+		MfdMap.slot_color(1), MfdMap.slot_color(2), MfdMap.slot_color(3), MfdMap.slot_color(4)
+	]
+	_check(colors[0] != colors[1] and colors[2] != colors[3], "slot colors are distinct")
+
+
+func _test_task_assignment() -> void:
+	var round1 := TaskAssignment.assign([1, 2, 3, 4], 1, 180000)
+	_check_eq(round1.size(), 4, "four active slots receive four tasks")
+	var labels: Array = []
+	for slot in [1, 2, 3, 4]:
+		labels.append(round1[slot]["spotLabel"])
+	labels.sort()
+	_check_eq(labels, ["A-01", "A-02", "A-03", "A-04"], "targets are exclusive among active players")
+	_check_eq(round1[1]["spotIndex"], 0, "round 1 starts at spot 0 for the first slot")
+	_check_eq(round1[1]["taskId"], 11, "taskId follows roundId * 10 + (spotIndex + 1)")
+	_check_eq(round1[4]["taskId"], 14, "taskId follows the spot order")
+
+	var round2 := TaskAssignment.assign([1, 2, 3, 4], 2, 180000)
+	_check_eq(round2[1]["spotIndex"], 1, "round 2 rotates the starting spot")
+	_check_eq(round2[4]["spotIndex"], 0, "rotation wraps around the four spots")
+
+	var partial := TaskAssignment.assign([1, 3], 1, 180000)
+	_check_eq(partial.size(), 2, "two connected slots receive two tasks")
+	_check(partial[1]["spotIndex"] != partial[3]["spotIndex"], "partial slots stay exclusive")
+
+	_check(TaskAssignment.assign([], 1, 180000).is_empty(), "an empty slot list assigns nothing")
+	_check_eq(TaskAssignment.assign([0, 5], 1, 180000).size(), 0, "out-of-range slots are not assigned")
+	_check_eq(
+		TaskAssignment.assign([2, 2, 1], 1, 180000).size(), 2, "duplicate slots are assigned once"
+	)
+	_check_eq(round1[1]["hint"], "north", "hint matches the baseline")
+	_check_eq(round1[1]["deadlineMs"], 180000, "deadline is the remaining round time")
+
+
+func _test_parking_detector() -> void:
+	var rect := Rect2(Vector2(336, 468), Vector2(96, 144))
+	var centered := ParkingDetector.car_corners(Vector2(384, 540), deg_to_rad(-90.0), MfdMap.CAR_SIZE)
+	_check(ParkingDetector.all_inside(centered, rect), "a centered car is inside the spot")
+
+	var far := ParkingDetector.car_corners(Vector2(900, 540), deg_to_rad(-90.0), MfdMap.CAR_SIZE)
+	_check(not ParkingDetector.all_inside(far, rect), "a car in another spot is outside")
+
+	var half_out := ParkingDetector.car_corners(Vector2(384 + 60, 540), deg_to_rad(-90.0), MfdMap.CAR_SIZE)
+	_check(not ParkingDetector.all_inside(half_out, rect), "a corner outside fails the check")
+
+	var edge := [
+		rect.position,
+		rect.position + Vector2(rect.size.x, 0),
+		rect.position + rect.size,
+		rect.position + Vector2(0, rect.size.y),
+	]
+	_check(ParkingDetector.all_inside(edge, rect), "the boundary counts as inside")
+
+	_check(ParkingDetector.speed_ok(0.0), "a stopped car passes the speed gate")
+	_check(ParkingDetector.speed_ok(40.0), "40 px/s passes the speed gate")
+	_check(not ParkingDetector.speed_ok(41.0), "above 40 px/s fails the speed gate")
+
+	_check_eq(ParkingDetector.angle_diff_deg(-90.0, -90.0), 0.0, "aligned facing has zero difference")
+	_check_eq(ParkingDetector.angle_diff_deg(90.0, -90.0), 180.0, "opposite facing differs by 180")
+
+	var hold := ParkingDetector.Hold.new()
+	_check(not hold.call("update", 0.25, true, true), "half the hold time does not complete")
+	_check(hold.call("update", 0.25, true, true), "0.5 s continuous hold completes")
+	var reset_hold := ParkingDetector.Hold.new()
+	reset_hold.call("update", 0.4, true, true)
+	reset_hold.call("update", 0.1, false, true)
+	_check(
+		not reset_hold.call("update", 0.4, true, true), "leaving the spot resets the hold timer"
+	)
+
+
+func _parked_cars(manager, speed: float) -> Dictionary:
+	var cars := {}
+	for slot in [1, 2, 3, 4]:
+		var entry: Dictionary = manager.get_task(slot)
+		if entry.is_empty():
+			continue
+		var rect: Rect2 = entry["spotRect"]
+		cars[slot] = {
+			"position": rect.get_center(),
+			"rotation": deg_to_rad(float(entry["spotFacing"])),
+			"speed": speed,
+		}
+	return cars
+
+
+func _test_task_manager() -> void:
+	var manager = TaskManagerScript.new()
+	manager.start_round([1, 2, 3, 4], 1, 180000, 0)
+	manager.set_running(true, 0)
+	_check_eq(manager.task_count(), 4, "four connected slots start with four tasks")
+	_check(manager.get_task(4)["spotLabel"] != manager.get_task(1)["spotLabel"], "tasks stay exclusive")
+
+	var completed: Array = []
+	manager.task_completed.connect(func(slot: int, result: Dictionary) -> void: completed.append([slot, result]))
+	manager.register_collision(1)
+	manager.register_collision(1)
+	manager.update_tasks(0.6, _parked_cars(manager, 0.0), 12000)
+	_check_eq(completed.size(), 4, "parked cars complete after the hold time")
+	var first: Dictionary = completed[0][1]
+	_check_eq(first["collisions"], 2 if int(first["slot"]) == 1 else 0, "collisions are recorded per slot")
+	_check_eq(first["completionMs"], 12000, "completion time uses the supplied timestamps")
+	manager.update_tasks(0.6, _parked_cars(manager, 0.0), 13000)
+	_check_eq(completed.size(), 4, "a completed task never completes twice")
+	manager.register_collision(int(first["slot"]))
+	_check_eq(
+		manager.get_task(int(first["slot"]))["collisions"], int(first["collisions"]),
+		"collisions after completion are ignored"
+	)
+
+	var early = TaskManagerScript.new()
+	early.start_round([1], 3, 180000, 0)
+	early.set_running(true, 0)
+	var early_done: Array = []
+	early.task_completed.connect(func(slot: int, result: Dictionary) -> void: early_done.append(slot))
+	early.update_tasks(0.3, _parked_cars(early, 0.0), 300)
+	early.update_tasks(0.3, _parked_cars(early, 100.0), 600)
+	_check(early_done.is_empty(), "leaving the spot or speeding up prevents completion")
+
+	var slow = TaskManagerScript.new()
+	slow.start_round([2], 1, 180000, 0)
+	slow.set_running(true, 0)
+	var slow_done: Array = []
+	slow.task_completed.connect(func(slot: int, result: Dictionary) -> void: slow_done.append(slot))
+	slow.update_tasks(0.6, _parked_cars(slow, 100.0), 600)
+	_check(slow_done.is_empty(), "a fast roll through the spot does not complete")
+
+	var held = TaskManagerScript.new()
+	held.start_round([1, 2], 1, 180000, 0)
+	held.set_running(true, 0)
+	held.set_slot_connected(2, false)
+	var held_done: Array = []
+	held.task_completed.connect(func(slot: int, result: Dictionary) -> void: held_done.append(slot))
+	held.update_tasks(0.6, _parked_cars(held, 0.0), 600)
+	_check_eq(held_done, [1], "a disconnected car keeps its task but does not complete")
+	_check(not held.get_task(2).is_empty(), "a disconnected slot keeps its reserved task")
+	held.set_slot_connected(2, true)
+	held.update_tasks(0.6, _parked_cars(held, 0.0), 1200)
+	_check_eq(held_done, [1, 2], "reconnecting resumes the same task")
+
+	var kicked = TaskManagerScript.new()
+	kicked.start_round([1, 2], 1, 180000, 0)
+	kicked.release_slot(2)
+	_check(kicked.get_task(2).is_empty(), "a kicked slot releases its spot")
+	_check_eq(kicked.task_count(), 1, "kicking removes only that slot")
+
+	var paused = TaskManagerScript.new()
+	paused.start_round([1], 1, 180000, 0)
+	paused.set_running(false, 0)
+	var paused_done: Array = []
+	paused.task_completed.connect(func(slot: int, result: Dictionary) -> void: paused_done.append(slot))
+	paused.update_tasks(0.6, _parked_cars(paused, 0.0), 600)
+	_check(paused_done.is_empty(), "no completion is detected while paused")
+
+	var resumed = TaskManagerScript.new()
+	resumed.start_round([1], 1, 180000, 1000)
+	resumed.set_running(true, 1000)
+	var resumed_done: Array = []
+	var resumed_results: Array = []
+	resumed.task_completed.connect(
+		func(slot: int, result: Dictionary) -> void:
+			resumed_done.append(slot)
+			resumed_results.append(result)
+	)
+	resumed.update_tasks(0.3, _parked_cars(resumed, 0.0), 1300)
+	resumed.set_running(false, 1300)
+	resumed.set_running(true, 5300)
+	resumed.update_tasks(0.5, _parked_cars(resumed, 0.0), 5800)
+	_check_eq(resumed_done, [1], "the task completes after resume with a fresh hold")
+	var resumed_first: Dictionary = resumed_results[0]
+	_check_eq(
+		resumed_first["completionMs"],
+		800,
+		"paused time is excluded from the completion duration",
+	)
+
+	for node in [manager, early, slow, held, kicked, paused, resumed]:
+		(node as Node).free()
+
+
 func _test_main_scene() -> void:
 	var packed := load("res://scenes/main.tscn") as PackedScene
 	_check(packed != null, "main.tscn loads")
@@ -314,6 +517,20 @@ func _test_main_scene() -> void:
 		)
 	slots.sort()
 	_check_eq(slots, [1, 2, 3, 4], "cars cover slots 1-4 exactly once")
+
+	var environment := scene.find_child("Environment", true, false)
+	_check(environment != null, "the main scene has an environment body")
+	if environment != null:
+		var solids := (environment as Node).find_children("*", "CollisionShape2D", true, false)
+		_check(solids.size() >= 6, "the environment has walls plus two MFD planters")
+		var positions: Array = []
+		for solid in solids:
+			positions.append((solid as Node2D).position)
+		_check(positions.has(Vector2(240, 540)), "the west planter matches the MFD baseline")
+		_check(positions.has(Vector2(1680, 540)), "the east planter matches the MFD baseline")
+
+	var task_manager := scene.find_child("TaskManager", true, false)
+	_check(task_manager != null, "the main scene has a task manager node")
 	scene.free()
 
 
