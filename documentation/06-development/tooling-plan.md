@@ -1,7 +1,7 @@
 # Tooling and Quality Gate Plan
 
 Status: Draft
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 Developer tooling for the project. A tool enters the repository only with a
 **trigger**, an **owner**, and — if it changes the stack or the merge gate — a
@@ -101,10 +101,14 @@ site activated the free-tier gates that do not need extra tooling:
    downloads it in CI. Export only on tags if CI time becomes a problem.
 4. Docs job: `mkdocs build --strict` when documentation, the MkDocs config, or
    its requirements change — active in `.github/workflows/docs.yml`.
-5. Cache Go modules, Gradle, and Godot downloads where possible; the Go job
+5. Sample environment smoke jobs: build the Go server and (for the controller
+   sample) `fakecontroller`, start the server, check `/healthz`, and run a
+   two-client, five-second controller sample — active in
+   `.github/workflows/sample-environments.yml` since 2026-11-10 (issue #80).
+6. Cache Go modules, Gradle, and Godot downloads where possible; the Go job
    caches modules through `actions/setup-go`, and the controller job uses the
    Gradle action cache.
-6. Required checks for `main`: Go tests/vet, Godot headless tests, and the
+7. Required checks for `main`: Go tests/vet, Godot headless tests, and the
    Android unit test/build/lint job. Branch protection is a repository-settings
    task and is not configured yet.
 
