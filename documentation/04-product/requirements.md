@@ -1,11 +1,34 @@
 # Product Requirements
 
 Status: Draft
-Last updated: 2026-10-22
+Last updated: 2026-11-10
 
-All items below are planned and not implemented unless marked otherwise. Game
-rules and tuning values are in `02-game-domain/game-design.md`; architecture and
-protocol are in `06-development/architecture.md` and `06-development/protocol.md`.
+Implementation status is summarized by area below. Per-item reconciliation is
+tracked in [#67](https://github.com/PSZLBit/ProszkowskaDrift/issues/67); items
+are planned unless the summary or the item says otherwise. Game rules and tuning
+values are in `02-game-domain/game-design.md`; architecture and protocol are in
+`06-development/architecture.md` and `06-development/protocol.md`.
+
+## Implementation Status (2026-11-10)
+
+| Area | Status | Evidence |
+|---|---|---|
+| Controller | API 19 plain-Views scaffold, WebSocket client, device-token store, and reconnect/backoff are merged (#63); real-tablet proof is pending. | #11, #48, #49 |
+| Server | Core slice implemented: configuration, controller/game endpoints, slots, input validation, heartbeat/reconnect, host command path, session end, diagnostics, and offline operation. Optional game process supervision is implemented (PR #59, D-37); server restart and the festival launcher remain future work. | `server/`, #15 |
+| Game | Scaffold only: one game connection, four cars, and placeholder boundaries. Map, tasks, parking detection, scoring, HUD, and results are pending. | `game/`, #13, #45, #46, #47 |
+| Post-MVP | Not implemented | D-26 |
+
+End-to-end four-tablet MFD evidence is tracked in #49.
+
+The MFD subset is defined in `02-game-domain/game-design.md` ("MFD Baseline",
+D-38). For the MFD, the baseline applies to `FR-G02`, `FR-G03`, `FR-G05`,
+`FR-G06`, and `FR-G09`: 1–4 cars, a shared 180 s timer, one task per player with
+four exclusive target spots, no auto-skip, direct start without a countdown, a
+minimal display HUD, host-started results, and a disconnected car stopping while
+its slot and task stay reserved. The MVP-only parts of those requirements — five
+tasks and the 24-spot pool, auto-skip, finish bonus, ratings, controller
+feedback, countdown, animated attract mode, all-disconnected pause, full
+reset/kick flows, and crash recovery — remain MVP.
 
 ## Controller (`controller-android/`, minimal Kotlin, Android 4.4.2)
 
@@ -98,7 +121,7 @@ protocol are in `06-development/architecture.md` and `06-development/protocol.md
   input-to-visible response (D-23).
 - `NFR-05` Controller compatibility: Android 4.4.2 (API 19); no Compose or
   OkHttp 4; avoid AndroidX unless a library is proven API 19 compatible;
-  validated in Sprint 0 (D-20).
+  validation is carried to #11/#48 (D-20; ADR-0002).
 - `NFR-06` Festival robustness: auto-reconnect, auto-restart after game/server
   crash, clear recovery states, and a documented runbook.
 - `NFR-07` English-only documentation, code, comments, commits, and UI strings

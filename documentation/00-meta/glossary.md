@@ -1,7 +1,7 @@
 # Glossary
 
 Status: Draft
-Last updated: 2026-10-20
+Last updated: 2026-11-04
 
 Single definition place for domain terms. Use these spellings in code, docs, and UI.
 
@@ -28,6 +28,7 @@ Single definition place for domain terms. Use these spellings in code, docs, and
 | Collision penalty | Point deduction for hitting static environment geometry during a task. | −10 per collision, maximum −30. |
 | Attract mode | Idle display state with title, instructions, and a start prompt. | Used between groups at the festival. |
 | Minimum Festival Demo (MFD) | Smallest playable scope acceptable for the festival stand. | Four tablets, one task type, score, reconnect, runbook. |
+| MFD baseline | The Decided game-rule subset for the Minimum Festival Demo: one task per player, a four-spot map, a 180 s round, time/precision/collision scoring, and a minimal display HUD/results. | Full five-task rules remain MVP; see the MFD Baseline in `02-game-domain/game-design.md`. |
 | MVP | First complete playable scope: five tasks, precision, results, attract mode, recovery. | Not implemented yet. |
 | Post-MVP | Work explicitly excluded from the first playable version. | Racing, drift, extra task types, web host panel. |
 | Local network | Same-site network shared by controllers, server, and display. | No internet play for MVP. |

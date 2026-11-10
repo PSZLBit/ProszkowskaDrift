@@ -202,6 +202,15 @@ func (s *Server) handleControllerInput(conn *controllerConn, env protocol.Envelo
 		}
 	}
 
+	// Log validated input at debug level so normal play does not flood
+	// default-level logs; raw payloads are never logged.
+	conn.log.Debug("controller input",
+		"slot", event.Slot,
+		"seq", event.Seq,
+		"steer", event.Steer,
+		"throttle", event.Throttle,
+	)
+
 	conn.invalid = 0
 	conn.rate = 0
 	s.sendToGame(protocol.TypeInput, protocol.ForwardedInputData{

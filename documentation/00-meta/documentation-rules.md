@@ -1,7 +1,7 @@
 # Documentation Rules
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-11-10
 
 ## Principles
 
@@ -29,6 +29,20 @@ Last updated: YYYY-MM-DD
   log; never delete decision history.
 - A `TBD` row blocks production implementation. A timeboxed spike may explore it
   under D-18; spike code is throwaway and is not merged as production.
+
+## ADR Threshold
+
+D-36 sets the threshold: use an ADR when a decision selects or changes the
+stack, transport, an architecture boundary, a cross-component contract, or a
+build/runtime interface constraint that changes how components are built or
+interact. Link the ADR from the decision-log row.
+
+Product rules stay in `02-game-domain/`, delivery decisions in
+`06-development/roadmap.md` and `06-development/sprint-reviews.md`, and process
+decisions in `06-development/workflow.md`. Product tuning, performance targets,
+and privacy rules stay in their module documents and dated decision-log rows
+unless they change an interface or stack choice. Do not create an ADR for every
+product or process decision.
 
 ## Read-First Protocol for Agents
 
