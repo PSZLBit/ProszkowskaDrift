@@ -1,7 +1,7 @@
 # Hardware Inventory
 
 Status: Draft
-Last updated: 2026-10-28
+Last updated: 2026-11-10
 
 Inventory of the four festival tablets and any spares, collected for Sprint 0
 (S0-02, issue #10). Devices are labelled `T1`–`T4`; slot labels `P1`–`P4` are
@@ -10,8 +10,8 @@ assigned only during festival provisioning.
 **Collection status:** all four tablets are recorded and share the same
 platform. Static specifications were read from Settings and the device
 specification. Hardware checks (Wi-Fi stability, charging under load, battery
-health, touch, readability) were not performed and are deferred to the S0-03
-controller spike (#11) and the S0-06 measurements (#14).
+health, touch, readability) were not performed and are deferred to the
+controller spike (#11), measurements (#14), and the four-player MFD run (#49).
 
 ## Privacy Rules
 
@@ -27,7 +27,7 @@ controller spike (#11) and the S0-06 measurements (#14).
    identical hardware and software.
 3. Record assumptions explicitly; do not present untested behavior as verified.
 4. Defer Wi-Fi, charging, battery-health, touch, and readability checks to the
-   spike that needs them (#11, #14, #17).
+   spike that needs them (#11, #14, #49).
 5. Mark unknown values `TBD`; never guess.
 
 Tools used: Settings, device specification. Optional ADB commands for later
@@ -163,6 +163,9 @@ in `06-development/architecture.md`.
 
 ## Spares and Replacements
 
+Owner: ZofiaDan. Decide the spare set and replacement option before the MFD;
+track it in #49.
+
 - Spare tablet: TBD.
 - Spare charger: TBD.
 - Spare micro-USB cable: TBD.
@@ -170,13 +173,15 @@ in `06-development/architecture.md`.
 
 ## Follow-ups
 
-- Install the controller APK on all four tablets when S0-03 (#11) produces it.
-- Run the 30-minute Wi-Fi, reconnect, and charging checks during #11 and #14.
-- Measure latency and readability in S0-06 (#14).
-- Update the hardware matrix in `06-development/testing.md` (#17).
-- Feed the device labels into the D-14 input-scheme playtest (#18).
-- Record any High risk in the roadmap risk register.
-- Update ADR-0002 validation evidence when the hardware checks are complete.
+| Follow-up | Owner | Tracking |
+|---|---|---|
+| Install the controller APK on all four tablets when #11 produces it | TracerDS | #11, #48 |
+| Run the 30-minute Wi-Fi, reconnect, and charging checks | ZofiaDan | #11, #14, #49 |
+| Measure latency and readability | ZofiaDan | #14 |
+| Update the hardware matrix in `06-development/testing.md` | ZofiaDan | #17 |
+| Feed the device labels into the D-14 input-scheme playtest | TracerDS | #18 |
+| Record any High risk in the roadmap risk register | ZofiaDan | #49 |
+| Update ADR-0002 validation evidence when the checks are complete | ZofiaDan | #49, ADR-0002 |
 
 ## Collection Log
 

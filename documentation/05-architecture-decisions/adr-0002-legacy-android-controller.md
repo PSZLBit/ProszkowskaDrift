@@ -1,7 +1,7 @@
 # ADR-0002: Legacy Android Controller
 
 Status: Decided
-Last updated: 2026-10-28
+Last updated: 2026-11-10
 Date: 2026-10-19
 Owner: Team
 
@@ -89,6 +89,21 @@ supervised festival stand but not a fully locked kiosk.
 If Kotlin/AGP cannot target API 19 reliably, try a minimal Java app. If the
 native path fails entirely, record a new decision before replacing the tablets
 or moving to a web controller.
+
+## Validation Status (2026-11-10)
+
+The gate above is not yet fully satisfied on real hardware. The decision remains
+accepted; validation is carried over, not reopened.
+
+- Static inventory for all four tablets is recorded (#10, PR #44). Wi-Fi,
+  charging, battery health, touch, readability, and spare checks are pending
+  (#10, #14, #49).
+- APK build is covered by PR #63 (`assembleDebug`; merged). Install, boot,
+  input, and reconnect on the tablets are pending (#11, #48).
+- The minimal Java fallback remains available but is not triggered.
+
+If a carried-over check fails, record a new dated decision before changing the
+controller stack.
 
 ## Links
 

@@ -1,11 +1,11 @@
 # Game Design — Proszkowska Drift MVP
 
 Status: Draft
-Last updated: 2026-11-04
+Last updated: 2026-11-10
 
-The MFD subset is being baselined in issue #45 (Sprint 2). The full GDD remains
-issue #32 and is deferred to the MVP stretch/Post-MVP; this document stays Draft
-until those changes land.
+The MFD subset is being baselined in issue #45. The full GDD remains issue #32
+and is deferred to the MVP stretch/Post-MVP; this document stays Draft until
+those changes land.
 
 This document defines the first playable game. Core rules are agreed in D-19;
 numeric values are initial tuning targets and should be changed only after a
@@ -311,3 +311,8 @@ decided before those playtests.
 - Whether finished cars should be hidden, ghosted, or parked in a finish area.
 - Whether the display should show a minimap for target finding or only on-map
   beacons.
+
+Owners and next steps for these items, including the two TBD tuning values, are
+tracked in the decision log's
+[Open TBD and Validation Items](../05-architecture-decisions/decision-log.md#open-tbd-and-validation-items).
+The MFD subset is owned by Brzana in #45; the full GDD remains #32.
