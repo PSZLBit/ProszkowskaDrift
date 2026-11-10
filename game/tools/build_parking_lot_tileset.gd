@@ -44,6 +44,14 @@ func _initialize() -> void:
 			return
 		print("Local (purchased) parking-lot TileSet written to %s." % LOCAL_OUTPUT)
 	else:
-		print("Purchased sheets not found; skipped %s." % LOCAL_OUTPUT)
+		# Without the purchased sheets a local TileSet can only be a stale
+		# artifact referencing missing textures, so remove it instead of
+		# leaving a file the map would fail to load.
+		var local_path := ProjectSettings.globalize_path(LOCAL_OUTPUT)
+		if ResourceLoader.exists(LOCAL_OUTPUT):
+			DirAccess.remove_absolute(local_path)
+			print("Removed stale %s (purchased sheets not found)." % LOCAL_OUTPUT)
+		else:
+			print("Purchased sheets not found; skipped %s." % LOCAL_OUTPUT)
 
 	quit(0)

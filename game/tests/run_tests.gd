@@ -714,6 +714,23 @@ func _test_parking_lot_map() -> void:
 				)
 				_check_eq(marker.position, center, "bay %d marker sits in its bay" % (bay + 1))
 
+	_check(
+		ParkingLotMapScript.should_use_local(true, true),
+		"an installed local TileSet is preferred",
+	)
+	_check(
+		not ParkingLotMapScript.should_use_local(true, false),
+		"a local TileSet without purchased sheets is stale",
+	)
+	_check(
+		not ParkingLotMapScript.should_use_local(false, true),
+		"a missing local TileSet falls back to committed",
+	)
+	_check(
+		not ParkingLotMapScript.should_use_local(false, false),
+		"a missing local TileSet without purchased sheets falls back",
+	)
+
 	map.free()
 
 

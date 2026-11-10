@@ -17,10 +17,23 @@ const TILESET_LOCAL_PATH := "res://tilesets/parking_lot.local.tres"
 
 func _tileset_path() -> String:
 	if ResourceLoader.exists(TILESET_LOCAL_PATH):
-		return TILESET_LOCAL_PATH
+		# A local TileSet is only usable when the purchased sheets are
+		# installed and the file actually loads. Otherwise it is a stale
+		# artifact referencing missing textures; loading it fails and the
+		# map would render blank, so fall back to the committed path.
+		var local := load(TILESET_LOCAL_PATH) as TileSet
+		if local != null and ParkingLotTilesetBuilder.purchased_available():
+			return TILESET_LOCAL_PATH
+		push_warning("Ignoring stale local TileSet %s." % TILESET_LOCAL_PATH)
 	if not ResourceLoader.exists(TILESET_PATH):
 		_generate_tileset()
 	return TILESET_PATH
+
+
+## Pure selection rule for tests: a local TileSet is only preferred when the
+## file exists and the purchased sheets are installed.
+static func should_use_local(local_exists: bool, purchased_present: bool) -> bool:
+	return local_exists and purchased_present
 
 
 func _generate_tileset() -> void:
