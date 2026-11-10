@@ -1,7 +1,7 @@
 # ADR-0001: MVP Architecture and Stack
 
 Status: Decided
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 Date: 2026-10-19
 Owner: Team
 

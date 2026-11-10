@@ -1,7 +1,7 @@
 # Game Domain Overview
 
 Status: Decided
-Last updated: 2026-10-19
+Last updated: 2026-11-10
 
 ## Concept
 

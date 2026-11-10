@@ -1,7 +1,7 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 Protocol version: `1` (MVP). The S0-04 server slice and the promoted controller
 WebSocket client (D-35) implement this contract; see the Sprint 0 implementation

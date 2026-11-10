@@ -323,6 +323,11 @@ These checks use the S0-04 fake clients. Details and expected output are in
     expires. Auto-start retries: `go run ./cmd/fakegame -token dev-token -auto-start`
     sends up to 5 start attempts over ~5 s (documented in `server/README.md`).
 
+11. Supervisor port propagation: start the server on a non-default port with
+    `--game-binary`, e.g. `go run ./cmd/server --addr :8099 --game-binary <path>
+    -game-token dev-token`, and confirm the supervised fakegame connects via
+    `PD_GAME_URL` and reports `game_ready` instead of crash-looping.
+
 Record the date, commit, commands, and observed result for these checks. A real
 Android controller and the target TV run were not available on 2026-11-04; those
 hardware checks remain pending in [Hardware Checklist (Manual, Pending)](#hardware-checklist-manual-pending).
