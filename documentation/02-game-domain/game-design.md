@@ -321,9 +321,9 @@ completing players: 103 = 63 time + 40 precision at 12.4 s, and
 
 - `config` for the MFD: `roundDurationMs = 180000`, `tasksPerPlayer = 1`, and
   `maxPlayers = 4`.
-- The server currently defaults `tasksPerPlayer` to 5. The MFD implementation
-  (#46) must change the default and its tests to 1; the MVP restores 5 when the
-  five-task rules land. The game must not ignore the config value.
+- The server now defaults `tasksPerPlayer` to 1 for the MFD baseline (#46).
+  The MVP restores 5 when the five-task rules land. The game must not ignore
+  the config value.
 - `game_ready.mapVersion` is `proszkowska-mfd-1`.
 - `host_command start` carries the server's new `roundId`; the game uses it for
   task IDs, spot rotation, and `round_result`. This is an additive protocol

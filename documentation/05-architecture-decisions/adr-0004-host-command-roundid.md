@@ -54,8 +54,10 @@ these values on.
 
 ## Validation Status (2026-11-10)
 
-- Documented only. Server emission, game handling, and tests are pending in
-  the MFD implementation (#46). No code sends or reads `roundId` yet.
+- Implemented in #46: server emission in
+  `server/internal/gameserver/game.go`, game handling in
+  `game/scripts/server_input.gd`, and server tests for start/reset/start and
+  kick omission.
 
 ## Links
 
