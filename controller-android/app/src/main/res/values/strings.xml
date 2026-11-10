@@ -11,8 +11,8 @@
   <string name="server_unset">Server not set — long-press to configure</string>
   <string name="set_server_hint">Long-press the server line to set the address</string>
   <string name="server_dialog_title">Server address</string>
-  <string name="server_dialog_hint">ws://192.168.1.10:8080 (path optional)</string>
-  <string name="server_invalid">Use a ws:// or wss:// address</string>
+  <string name="server_dialog_hint">192.168.1.10:8080 or ws://192.168.1.10:8080</string>
+  <string name="server_invalid">Use a host, ws://, or wss:// address</string>
 
   <string name="slot_none">—</string>
   <string name="phase_format">Phase: %1$s</string>

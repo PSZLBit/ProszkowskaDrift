@@ -1,7 +1,7 @@
 # Documentation — Source of Truth
 
 Status: Decided
-Last updated: 2026-11-03
+Last updated: 2026-11-09
 
 > All project artifacts are in English. This folder is the source of truth.
 > Code implements what is described here. Chat history does not override this folder.
@@ -80,9 +80,13 @@ Superseded decisions stay in the log. Do not delete history.
   PR only on explicit request (D-29).
 - Docs publishing: read-only MkDocs site on GitHub Pages; `documentation/`
   remains the source of truth (D-30).
+- Assets: purchased third-party art stays out of Git; local copies only, with
+  provenance in `game/assets/CREDITS.md` (D-34).
 - Delivery calendar: festival 2026-11-24; festival-ready target 2026-11-18;
   MFD committed, MVP stretch (D-31).
 - Game scaffold promoted from S0-05 (D-32).
+- Controller WebSocket scaffold promoted from S0-05; real-tablet validation and
+  the production UI remain #11/#48 (D-35).
 - Sprint 2 re-baselined to a single-tablet vertical slice; four-player MFD
   validation moved to Sprint 3 (D-33).
 - Open: controller input scheme (D-14), map/tuning details, and hardware specs

@@ -1,7 +1,7 @@
 # Development Workflow
 
 Status: Decided
-Last updated: 2026-11-04
+Last updated: 2026-11-09
 
 ## Monorepo Layout
 
@@ -13,8 +13,8 @@ Last updated: 2026-11-04
   detection, scoring, and HUD are later work. `game/scenes/main.tscn` is the
   main scene.
 - `controller-android/` — minimal Kotlin Android controller for API 19. The
-  WebSocket spike is implemented; real-tablet validation and the production UI
-  are tracked by #11 and #48.
+  WebSocket client is promoted after cleanup (D-35); real-tablet validation and
+  the production UI are tracked by #11 and #48.
 - `documentation/` — source of truth and decision history.
 - Tests live next to the code they test; no separate top-level test tree.
 
@@ -35,8 +35,9 @@ Run from the repository root unless a command changes directory.
 - Local run instructions for server, game, and fake controllers are in the root
   `README.md`.
 
-CI runs the server and game commands in `.github/workflows/server.yml` and
-`.github/workflows/game.yml`; the controller job is not enabled yet.
+CI runs the server, game, and controller commands in
+`.github/workflows/server.yml`, `.github/workflows/game.yml`, and
+`.github/workflows/controller.yml`.
 
 ## Team and Responsibilities
 
@@ -174,6 +175,10 @@ outcome and acceptance criteria. Link every PR to an issue.
   issue/PR, not only in chat.
 - Demo on the real target hardware every week when the work touches controller,
   game, or network behavior.
+- Do not commit purchased third-party art assets. Keep them local under
+  `game/assets/` (the purchased tileset is ignored by `.gitignore`), record
+  provenance in `game/assets/CREDITS.md`, and never commit purchase receipts or
+  personal data (D-34).
 
 ## Definition of Ready
 
