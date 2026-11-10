@@ -162,9 +162,12 @@ input-to-visible measurements remain in issue #13 until recorded in
 Development mode may run Go and Godot in separate terminals; the festival mode
 must use the supervisor/launcher so a crash does not require a developer. The
 Sprint 0 server slice and game scaffold implement the game/session sides of
-steps 4–7. The development token is supplied manually. Godot launch and
-supervision are in review in PR #59; the server-crash launcher remains part of
-the M3 runbook (#50).
+steps 4–7. Game-only process supervision is now implemented in the optional Go
+supervisor (`server/internal/supervisor`, enabled with `--game-binary`): it starts
+Godot with a per-launch token and restarts it after an unexpected exit, returning
+the session to `Attract`. The development token can still be supplied manually in
+development mode. Server restart (step 9) and the festival launcher/wrapper remain
+future work (M3 runbook, #50).
 
 ## Data Flow
 
@@ -223,9 +226,10 @@ Host keyboard --> Game --host_request--> Server --host_command--> Game
 
 - `server/`: Go binary, config file, logs directory.
 - `game/`: Godot export (Windows and/or Linux, decided by the laptop OS).
-- `server/ops/`: launch script or small supervisor that starts the server,
-  waits for health, starts/stops the game, and restarts on failure. It stays
-  inside `server/` to respect the D-07 layout.
+- `server/ops/`: optional launch wrapper around the Go server. The MVP
+  supervision path is the in-process Go supervisor (`--game-binary`); a shell
+  wrapper may still orchestrate the server binary itself. It stays inside
+  `server/` to respect the D-07 layout.
 - Development: separate commands for Go and Godot, documented in the root
   `README.md` and `06-development/workflow.md`.
 - Festival: one folder, one launch action, fullscreen, no developer tools.
@@ -253,8 +257,9 @@ Owners and next steps are also recorded in the decision log's
 - WebSocket libraries: the Go slice uses `github.com/coder/websocket` v1.8.15;
   the controller uses OkHttp 3.12.x (D-35, merged in PR #63). Confirm both in
   the architecture and on API 19. Owner: TracerDS + GreenDude5; #11/#48.
-- Exact process supervisor implementation (Go or shell script). Owner:
-  GreenDude5; #15 and PR #59 (in review).
+- Process supervisor implementation: decided as the in-process Go supervisor
+  (D-37); a shell wrapper remains optional for launching the server binary.
+  Owner: GreenDude5; #15 (PR #59).
 - Windows vs Linux festival laptop. Owner: ZofiaDan; #49/#50.
 - Router model and static-IP plan. Owner: ZofiaDan; #49/#50.
 - Final map data format and task/target scene structure. The scaffold currently

@@ -6,8 +6,9 @@ reconnect, input validation, rate limiting, heartbeats, and the minimal host
 command path.
 
 This is the Sprint 0 slice (issue #12). It is intentionally small: the full
-cross-round session lifecycle, late join, game process supervision, scoring, and
-round timing are later milestones.
+cross-round session lifecycle, late join, scoring, and round timing are later
+milestones. Optional in-process game process supervision is implemented
+(`--game-binary`); server restart and the festival launcher remain future work.
 
 ## Requirements
 
@@ -239,9 +240,10 @@ configurable in this slice.
 ## Not implemented in this slice
 
 - Full session lifecycle, late join.
-- Game process supervision and per-launch token rotation (S0-07). A game crash
-  or a silent game connection already notifies controllers and accepts a
-  reconnect; the server does not launch or restart Godot itself.
+- Server restart and the festival launcher/wrapper (S0-07). A game crash or a
+  silent game connection already notifies controllers and accepts a reconnect;
+  game-only supervision is available through the optional `--game-binary`
+  supervisor, but the server binary itself is not yet restarted automatically.
 - Countdown, round timer ownership, tasks, scoring, and controller feedback.
 - TLS, persistence, accounts, or any internet-facing deployment.
 
