@@ -10,6 +10,7 @@ extends Node
 
 const GameProtocol := preload("res://scripts/game_protocol.gd")
 const SlotInputStore := preload("res://scripts/slot_input_store.gd")
+const MfdMap := preload("res://scripts/mfd_map.gd")
 
 const HEARTBEAT_INTERVAL_SEC := 1.0
 const CONNECT_TIMEOUT_MS := 5000
@@ -22,7 +23,8 @@ signal connection_state_changed(connected: bool)
 signal slot_joined(slot: int, label: String, color: String)
 signal slot_left(slot: int, reason: String)
 signal config_received(config: Dictionary)
-signal host_command_received(command: String, slot: int)
+signal host_command_received(command: String, slot: int, round_id: int)
+signal task_completed(slot: int, result: Dictionary)
 signal fatal_error(code: String, message: String)
 
 ## Base WebSocket URL. Do not put the token in this URL; use game_token or the
@@ -57,6 +59,8 @@ var _next_auto_start_at_ms := 0
 var _saw_input: Dictionary = {}
 var _logged_types: Dictionary = {}
 var _config: Dictionary = {}
+var _active_slots: Dictionary = {}
+var _round_id := 0
 
 
 func _ready() -> void:
@@ -303,7 +307,7 @@ func _maybe_send_game_ready() -> void:
 	if not _connected or _game_ready_sent or not _got_game_hello or not _got_config:
 		return
 
-	if _send("game_ready", {"gameVersion": "0.1.0", "mapVersion": "proszkowska-1"}):
+	if _send("game_ready", {"gameVersion": "0.1.0", "mapVersion": MfdMap.MAP_VERSION}):
 		_game_ready_sent = true
 		_heartbeat_accum = 0.0
 		_reconnect_attempt = 0
@@ -344,11 +348,13 @@ func _handle_player_joined(data: Dictionary) -> void:
 	# A reconnect re-sends player_joined and resets the controller sequence.
 	_store.clear_slot(slot)
 	_saw_input.erase(slot)
+	_active_slots[slot] = true
 	print(
 		"[ServerInput] player_joined slot=%d label=%s color=%s."
 		% [slot, str(data.get("label", "")), str(data.get("color", ""))]
 	)
 	slot_joined.emit(slot, str(data.get("label", "")), str(data.get("color", "")))
+	_task_manager_call("set_slot_connected", [slot, true])
 
 
 func _handle_player_left(data: Dictionary) -> void:
@@ -360,36 +366,100 @@ func _handle_player_left(data: Dictionary) -> void:
 	var reason := str(data.get("reason", ""))
 	_store.clear_slot(slot)
 	_saw_input.erase(slot)
+	_active_slots.erase(slot)
 	print("[ServerInput] player_left slot=%d reason=%s." % [slot, reason])
 	slot_left.emit(slot, reason)
+	_task_manager_call("set_slot_connected", [slot, false])
 
 
 func _handle_host_command(data: Dictionary) -> void:
 	var command := str(data.get("command", ""))
 	var slot := int(data.get("slot", 0))
-	print("[ServerInput] host_command %s slot=%d." % [command, slot])
+	if command == "start":
+		var round_id := int(data.get("roundId", _round_id + 1))
+		if round_id <= 0:
+			round_id = _round_id + 1
+		_round_id = round_id
+	print("[ServerInput] host_command %s slot=%d round=%d." % [command, slot, _round_id])
 
 	match command:
 		"start":
 			_start_accepted = true
 			_phase = "playing"
 			clear_input()
+			_start_task_round()
 		"pause":
 			_phase = "paused"
 			clear_input()
+			_task_manager_call("set_running", [false])
 		"resume":
 			_phase = "playing"
+			_task_manager_call("set_running", [true])
 		"reset":
 			_phase = "ready"
 			clear_input()
+			_task_manager_call("set_running", [false])
+			_task_manager_call("clear_round", [])
 		"end":
 			_phase = "ended"
 			clear_input()
+			_task_manager_call("set_running", [false])
+			_task_manager_call("clear_round", [])
 		"kick":
 			_store.clear_slot(slot)
 			_saw_input.erase(slot)
+			_active_slots.erase(slot)
+			_task_manager_call("release_slot", [slot])
 
-	host_command_received.emit(command, slot)
+	host_command_received.emit(command, slot, _round_id)
+
+
+## Starts one MFD round: every connected slot gets one exclusive task.
+## Late join is between rounds (D-24), so no task is assigned mid-round.
+func _start_task_round() -> void:
+	var manager := _task_manager()
+	if manager == null:
+		return
+	var slots: Array = []
+	for slot_raw in _active_slots.keys():
+		slots.append(int(slot_raw))
+	slots.sort()
+	var duration_ms := int(_config.get("roundDurationMs", 180000))
+	manager.call("start_round", slots, _round_id, duration_ms, Time.get_ticks_msec())
+	manager.call("set_running", [true])
+	if not manager.is_connected("task_completed", _on_task_completed):
+		manager.connect("task_completed", _on_task_completed)
+
+
+## Hook for #47: a completed task emits the result once with timing, center
+## offset, angle difference, and collision count. Scoring and the
+## task_result send stay in #47; this only records and re-emits.
+func _on_task_completed(slot: int, result: Dictionary) -> void:
+	print(
+		"[ServerInput] task_completed slot=%d task=%s offset=%.1f angle=%.1f collisions=%d."
+		% [
+			slot,
+			str(result.get("taskId", "")),
+			float(result.get("centerOffset", 0.0)),
+			float(result.get("angleDiff", 0.0)),
+			int(result.get("collisions", 0)),
+		]
+	)
+	task_completed.emit(slot, result)
+
+
+func _task_manager():
+	var parent := get_parent()
+	if parent == null:
+		return null
+	return parent.get_node_or_null("TaskManager")
+
+
+func _task_manager_call(method: String, args: Array) -> void:
+	var manager := _task_manager()
+	if manager == null:
+		return
+	manager.callv(method, args)
 
 
 func _handle_host_denied(data: Dictionary) -> void:
@@ -476,6 +546,8 @@ func _reset_connection_state() -> void:
 	_next_auto_start_at_ms = 0
 	_store.clear_all()
 	_saw_input.clear()
+	_active_slots.clear()
+	_task_manager_call("set_running", [false])
 
 
 func _schedule_reconnect(reason: String) -> void:

@@ -494,6 +494,20 @@ func _test_main_scene() -> void:
 		)
 	slots.sort()
 	_check_eq(slots, [1, 2, 3, 4], "cars cover slots 1-4 exactly once")
+
+	var environment := scene.find_child("Environment", true, false)
+	_check(environment != null, "the main scene has an environment body")
+	if environment != null:
+		var solids := (environment as Node).find_children("*", "CollisionShape2D", true, false)
+		_check(solids.size() >= 6, "the environment has walls plus two MFD planters")
+		var positions: Array = []
+		for solid in solids:
+			positions.append((solid as Node2D).position)
+		_check(positions.has(Vector2(240, 540)), "the west planter matches the MFD baseline")
+		_check(positions.has(Vector2(1680, 540)), "the east planter matches the MFD baseline")
+
+	var task_manager := scene.find_child("TaskManager", true, false)
+	_check(task_manager != null, "the main scene has a task manager node")
 	scene.free()
 
 

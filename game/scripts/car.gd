@@ -45,6 +45,14 @@ var steer := 0.0
 ## Throttle input: -1 (brake/reverse) to 1 (throttle).
 var throttle := 0.0
 
+## Emitted once per contact episode with the static environment. A contact
+## that persists across frames counts once; separation and re-contact count
+## again. The task manager counts these while a task is assigned.
+signal collision_started
+
+## Whether the car touched the environment last physics frame.
+var _was_touching := false
+
 ## Signed forward speed in px/s; positive = forward, negative = reverse.
 var _speed := 0.0
 
@@ -73,9 +81,14 @@ func _physics_process(delta: float) -> void:
 
 	# Hitting the static environment reduces speed (game-design.md). Never
 	# destroys the car or ends the round. Counting collisions for the current
-	# task is the job of the future task/scoring module, not this script.
-	if get_slide_collision_count() > 0:
+	# task is the job of the future task/scoring module, which listens for
+	# collision_started: one count per contact episode, not per frame.
+	var touching := get_slide_collision_count() > 0
+	if touching:
 		_speed *= 0.5
+	if touching and not _was_touching:
+		collision_started.emit()
+	_was_touching = touching
 
 
 ## Returns the current input as (steer, throttle), each in [-1, 1].

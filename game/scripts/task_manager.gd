@@ -129,7 +129,8 @@ func _complete(slot: int, car: Dictionary, now_ms: int) -> void:
 		return
 	_tasks[slot]["state"] = "completed"
 	var rect: Rect2 = _tasks[slot]["spotRect"]
-	var center_offset: float = (car["position"] as Vector2).distance_to(rect.get_center())
+	var car_pos: Vector2 = car["position"]
+	var center_offset: float = car_pos.distance_to(rect.get_center())
 	var angle_diff: float = ParkingDetector.angle_diff_deg(
 		rad_to_deg(float(car["rotation"])), float(_tasks[slot]["spotFacing"])
 	)
@@ -159,7 +160,7 @@ func _physics_process(delta: float) -> void:
 			cars[slot] = {
 				"position": body.position,
 				"rotation": body.rotation,
-				"speed": (body.velocity as Vector2).length(),
+				"speed": body.velocity.length(),
 			}
 	if not cars.is_empty():
 		update_tasks(delta, cars, Time.get_ticks_msec())
@@ -188,7 +189,7 @@ func _spawn_beacons() -> void:
 	if parent == null:
 		return
 	for slot in _tasks.keys():
-		var beacon: Node2D = TargetSpot.new()
+		var beacon = TargetSpot.new()
 		var rect: Rect2 = _tasks[slot]["spotRect"]
 		beacon.position = rect.get_center()
 		parent.add_child(beacon)
