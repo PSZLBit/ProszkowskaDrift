@@ -39,7 +39,6 @@ const (
 // Error codes sent in an error message.
 const (
 	CodeAuthFailed       = "auth_failed"
-	CodeTokenInUse       = "token_in_use"
 	CodeSessionFull      = "session_full"
 	CodeInvalidInput     = "invalid_input"
 	CodeRateLimited      = "rate_limited"

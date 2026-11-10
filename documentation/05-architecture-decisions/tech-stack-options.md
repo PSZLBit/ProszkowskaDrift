@@ -1,7 +1,7 @@
 # Tech Stack Options — Analysis and Outcome
 
 Status: Draft
-Last updated: 2026-11-09
+Last updated: 2026-11-03
 
 This file preserves the analysis that led to D-22 and ADR-0001. The decision is
 recorded there; the options below are context, not open choices.
@@ -35,10 +35,9 @@ supersedes the affected part; do not silently change the stack.
   game state), discarded at session end (D-12, D-25).
 - English only (D-05).
 - `server/` and `game/` are scaffolded. The Godot headless test runner and CI
-  job are configured. The Android controller WebSocket client is promoted
-  (D-35) with host-JVM fake-server tests and a controller CI job; real-tablet
-  validation and production UI work are tracked by #11 and #48
-  (`06-development/workflow.md`).
+  job are configured. The Android controller is not on `main`; an API 19
+  plain-Views scaffold exists on an unmerged branch, and production work is
+  tracked by #11 and #48 (`06-development/workflow.md`).
 
 ## 1. Server language / runtime (D-17, D-01 — resolved by D-22)
 
