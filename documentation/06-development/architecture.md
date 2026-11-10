@@ -39,7 +39,7 @@ or simulate the game.
 | Component | Process | Responsibilities |
 |-----------|---------|------------------|
 | Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold and WebSocket client are merged (#63); production work is #48 |
-| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; Godot supervision is in review (#59)
+| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, optional game supervision, logs. Sprint 0 slice implemented in `server/`; game-only supervision is implemented (PR #59, D-37); server restart and launcher remain later work
 | Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, placeholder boundaries; no map, parking, or scoring yet |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
@@ -88,10 +88,12 @@ the Sprint 0 spikes finish.
 - `cmd/fakecontroller` and `cmd/fakegame` provide manual end-to-end checks. The
   protocol details and current deviations are in `06-development/protocol.md`.
 
-This slice does not launch or supervise Godot (the game heartbeat closes a
-silent game connection already; launching, token rotation per launch, and
-restarts are S0-07), assign tasks, score, implement late join, or provide a
-production controller UI. Those remain later sprint items.
+This slice does not restart the server or provide the festival launcher
+(the game heartbeat closes a silent game connection already; game-only
+supervision, per-launch token rotation, and restarts are implemented in the
+optional Go supervisor, PR #59 / D-37; server restart and launcher remain
+S0-07), assign tasks, score, implement late join, or provide a production
+controller UI. Those remain later sprint items.
 
 ## Game Scaffold
 

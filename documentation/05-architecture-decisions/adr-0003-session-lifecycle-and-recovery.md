@@ -72,7 +72,7 @@ D-24. It does not change their behavior.
   and covered by server tests.
 - Controller auto-connect, token persistence, and reconnect are merged in PR #63
   and tracked by #48.
-- The Godot supervisor is in review in PR #59; the server-crash launcher remains
+- The Godot supervisor is implemented (PR #59, D-37); manual drill pending (#15); the server-crash launcher remains
   M3 work in #50. Neither is proven by a manual crash drill yet.
 - Real-tablet reconnect and 30-minute Wi-Fi/charging behavior have not been
   tested; they are tracked by #14, #48, and #49. The S0-02 short

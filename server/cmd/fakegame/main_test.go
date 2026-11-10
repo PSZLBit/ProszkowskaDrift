@@ -42,3 +42,15 @@ func TestCommandLoopEOFDoesNotReturnUntilContextCancelled(t *testing.T) {
 		t.Fatal("commandLoop did not return after context cancellation")
 	}
 }
+
+func TestResolveServerURL(t *testing.T) {
+	if got := resolveServerURL(defaultServerURL, "ws://127.0.0.1:8099/ws/game"); got != "ws://127.0.0.1:8099/ws/game" {
+		t.Fatalf("env override not applied: got %q", got)
+	}
+	if got := resolveServerURL("ws://example/ws/game", "ws://127.0.0.1:8099/ws/game"); got != "ws://example/ws/game" {
+		t.Fatalf("explicit flag overridden: got %q", got)
+	}
+	if got := resolveServerURL(defaultServerURL, ""); got != defaultServerURL {
+		t.Fatalf("empty env changed value: got %q", got)
+	}
+}

@@ -61,7 +61,7 @@ until it is run on the target tablets, laptop, TV, and router.
 | S0-04 (#12) | Go server | Four fake controllers get slots; validation, heartbeat, and reconnect tests pass | Automated pass; real-controller path pending |
 | S0-05 (#13) | Godot integration | Four controller inputs render as four independently moving cars | Headless pass on 2026-10-26; target-display run pending |
 | S0-06 (#14) | Latency and Wi-Fi | p95 input-to-visible ≤100 ms, 20–30 Hz input, stable 30-minute Wi-Fi | Pending |
-| S0-07 (#15) | Supervisor | Starts Godot, detects a crash, and restarts it into `Attract` | Pending: supervisor is not merged; PR #59 is in review |
+| S0-07 (#15) | Supervisor | Starts Godot, detects a crash, and restarts it into `Attract` | Implemented in PR #59 (merged); manual crash-recovery proof pending (#15) |
 | S0-09 (#17) | Test plan and hardware checklist | This document covers the MFD and hardware checks, and the checklist has a dry run on the target hardware | Checklist added; hardware dry run pending |
 
 Automated server and game evidence is in [Go Server Tests](#go-server-tests),
@@ -322,6 +322,11 @@ These checks use the S0-04 fake clients. Details and expected output are in
     stays connected for the full duration and disconnects only when the duration
     expires. Auto-start retries: `go run ./cmd/fakegame -token dev-token -auto-start`
     sends up to 5 start attempts over ~5 s (documented in `server/README.md`).
+
+11. Supervisor port propagation: start the server on a non-default port with
+    `--game-binary`, e.g. `go run ./cmd/server --addr :8099 --game-binary <path>
+    -game-token dev-token`, and confirm the supervised fakegame connects via
+    `PD_GAME_URL` and reports `game_ready` instead of crash-looping.
 
 Record the date, commit, commands, and observed result for these checks. A real
 Android controller and the target TV run were not available on 2026-11-04; those

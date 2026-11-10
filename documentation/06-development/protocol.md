@@ -1,7 +1,7 @@
 # Controller–Server–Game Protocol
 
 Status: Draft
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 Protocol version: `1` (MVP). The S0-04 server slice and the promoted controller
 WebSocket client (D-35) implement this contract; see the Sprint 0 implementation
@@ -410,7 +410,7 @@ Session-boundary choices (this sprint, additive):
   reason `game_heartbeat_timeout`, broadcasts `error` `game_unavailable`,
   resets the session to `attract` (slots stay reserved), and waits for the
   game to reconnect with the configured token. Token rotation per game launch
-  arrives with S0-07 game supervision.
+  is implemented in the optional Go supervisor (PR #59, D-37).
 - `/healthz` (plain HTTP, not WebSocket) returns
   `{status, phase, roundId, controllers, gameReady}` for the launcher and
   manual checks.

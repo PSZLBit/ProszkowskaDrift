@@ -25,8 +25,10 @@ Drift and a racing mode are post-MVP ideas. The MVP is the parking core.
 - `server/` — Go session server: slots, input validation, reconnects, host
   commands, session timers, and recovery signals. Sprint 0 slice: controller
   and game WebSocket endpoints, in-memory slots, validation, all-disconnected
-  pause, `/healthz`, and fake clients. Game process supervision is not
-  implemented yet. See [`server/README.md`](server/README.md).
+  pause, `/healthz`, and fake clients. Optional game process supervision is
+  implemented (`server/internal/supervisor`, enabled with `--game-binary`);
+  server restart and the festival launcher remain future work. See
+  [`server/README.md`](server/README.md).
 - `game/` — Godot 4 game and fullscreen display. Current scaffold: one game
   connection, four slot-keyed cars, protocol validation, fullscreen settings,
   and headless tests. Map, parking detection, scoring, and HUD are next.

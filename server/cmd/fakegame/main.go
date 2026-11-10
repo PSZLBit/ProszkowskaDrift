@@ -39,11 +39,16 @@ func main() {
 	log.SetFlags(0)
 
 	opts := options{}
-	flag.StringVar(&opts.server, "server", "ws://127.0.0.1:8080/ws/game", "game WebSocket URL")
+	flag.StringVar(&opts.server, "server", defaultServerURL, "game WebSocket URL")
 	flag.StringVar(&opts.token, "token", os.Getenv("PD_GAME_TOKEN"), "game token (or PD_GAME_TOKEN)")
 	flag.DurationVar(&opts.duration, "duration", 0, "exit after this duration (0 runs until interrupted)")
 	flag.BoolVar(&opts.autoStart, "auto-start", false, "send host_request start one second after connecting")
 	flag.Parse()
+
+	// The supervisor injects the resolved game URL (including a non-default port)
+	// through PD_GAME_URL. It overrides only the default URL so an explicit
+	// -server flag still wins.
+	opts.server = resolveServerURL(opts.server, os.Getenv("PD_GAME_URL"))
 
 	if opts.token == "" {
 		fmt.Fprintln(os.Stderr, "fakegame: -token or PD_GAME_TOKEN is required")
@@ -347,4 +352,15 @@ func sleep(ctx context.Context, d time.Duration) bool {
 	case <-timer.C:
 		return true
 	}
+}
+
+const defaultServerURL = "ws://127.0.0.1:8080/ws/game"
+
+// resolveServerURL applies the PD_GAME_URL override only when the caller did not
+// pass an explicit -server value.
+func resolveServerURL(flagValue, envValue string) string {
+	if envValue != "" && flagValue == defaultServerURL {
+		return envValue
+	}
+	return flagValue
 }
