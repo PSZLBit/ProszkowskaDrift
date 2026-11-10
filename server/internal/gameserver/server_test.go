@@ -416,7 +416,7 @@ func TestReconnectReclaimsSlot(t *testing.T) {
 
 	duplicate := env.dialController(t)
 	duplicate.sendHello("token-reconnect")
-	duplicate.expectError(protocol.CodeAuthFailed)
+	duplicate.expectError(protocol.CodeTokenInUse)
 
 	first.close()
 	waitFor(t, func() bool {
