@@ -39,14 +39,27 @@ or simulate the game.
 | Component | Process | Responsibilities |
 |-----------|---------|------------------|
 | Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold and WebSocket client are merged (#63); production work is #48 |
-| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; Godot supervision is in review (#59) |
+| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; Godot supervision is in review (#59)
 | Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, placeholder boundaries; no map, parking, or scoring yet |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
-As of 2026-11-10 the controller production code is merged in PR #63 (API 19
-scaffold, WebSocket client, device-token store, reconnect/backoff, and host-JVM
-tests). Real-tablet proof and production work are tracked by #11 and #48.
+Controller implementation status (2026-11-10): `controller-android/` is an API
+19 app — `minSdk 19` / `targetSdk 19`, landscape, one plain-Views `Activity`,
+keep-screen-on, platform Holo theme — built with AGP 9.4.1 and AGP built-in
+Kotlin. Per D-20/ADR-0002 it has no Compose and no AndroidX; dependencies are
+JUnit for local unit tests and OkHttp 3.12.x for the WebSocket client. The
+controller WebSocket spike is promoted after cleanup (D-35) and merged in
+PR #63. It implements `connect` to `/ws/controller` (a bare host address is
+expanded to that path), the `hello` device-token handshake, `input` at 25 Hz
+while the phase is `playing`, a 2 s application `ping` with a bounded pong
+watchdog, and reconnect with capped exponential backoff. A duplicate token is
+reported as `token_in_use` and retried; `auth_failed` stays permanent.
+`game_unavailable` keeps the socket open and the following `attract` phase
+gates input. Host-JVM tests use OkHttp MockWebServer as the fake server and an
+injected scheduler and clock for deterministic timing. Real-tablet validation is
+still pending; the production controller is issue #48 and the spike evidence is
+issue #11.
 
 ## Server Slice
 
@@ -238,8 +251,8 @@ Owners and next steps are also recorded in the decision log's
 [Open TBD and Validation Items](../05-architecture-decisions/decision-log.md#open-tbd-and-validation-items).
 
 - WebSocket libraries: the Go slice uses `github.com/coder/websocket` v1.8.15;
-  PR #63 uses OkHttp 3.12.x for the API 19 controller. Confirm both in the
-  architecture and on API 19. Owner: TracerDS + GreenDude5; #11/#48.
+  the controller uses OkHttp 3.12.x (D-35, merged in PR #63). Confirm both in
+  the architecture and on API 19. Owner: TracerDS + GreenDude5; #11/#48.
 - Exact process supervisor implementation (Go or shell script). Owner:
   GreenDude5; #15 and PR #59 (in review).
 - Windows vs Linux festival laptop. Owner: ZofiaDan; #49/#50.

@@ -86,6 +86,8 @@ Superseded decisions stay in the log. Do not delete history.
 - Delivery calendar: festival 2026-11-24; festival-ready target 2026-11-18;
   MFD committed, MVP stretch (D-31).
 - Game scaffold promoted from S0-05 (D-32).
+- Controller WebSocket scaffold promoted from S0-05; real-tablet validation and
+  the production UI remain #11/#48 (D-35).
 - Sprint 2 re-baselined to a single-tablet vertical slice; four-player MFD
   validation moved to Sprint 3 (D-33).
 - Open: controller input scheme and feedback (D-14; #18/#48), MFD map/tuning

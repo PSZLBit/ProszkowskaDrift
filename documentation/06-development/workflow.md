@@ -1,7 +1,7 @@
 # Development Workflow
 
 Status: Decided
-Last updated: 2026-11-04
+Last updated: 2026-11-09
 
 ## Monorepo Layout
 
@@ -13,7 +13,8 @@ Last updated: 2026-11-04
   detection, scoring, and HUD are later work. `game/scenes/main.tscn` is the
   main scene.
 - `controller-android/` — minimal Kotlin Android controller for API 19. The
-  scaffold exists on an unmerged branch; production work is tracked by #48.
+  WebSocket client is promoted after cleanup (D-35); real-tablet validation and
+  the production UI are tracked by #11 and #48.
 - `documentation/` — source of truth and decision history.
 - Tests live next to the code they test; no separate top-level test tree.
 
@@ -27,13 +28,16 @@ Run from the repository root unless a command changes directory.
 - Server tests: `cd server`, then `go test -race ./...` and `go vet ./...`.
 - Game tests: `godot --headless --path game --import`, then
   `godot --headless --path game --script res://tests/run_tests.gd`.
+- Controller tests: `cd controller-android`, then
+  `./gradlew :app:testDebugUnitTest`, `./gradlew :app:assembleDebug`, and
+  `./gradlew :app:lintDebug`.
 - Documentation site: `mkdocs build --strict`.
 - Local run instructions for server, game, and fake controllers are in the root
   `README.md`.
 
-Controller commands will be added when the controller lands on `main`.
-CI runs the server and game commands in `.github/workflows/server.yml` and
-`.github/workflows/game.yml`.
+CI runs the server, game, and controller commands in
+`.github/workflows/server.yml`, `.github/workflows/game.yml`, and
+`.github/workflows/controller.yml`.
 
 ## Team and Responsibilities
 
