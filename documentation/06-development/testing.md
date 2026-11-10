@@ -1,11 +1,12 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-11-04
+Last updated: 2026-11-10
 
 The test-plan update is tracked in issue #17. The controller WebSocket spike is
-implemented with host-JVM tests; install/run on the real tablets and the latency
-measurements remain tracked by #11 and #48.
+implemented with host-JVM tests; install/run has been verified on one physical
+API 19 tablet, while the four-tablet matrix and the latency measurements remain
+tracked by #11 and #48.
 
 ## Goals
 
@@ -227,13 +228,17 @@ Manual check, written down before implementing any controller change:
 5. Force a disconnect (stop the server or disable Wi-Fi), then restore it: the
    app reconnects with the same device token and reclaims the same slot.
 
-Status 2026-11-04: the plain-Views scaffold has the WebSocket spike — OkHttp
+Status 2026-11-10: the plain-Views scaffold has the WebSocket spike — OkHttp
 3.12.x, `hello`/input/ping/reconnect client, and 27 host-JVM tests. On this
 machine `:app:testDebugUnitTest` passes (27 tests), `:app:assembleDebug`
 produces the debug APK, and `:app:lintDebug` passes. The configured send rate is
-25 Hz. Install/run on the real tablets, measured latency, and the
-Kotlin-versus-Java recommendation for issue #11 are still pending hardware
-validation.
+25 Hz. A debug APK was installed on one SM-T210 running Android 4.4.2 (API 19):
+the app launches into the landscape controller screen, inflates the touch pad,
+stays alive while idle, and keeps retrying after an unreachable server. This
+check exposed and verified the fix for the custom-view inflation crash (the view
+needed a public `(Context, AttributeSet)` constructor). The remaining three
+tablets, measured latency, and the Kotlin-versus-Java recommendation for issue
+#11 are still pending hardware validation.
 
 ## Android 4.4.2 Hardware Matrix
 
