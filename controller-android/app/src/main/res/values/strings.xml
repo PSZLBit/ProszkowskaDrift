@@ -17,12 +17,16 @@
   <string name="slot_none">—</string>
   <string name="phase_format">Phase: %1$s</string>
   <string name="phase_time_format">Phase: %1$s · %2$d s</string>
+  <string name="phase_waiting_for_server">Waiting for server</string>
   <string name="task_none">Task: —</string>
   <string name="task_format">Task %1$s (%2$s) · %3$s</string>
   <string name="score_format">Score: %1$d</string>
   <string name="result_task_format">+%1$d points (%2$s) · total %3$d</string>
   <string name="result_round_format">Round %1$d · winner P%2$d</string>
   <string name="result_error_format">Error %1$s: %2$s</string>
+
+  <string name="debug_button">Debug</string>
+  <string name="debug_dialog_title">Diagnostics</string>
 
   <string name="overlay_connecting">Connecting…</string>
   <string name="overlay_reconnecting">Reconnecting…</string>

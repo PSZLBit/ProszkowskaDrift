@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import pszlbit.drift.input.InputPadView
@@ -42,7 +43,7 @@ class MainActivity : Activity(), ControllerClient.Listener {
     private lateinit var statsView: TextView
     private lateinit var overlayView: TextView
     private lateinit var inputPad: InputPadView
-
+    private lateinit var debugButton: Button
     private var state = ConnectionState.IDLE
     private var phase = "attract"
     private var timeLeftSeconds = 0L
@@ -63,8 +64,10 @@ class MainActivity : Activity(), ControllerClient.Listener {
         statsView = findViewById(R.id.stats_text)
         overlayView = findViewById(R.id.overlay_text)
         inputPad = findViewById(R.id.input_pad)
+        debugButton = findViewById(R.id.debug_button)
 
         inputPad.onInputChanged = { input = it }
+        debugButton.setOnClickListener { showDebugDialog() }
         serverView.setOnLongClickListener {
             showServerDialog()
             true
@@ -239,6 +242,23 @@ class MainActivity : Activity(), ControllerClient.Listener {
         statsView.text = ""
     }
 
+    private fun showDebugDialog() {
+        val details = buildString {
+            append("Connection state: ").append(state).append('\n')
+            append("Phase: ").append(phase).append('\n')
+            append("Slot: ").append(slotView.text).append('\n')
+            append("Server: ").append(serverView.text).append('\n')
+            append("Status: ").append(statusView.text).append('\n')
+            append("Stats: ").append(statsView.text).append('\n')
+            append("Input enabled: ").append(inputPad.isEnabled)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.debug_dialog_title)
+            .setMessage(details)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
     private fun showServerDialog() {
         val field = EditText(this).apply {
             setText(settings.serverUrl)
@@ -281,10 +301,15 @@ class MainActivity : Activity(), ControllerClient.Listener {
     }
 
     private fun renderPhase() {
-        phaseView.text = if (timeLeftSeconds > 0L) {
-            getString(R.string.phase_time_format, phase, timeLeftSeconds)
+        val displayPhase = if (phase == "attract") {
+            getString(R.string.phase_waiting_for_server)
         } else {
-            getString(R.string.phase_format, phase)
+            phase
+        }
+        phaseView.text = if (timeLeftSeconds > 0L) {
+            getString(R.string.phase_time_format, displayPhase, timeLeftSeconds)
+        } else {
+            getString(R.string.phase_format, displayPhase)
         }
     }
 
