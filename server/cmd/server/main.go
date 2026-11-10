@@ -98,7 +98,7 @@ func run() error {
 	go srv.StartTick(ctx)
 
 	if *gameBinary != "" {
-		args := make([]string, 0, 4)
+		args := make([]string, 0, 8)
 		if *gameProject != "" {
 			args = append(args, "--path", *gameProject)
 		}
@@ -110,18 +110,27 @@ func run() error {
 				}
 			}
 		}
-		sup := supervisor.New(supervisor.Config{
-			Binary:         *gameBinary,
-			Args:           args,
-			Env:            []string{"PD_GAME_TOKEN=" + token},
+		var gameSup *supervisor.Supervisor
+		gameSup = supervisor.New(supervisor.Config{
+			Binary: *gameBinary,
+			Args:   args,
+			Env: []string{
+				"PD_GAME_TOKEN=" + token,
+				fmt.Sprintf("PD_GAME_URL=ws://127.0.0.1:%d/ws/game", port),
+			},
 			MaxRestarts:    *gameMaxRestarts,
 			InitialBackoff: time.Second,
 			MaxBackoff:     30 * time.Second,
 			Logger:         logger,
 		})
 		go func() {
-			if err := sup.Run(ctx); err != nil {
+			if err := gameSup.Run(ctx); err != nil {
 				logger.Error("game supervisor stopped", "error", err)
+			}
+		}()
+		defer func() {
+			if gameSup != nil {
+				gameSup.Stop()
 			}
 		}()
 		logger.Info("game supervisor enabled", "binary", *gameBinary, "args", args)

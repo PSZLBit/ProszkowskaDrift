@@ -684,6 +684,11 @@ Before the event, run the full checklist from
 2. Four-player round; measure setup and round turnover.
 3. Disconnect one tablet mid-round; reconnect.
 4. Kill the game process; verify auto-restart and reconnect.
+   Supervisor-specific check: start the server with `--game-binary <path>` (and
+   `--game-project`/`--game-args` as needed), kill the game process, and confirm
+   the supervisor restarts it and the session returns to `Attract`. Repeat until
+   the configured `--game-max-restarts` is exceeded and confirm the supervisor
+   stops with a `game crash loop` error. Record the command, commit, and result.
 5. Kill the server; verify supervisor restart and tablet reconnect.
 6. Simulate router failure; execute the hotspot fallback.
 7. Run for 30–60 minutes continuously; watch heat, battery, memory, logs.

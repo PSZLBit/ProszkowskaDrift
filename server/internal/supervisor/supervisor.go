@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 )
@@ -32,7 +33,11 @@ type Config struct {
 	InitialBackoff time.Duration
 	// MaxBackoff caps the exponential backoff between restarts.
 	MaxBackoff time.Duration
-	Logger     *slog.Logger
+	// StableDuration is how long a game process must run before a later crash
+	// is treated as a fresh failure rather than part of the same crash loop.
+	// Zero defaults to 30s.
+	StableDuration time.Duration
+	Logger         *slog.Logger
 }
 
 // Supervisor monitors one game process.
@@ -60,58 +65,22 @@ func New(cfg Config) *Supervisor {
 	if cfg.MaxRestarts < 0 {
 		cfg.MaxRestarts = 0
 	}
+	if cfg.StableDuration <= 0 {
+		cfg.StableDuration = 30 * time.Second
+	}
 	return &Supervisor{cfg: cfg, done: make(chan struct{})}
 }
 
 // Run starts the game and restarts it after unexpected exits until ctx is
 // cancelled, Stop is called, or the restart budget is exhausted.
-
-// appendEnv appends extra environment variables, replacing any existing value
-// for the same key so overrides such as PD_GAME_TOKEN take effect.
-func appendEnv(base, extra []string) []string {
-	out := make([]string, 0, len(base)+len(extra))
-	for _, item := range base {
-		key, _, ok := splitEnv(item)
-		if !ok {
-			out = append(out, item)
-			continue
-		}
-		if hasEnvKey(extra, key) {
-			continue
-		}
-		out = append(out, item)
-	}
-	out = append(out, extra...)
-	return out
-}
-
-func splitEnv(item string) (string, string, bool) {
-	for i := 0; i < len(item); i++ {
-		if item[i] == '=' {
-			return item[:i], item[i+1:], true
-		}
-	}
-	return item, "", false
-}
-
-func hasEnvKey(items []string, key string) bool {
-	for _, item := range items {
-		if k, _, ok := splitEnv(item); ok && k == key {
-			return true
-		}
-	}
-	return false
-}
-
 func (s *Supervisor) Run(ctx context.Context) error {
 	if s.cfg.Binary == "" {
 		return nil
 	}
-	resolved, err := exec.LookPath(s.cfg.Binary)
+	binary, err := exec.LookPath(s.cfg.Binary)
 	if err != nil {
 		return fmt.Errorf("game binary not found: %w", err)
 	}
-	s.cfg.Binary = resolved
 
 	backoff := s.cfg.InitialBackoff
 	for {
@@ -125,16 +94,21 @@ func (s *Supervisor) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
+		case <-s.done:
+			return nil
 		default:
 		}
 
-		s.cfg.Logger.Info("starting game process", "binary", s.cfg.Binary, "args", s.cfg.Args)
-		cmd := exec.CommandContext(ctx, s.cfg.Binary, s.cfg.Args...)
+		s.cfg.Logger.Info("starting game process", "binary", binary, "args", s.cfg.Args)
+		started := time.Now()
+		cmd := exec.CommandContext(ctx, binary, s.cfg.Args...)
 		cmd.Env = appendEnv(os.Environ(), s.cfg.Env)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-		err := cmd.Run()
+		runErr := cmd.Run()
+		runtime := time.Since(started)
+
 		if ctx.Err() != nil {
 			return nil
 		}
@@ -144,11 +118,15 @@ func (s *Supervisor) Run(ctx context.Context) error {
 			s.mu.Unlock()
 			return nil
 		}
+		if runtime >= s.cfg.StableDuration {
+			s.restarts = 0
+			backoff = s.cfg.InitialBackoff
+		}
 		s.restarts++
 		restarts := s.restarts
 		s.mu.Unlock()
 
-		s.cfg.Logger.Warn("game process exited", "error", err, "restart", restarts)
+		s.cfg.Logger.Warn("game process exited", "error", runErr, "restart", restarts, "runtime", runtime)
 
 		if restarts > s.cfg.MaxRestarts {
 			return fmt.Errorf("game crash loop: %d restarts exceeded", s.cfg.MaxRestarts)
@@ -156,6 +134,8 @@ func (s *Supervisor) Run(ctx context.Context) error {
 
 		select {
 		case <-ctx.Done():
+			return nil
+		case <-s.done:
 			return nil
 		case <-time.After(backoff):
 		}
@@ -182,4 +162,71 @@ func (s *Supervisor) Restarts() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.restarts
+}
+
+// appendEnv appends extra environment variables, replacing any existing value
+// for the same key so overrides such as PD_GAME_TOKEN take effect. Duplicate
+// keys in extra are collapsed, keeping the last value. Key comparison is
+// case-insensitive.
+func appendEnv(base, extra []string) []string {
+	dedupedExtra := dedupEnv(extra)
+	out := make([]string, 0, len(base)+len(dedupedExtra))
+	for _, item := range base {
+		key, _, ok := splitEnv(item)
+		if !ok {
+			out = append(out, item)
+			continue
+		}
+		if hasEnvKey(dedupedExtra, key) {
+			continue
+		}
+		out = append(out, item)
+	}
+	out = append(out, dedupedExtra...)
+	return out
+}
+
+func dedupEnv(items []string) []string {
+	values := make(map[string]string)
+	order := make([]string, 0, len(items))
+	for _, item := range items {
+		key, _, ok := splitEnv(item)
+		if !ok {
+			outKey := item
+			if _, exists := values[outKey]; !exists {
+				order = append(order, outKey)
+			}
+			values[outKey] = item
+			continue
+		}
+		upper := strings.ToUpper(key)
+		if _, exists := values[upper]; !exists {
+			order = append(order, upper)
+		}
+		values[upper] = item
+	}
+	out := make([]string, 0, len(order))
+	for _, key := range order {
+		out = append(out, values[key])
+	}
+	return out
+}
+
+func splitEnv(item string) (string, string, bool) {
+	for i := 0; i < len(item); i++ {
+		if item[i] == '=' {
+			return item[:i], item[i+1:], true
+		}
+	}
+	return item, "", false
+}
+
+func hasEnvKey(items []string, key string) bool {
+	upper := strings.ToUpper(key)
+	for _, item := range items {
+		if k, _, ok := splitEnv(item); ok && strings.ToUpper(k) == upper {
+			return true
+		}
+	}
+	return false
 }

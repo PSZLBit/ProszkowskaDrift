@@ -69,6 +69,11 @@ func _ready() -> void:
 	if game_token.is_empty():
 		_fatal("missing_token", "Set game_token or %s before starting the game." % token_env_var)
 		return
+
+	var env_server_url := OS.get_environment("PD_GAME_URL").strip_edges()
+	if not env_server_url.is_empty():
+		server_url = env_server_url
+
 	_connect()
 
 

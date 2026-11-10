@@ -1,13 +1,14 @@
 # Development Workflow
 
 Status: Decided
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 ## Monorepo Layout
 
 - `server/` — Go session server, WebSocket endpoints, validation, supervisor,
-  and launcher scripts. The Sprint 0 session/input slice is scaffolded; game
-  supervision and the launcher are later work.
+  and launcher scripts. The Sprint 0 session/input slice is scaffolded; game-only
+  supervision is implemented in the optional Go supervisor (`--game-binary`),
+  while server restart and the festival launcher remain later work.
 - `game/` — Godot 4 project: one game connection, four slot-keyed cars,
   placeholder map, fullscreen display settings, and headless tests. Parking
   detection, scoring, and HUD are later work. `game/scenes/main.tscn` is the
