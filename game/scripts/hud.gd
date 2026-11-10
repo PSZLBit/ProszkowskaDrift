@@ -63,7 +63,10 @@ func update_board(rows: Array) -> void:
 	if scores_box == null:
 		return
 	for slot in _rows.keys():
-		(_rows[slot] as Control).queue_free()
+		var old_row := _rows[slot] as Control
+		if old_row != null:
+			scores_box.remove_child(old_row)
+			old_row.free()
 	_rows.clear()
 	for entry_raw in rows:
 		var entry: Dictionary = entry_raw
@@ -119,7 +122,8 @@ func show_results(title: String, winner_line: String, lines: Array) -> void:
 		winner_label.text = winner_line
 	if results_rows != null:
 		for child in results_rows.get_children():
-			child.queue_free()
+			results_rows.remove_child(child)
+			child.free()
 		for line_raw in lines:
 			var line := Label.new()
 			line.add_theme_font_size_override("font_size", 28)

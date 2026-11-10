@@ -117,6 +117,9 @@ func _hud_call(method: String, args: Array) -> void:
 
 func _exit_tree() -> void:
 	_exiting = true
+	if _clock != null:
+		_clock.free()
+		_clock = null
 	if _socket != null:
 		_socket.close(1000, "game_exit")
 		_socket = null
@@ -531,8 +534,8 @@ func _on_task_completed(slot: int, result: Dictionary) -> void:
 		int(result.get("collisions", 0)),
 	):
 		_send("task_result", _task_result_payload(slot))
-	_hud_call("flash_notice", ["P%d parked!" % slot])
-	_refresh_board()
+		_hud_call("flash_notice", ["P%d parked!" % slot])
+		_refresh_board()
 	_check_early_finish()
 	task_completed.emit(slot, result)
 
@@ -588,7 +591,7 @@ func _end_round() -> void:
 
 
 ## Lobby/attract screen: static prompt, hidden results, zeroed board.
-func _show_lobby(slots: Array) -> void:
+func _show_lobby(_slots: Array) -> void:
 	_hud_call("hide_results", [])
 	_hud_call("set_state", ["Press Enter to start"])
 	_refresh_board()
