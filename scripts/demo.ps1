@@ -3,14 +3,20 @@
     Runs the current Proszkowska Drift slice with one command.
 
 .DESCRIPTION
-    Starts the Go server, four simulated controllers, and the Godot game in the
-    correct order. The Godot window opens fullscreen and auto-starts the round.
-    Everything is stopped when the game window closes, when Q is pressed, or
-    when -DurationSeconds expires.
+    Starts the Go server and the Godot game in the correct order.
+
+    Default mode also starts four simulated controllers: the Godot window
+    opens fullscreen and auto-starts the round. Everything is stopped when
+    the game window closes, when Q is pressed, or when -DurationSeconds
+    expires.
+
+    With -UseRealController, no simulated controllers are started. The
+    script prints the laptop LAN address, waits for one real Android tablet
+    to connect, then starts the Godot game. The tablet drives slot P1.
 
     This is a development demo, not the festival launcher. The current slice
-    shows four slot-keyed cars and the server input path. Parking tasks,
-    scoring, HUD, and the Android controller are not on main yet.
+    shows slot-keyed cars and the server input path. Parking tasks, scoring,
+    HUD, and the production controller UI are next (#46/#47/#48).
 
 .PARAMETER GodotPath
     Path to the Godot 4 executable. Use this when Godot is not on PATH.
@@ -19,8 +25,21 @@
     Stop the demo after this many seconds. 0 (the default) runs until the game
     window closes.
 
+.PARAMETER UseRealController
+    Wait for one real Android tablet instead of starting four simulated
+    controllers. On the tablet, install the controller debug APK, join the
+    same Wi-Fi network, long-press the server line, and enter the printed
+    address.
+
+.PARAMETER WaitForControllerTimeoutSeconds
+    How long to wait for the real tablet in -UseRealController mode.
+    0 waits up to 24 hours. Default 300.
+
 .EXAMPLE
     .\scripts\demo.ps1
+
+.EXAMPLE
+    .\scripts\demo.ps1 -UseRealController
 
 .EXAMPLE
     .\scripts\demo.ps1 -GodotPath 'C:\Tools\Godot\Godot_v4.7.2-stable_win64.exe'
@@ -35,7 +54,12 @@
 param(
     [string]$GodotPath,
     [ValidateRange(0, 86400)]
-    [int]$DurationSeconds = 0
+    [int]$DurationSeconds = 0,
+
+    [switch]$UseRealController,
+
+    [ValidateRange(0, 86400)]
+    [int]$WaitForControllerTimeoutSeconds = 300
 )
 
 $ErrorActionPreference = 'Stop'
@@ -279,13 +303,57 @@ function Test-PortInUse {
     }
 }
 
+function Get-LanIpAddresses {
+    $candidates = @()
+    try {
+        $candidates = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
+            Where-Object { $_.IPAddress -ne '127.0.0.1' -and $_.IPAddress -notlike '169.254.*' })
+    } catch {
+        $candidates = @()
+    }
+
+    if ($candidates.Count -eq 0) {
+        try {
+            $fallback = @([System.Net.Dns]::GetHostAddresses([System.Net.Dns]::GetHostName()) |
+                Where-Object { $_.AddressFamily -eq 'InterNetwork' } |
+                ForEach-Object { $_.ToString() } |
+                Where-Object { $_ -ne '127.0.0.1' -and $_ -notlike '169.254.*' })
+            $candidates = @($fallback | ForEach-Object {
+                [pscustomobject]@{ IPAddress = $_; PrefixOrigin = 'Unknown' }
+            })
+        } catch {
+            $candidates = @()
+        }
+    }
+
+    # Prefer DHCP addresses (physical Wi-Fi/Ethernet) over manually assigned
+    # virtual adapters (WSL, Hyper-V, VPNs), then prefer common home subnets.
+    return @($candidates | Sort-Object -Property `
+        @{ Expression = { [int]($_.PrefixOrigin -ne 'Dhcp') } }, `
+        @{ Expression = {
+            if ($_.IPAddress -like '192.168.*') { 0 }
+            elseif ($_.IPAddress -like '10.*') { 1 }
+            elseif ($_.IPAddress -like '172.*') { 2 }
+            else { 3 }
+        } } |
+        Select-Object -ExpandProperty IPAddress)
+}
+
 try {
     Write-Host ''
     Write-Host '  Proszkowska Drift - current main-branch demo' -ForegroundColor White
-    Write-Host '  Go server + four simulated controllers + Godot display' -ForegroundColor Gray
+    if ($UseRealController) {
+        Write-Host '  Go server + one real tablet controller + Godot display' -ForegroundColor Gray
+    } else {
+        Write-Host '  Go server + four simulated controllers + Godot display' -ForegroundColor Gray
+    }
     Write-Host ''
-    Write-Host '  Visible now: session slots, validated input forwarding, four moving cars.' -ForegroundColor Gray
-    Write-Host '  Not on main yet: parking tasks, scoring, HUD, Android controller.' -ForegroundColor DarkYellow
+    Write-Host '  Visible now: session slots, validated input forwarding, slot-keyed cars.' -ForegroundColor Gray
+    if ($UseRealController) {
+        Write-Host '  The tablet drives slot P1. Parking tasks, scoring, and HUD are next.' -ForegroundColor DarkYellow
+    } else {
+        Write-Host '  Not on main yet: parking tasks, scoring, HUD, Android controller.' -ForegroundColor DarkYellow
+    }
     Write-Host ''
 
     Write-Step 'Checking prerequisites'
@@ -314,7 +382,7 @@ try {
     New-Item -ItemType Directory -Path $binDir -Force | Out-Null
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 
-    Write-Step 'Building the Go server and fake controller'
+    Write-Step 'Building the Go server'
     $serverExe = Join-Path $binDir 'server.exe'
     $controllerExe = Join-Path $binDir 'fakecontroller.exe'
     Push-Location -LiteralPath $serverDir
@@ -323,9 +391,11 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw 'go build ./cmd/server failed.'
         }
-        & go build -o $controllerExe ./cmd/fakecontroller
-        if ($LASTEXITCODE -ne 0) {
-            throw 'go build ./cmd/fakecontroller failed.'
+        if (-not $UseRealController) {
+            & go build -o $controllerExe ./cmd/fakecontroller
+            if ($LASTEXITCODE -ne 0) {
+                throw 'go build ./cmd/fakecontroller failed.'
+            }
         }
     } finally {
         Pop-Location
@@ -357,21 +427,51 @@ try {
     }
     Write-Ok "Server healthy: phase=$($health.phase), controllers=$($health.controllers), gameReady=$($health.gameReady)"
 
-    Write-Step 'Connecting four simulated controllers'
-    $controllerArgs = @('-clients', '4', '-duration', '24h', '-token-prefix', 'demo')
-    $controllerProcess = Start-Process -FilePath $controllerExe -ArgumentList $controllerArgs `
-        -WorkingDirectory $serverDir -NoNewWindow -PassThru `
-        -RedirectStandardOutput $controllerOut -RedirectStandardError $controllerErr
-    $health = Wait-ForControllers -Expected 4 -TimeoutSeconds 15
-    if ($null -eq $health -or [int]$health.controllers -lt 4) {
-        if ($null -ne $health) {
-            Write-Warn "Only $($health.controllers) controllers connected."
+    if ($UseRealController) {
+        $lanIps = @(Get-LanIpAddresses)
+        if ($lanIps.Count -eq 0) { $lanIps = @('127.0.0.1') }
+        $lanIp = $lanIps[0]
+        $apkPath = Join-Path $repoRoot 'controller-android\app\build\outputs\apk\debug\app-debug.apk'
+        Write-Host ''
+        Write-Host '  Connect one real tablet (it will drive slot P1):' -ForegroundColor White
+        Write-Host '    1. Install the controller app on the tablet:'
+        if (Test-Path -LiteralPath $apkPath -PathType Leaf) {
+            Write-Host "       $apkPath" -ForegroundColor Gray
+        } else {
+            Write-Host '       No debug APK found. Build it on a machine with JDK 17 and the Android SDK:' -ForegroundColor DarkYellow
+            Write-Host '         cd controller-android; ./gradlew :app:assembleDebug' -ForegroundColor Gray
         }
-        Show-LogTail -Path $controllerOut -Label 'Controller output'
-        Show-LogTail -Path $controllerErr -Label 'Controller errors'
-        throw 'Four simulated controllers did not connect.'
+        Write-Host '    2. Join the same Wi-Fi network as this laptop.'
+        Write-Host "    3. In the app, long-press the server line and enter: ${lanIp}:$port" -ForegroundColor White
+        if ($lanIps.Count -gt 1) {
+            Write-Host "       Other laptop addresses, if the tablet cannot reach it: $(($lanIps | Select-Object -Skip 1) -join ', ')" -ForegroundColor DarkGray
+        }
+        Write-Host ''
+        $waitTimeout = $WaitForControllerTimeoutSeconds
+        if ($waitTimeout -le 0) { $waitTimeout = 86400 }
+        Write-Step "Waiting for one tablet to connect (timeout ${waitTimeout}s)"
+        $health = Wait-ForControllers -Expected 1 -TimeoutSeconds $waitTimeout
+        if ($null -eq $health -or [int]$health.controllers -lt 1) {
+            throw "No tablet connected within ${waitTimeout}s. Enter ${lanIp}:$port in the app server address and retry."
+        }
+        Write-Ok 'One real controller connected (slot P1).'
+    } else {
+        Write-Step 'Connecting four simulated controllers'
+        $controllerArgs = @('-clients', '4', '-duration', '24h', '-token-prefix', 'demo')
+        $controllerProcess = Start-Process -FilePath $controllerExe -ArgumentList $controllerArgs `
+            -WorkingDirectory $serverDir -NoNewWindow -PassThru `
+            -RedirectStandardOutput $controllerOut -RedirectStandardError $controllerErr
+        $health = Wait-ForControllers -Expected 4 -TimeoutSeconds 15
+        if ($null -eq $health -or [int]$health.controllers -lt 4) {
+            if ($null -ne $health) {
+                Write-Warn "Only $($health.controllers) controllers connected."
+            }
+            Show-LogTail -Path $controllerOut -Label 'Controller output'
+            Show-LogTail -Path $controllerErr -Label 'Controller errors'
+            throw 'Four simulated controllers did not connect.'
+        }
+        Write-Ok 'Four simulated controllers connected (slots P1-P4).'
     }
-    Write-Ok 'Four simulated controllers connected (slots P1-P4).'
 
     Write-Step 'Starting the Godot game'
     $env:PD_GAME_TOKEN = $gameToken
@@ -402,7 +502,11 @@ try {
     Write-Host ''
     Write-Host 'Demo is running. Keep this window open.' -ForegroundColor Green
     Write-Host '  * The Go server owns the session, slots, and input validation.'
-    Write-Host '  * Four simulated controllers are driving the four cars.'
+    if ($UseRealController) {
+        Write-Host '  * The real tablet drives slot P1.'
+    } else {
+        Write-Host '  * Four simulated controllers are driving the four cars.'
+    }
     Write-Host '  * The Godot window shows the current placeholder map and cars.'
     Write-Host ''
     Write-Host 'Game window keys: Enter start/resume, P pause/resume, R reset, Q quit.'

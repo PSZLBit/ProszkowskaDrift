@@ -332,6 +332,38 @@ Record the date, commit, commands, and observed result for these checks. A real
 Android controller and the target TV run were not available on 2026-11-04; those
 hardware checks remain pending in [Hardware Checklist (Manual, Pending)](#hardware-checklist-manual-pending).
 
+### One-command real-controller demo check (issue #77)
+
+**Status: procedure verified with a stand-in (2026-11-10); real-tablet run pending.**
+
+Run on a Windows dev machine with Go 1.23+, Godot 4.7.2, and one real API 19
+tablet on the same Wi-Fi network as the laptop.
+
+1. Install the controller debug APK on the tablet (`controller-android/`,
+   `./gradlew :app:assembleDebug` on a machine with JDK 17 and the Android
+   SDK).
+2. From the repository root, run
+   `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\demo.ps1 -UseRealController`.
+3. In the app, long-press the server line and enter the printed
+   `<laptop-ip>:8080` address.
+4. The script waits for the tablet (slot P1), starts the Godot game, and the
+   round auto-starts. Drive the car with touch input; stopping input stops
+   the car.
+5. Force a disconnect (Wi-Fi off/on or app restart) and confirm the same slot
+   is reclaimed without a server restart.
+
+Pass when one tablet connects as P1, its input visibly drives one car, the
+round starts without manual host keys, and reconnect reclaims the slot. The
+script fails with a plain-English message when Go, Godot, the port, the APK,
+or the tablet connection is missing.
+
+Verified 2026-11-10 on `feat/77-one-command-real-controller-demo`: the full
+path passes with `fakecontroller -clients 1` as a protocol stand-in (server
+build, tablet wait, game start, `phase=playing`, clean shutdown, exit 0);
+the failure path (no controller within the timeout) exits 1 with the
+tablet instructions. The real-tablet run is still pending and must be
+recorded here with date, commit, hardware set, and observed result.
+
 ## Android Controller Build Checks
 
 The controller is in `controller-android/`. It is a minimal API 19 app with no
