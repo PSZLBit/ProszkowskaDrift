@@ -802,6 +802,22 @@ func _test_round_clock() -> void:
 	_check_eq(clock.phase, RoundClock.Phase.READY, "reset returns to ready")
 	_check_eq(clock.remaining_ms, 180000, "reset restores the full time")
 
+	var emitted: Array = []
+	clock.time_changed.connect(func(remaining_ms: int) -> void: emitted.append(remaining_ms))
+	clock.start()
+	_check_eq(emitted, [180000], "start emits the reset time")
+	clock.reset()
+	_check_eq(emitted, [180000, 180000], "reset emits the restored time")
+
+	clock.configure(60000)
+	_check_eq(clock.round_length_ms, 60000, "configure applies the server duration")
+	_check_eq(clock.remaining_ms, 60000, "configure resets the idle timer")
+	_check_eq(emitted, [180000, 180000, 60000], "configure emits the new time")
+	clock.start()
+	clock.tick(10.0)
+	clock.configure(120000)
+	_check_eq(clock.remaining_ms, 50000, "configure while playing keeps the running timer")
+
 	var finished := [false]
 	clock.finished.connect(func() -> void: finished[0] = true)
 	clock.start()

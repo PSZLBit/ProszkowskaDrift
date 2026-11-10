@@ -1,10 +1,12 @@
 class_name RoundClock
 extends Node
-## Provisional round timer for the vertical slice (#47).
+## MFD round timer (D-38, issue #47).
 ##
-## Phase behaviour and the 180 s length are TBD pending #45; this scaffold
-## exposes the interface the HUD and game loop depend on and is covered by
-## headless tests. It is not the final round controller.
+## A dumb countdown owned by the round orchestration in
+## `game/scripts/server_input.gd`. The server sends `host_command start` with
+## the round id, and the game config carries `roundDurationMs`; the clock never
+## starts, pauses, or resets itself. Every state change emits `time_changed`
+## so the HUD always shows the current value.
 
 signal time_changed(remaining_ms: int)
 signal phase_changed(phase: int)
@@ -33,7 +35,18 @@ func start() -> void:
 		return
 	remaining_ms = round_length_ms
 	_remainder_ms = 0.0
+	time_changed.emit(remaining_ms)
 	_set_phase(Phase.PLAYING)
+
+
+## Applies the server config duration. While not playing, the remaining time
+## follows the new length so the HUD shows the configured round.
+func configure(duration_ms: int) -> void:
+	round_length_ms = maxi(1, duration_ms)
+	if phase != Phase.PLAYING and phase != Phase.PAUSED:
+		remaining_ms = round_length_ms
+		_remainder_ms = 0.0
+		time_changed.emit(remaining_ms)
 
 
 func pause() -> void:
@@ -49,6 +62,7 @@ func resume() -> void:
 func reset() -> void:
 	remaining_ms = round_length_ms
 	_remainder_ms = 0.0
+	time_changed.emit(remaining_ms)
 	_set_phase(Phase.READY)
 
 
