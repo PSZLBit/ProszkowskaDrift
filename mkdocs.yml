@@ -5,6 +5,8 @@ edit_uri: edit/main/documentation/
 docs_dir: documentation
 theme:
   name: readthedocs
+  logo: assets/logo.png
+  favicon: img/favicon.ico
   highlightjs: true
   hljs_languages:
     - yaml
