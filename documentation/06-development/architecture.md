@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 This document describes the MVP runtime. Decisions are recorded in D-21, D-22,
 D-24, ADR-0001, ADR-0002, and ADR-0003. Message schemas are in
@@ -38,15 +38,16 @@ or simulate the game.
 
 | Component | Process | Responsibilities |
 |-----------|---------|------------------|
-| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold is on an unmerged branch; production work is #48 |
-| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; supervision is later work |
+| Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold and WebSocket client are in review (#63); production work is #48 |
+| Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, game supervision, logs. Sprint 0 slice implemented in `server/`; Godot supervision is in review (#59) |
 | Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, placeholder boundaries; no map, parking, or scoring yet |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
-As of 2026-11-03 the controller production code is not on `main`. The API 19
-scaffold is on `feat/controller-scaffold` and is tracked by #11 and #48; it is not
-implemented production behavior.
+As of 2026-11-10 the controller production code is not merged. PR #63 is in
+review with the API 19 scaffold, WebSocket client, device-token store,
+reconnect/backoff, and host-JVM tests; real-tablet proof and production work are
+tracked by #11 and #48.
 
 ## Server Slice
 
@@ -149,8 +150,9 @@ input-to-visible measurements remain in issue #13 until recorded in
 Development mode may run Go and Godot in separate terminals; the festival mode
 must use the supervisor/launcher so a crash does not require a developer. The
 Sprint 0 server slice and game scaffold implement the game/session sides of
-steps 4–7. The development token is supplied manually; launching and supervising
-Godot (steps 2–3 and 8–9) is not implemented yet.
+steps 4–7. The development token is supplied manually. Godot launch and
+supervision are in review in PR #59; the server-crash launcher remains part of
+the M3 runbook (#50).
 
 ## Data Flow
 
@@ -237,10 +239,10 @@ Owners and next steps are also recorded in the decision log's
 [Open TBD and Validation Items](../05-architecture-decisions/decision-log.md#open-tbd-and-validation-items).
 
 - WebSocket libraries: the Go slice uses `github.com/coder/websocket` v1.8.15;
-  confirm it in the architecture and select the Android client library. Owner:
-  TracerDS + GreenDude5; #11/#48.
+  PR #63 uses OkHttp 3.12.x for the API 19 controller. Confirm both in the
+  architecture and on API 19. Owner: TracerDS + GreenDude5; #11/#48.
 - Exact process supervisor implementation (Go or shell script). Owner:
-  GreenDude5; #15 (Sprint 3).
+  GreenDude5; #15 and PR #59 (in review).
 - Windows vs Linux festival laptop. Owner: ZofiaDan; #49/#50.
 - Router model and static-IP plan. Owner: ZofiaDan; #49/#50.
 - Final map data format and task/target scene structure. The scaffold currently

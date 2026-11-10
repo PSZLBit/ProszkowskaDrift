@@ -1,7 +1,7 @@
 # ADR-0003: Session Lifecycle, Reconnect, and Recovery
 
 Status: Decided
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 Date: 2026-11-09
 Owner: Team
 
@@ -36,15 +36,18 @@ D-24. It does not change their behavior.
 - The server maps the token to a slot and reserves that slot for the session.
   A reconnect with the same token reclaims the slot; a new device cannot take
   it while it is reserved.
-- A disconnected controller's car stops immediately. If the round is still
-  running, control resumes when the same tablet reconnects.
+- A disconnected controller's car coasts to a stop after the 500 ms input
+  timeout. If the round is still running, control resumes when the same tablet
+  reconnects.
 - If all controllers disconnect, the round pauses after a 10 s grace period.
   The host can resume, reset, or end the session.
 - Late join is allowed between rounds only. A new player starts the next round
   with zero score.
-- A game or server crash returns the system to `Attract`; the interrupted round
-  is lost. Tablets reconnect automatically. The supervisor restarts the server
-  and game (D-24; #15).
+- A game crash returns the system to `Attract`; the server restarts Godot and
+  the interrupted round is lost. A server crash also returns to `Attract`; the
+  festival launcher restarts the server and game, and the round is lost. Tablets
+  reconnect automatically. The Godot supervisor is tracked in #15; the
+  server-crash launcher is part of the M3 festival runbook (#50).
 - The host can kick a slot when a tablet is replaced or its token is lost. A
   kicked token is blocked for the rest of the session.
 - QR or manual address entry is only a setup fallback, never the normal player
@@ -63,14 +66,14 @@ D-24. It does not change their behavior.
 - No personal data is introduced: tokens are random, may appear truncated in
   diagnostics, and are discarded at session end.
 
-## Validation Status (2026-11-09)
+## Validation Status (2026-11-10)
 
 - Server token/slot reclaim and the all-disconnected pause path are implemented
   and covered by server tests.
-- Controller auto-connect, token persistence, and reconnect are not on `main`;
-  they are tracked by #11 and #48.
-- Supervisor restart and crash recovery are not implemented; they are tracked by
-  #15.
+- Controller auto-connect, token persistence, and reconnect are not merged; they
+  are in review in PR #63 and tracked by #11 and #48.
+- The Godot supervisor is in review in PR #59; the server-crash launcher remains
+  M3 work in #50. Neither is proven by a manual crash drill yet.
 - Real-tablet reconnect, Wi-Fi loss, and charging behavior have not been tested;
   they are tracked by #10, #14, and #49.
 
