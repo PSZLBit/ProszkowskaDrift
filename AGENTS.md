@@ -102,8 +102,6 @@ Detailed process: `documentation/06-development/workflow.md`. Detailed testing:
   `<type>(<scope>): <summary>`.
 - Types: `feat`, `fix`, `docs`, `test`, `chore`, `spike`.
 - Scopes: `server`, `game`, `controller`, `docs`, `ops`.
-- All commits must be GPG-signed (`git commit -S`). Unsigned commits are not
-  accepted; do not use `--no-gpg-sign`.
 - Commit small and regularly: one logical change per commit, and commit each
   coherent step instead of batching days of work.
 - Never bundle unrelated refactors, formatting, or generated files.

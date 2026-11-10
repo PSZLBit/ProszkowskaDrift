@@ -135,8 +135,6 @@ outcome and acceptance criteria. Link every PR to an issue.
   at least one review, and green CI.
 - Branch names: `feat/<short-name>`, `fix/<short-name>`, `docs/<short-name>`,
   `spike/<short-name>`, `chore/<short-name>`.
-- All commits must be GPG-signed (`git commit -S`). Unsigned commits are not
-  accepted; do not use `--no-gpg-sign`.
 - Commit convention: `<type>(<scope>): <summary>`, for example
   `feat(server): validate input rate`. Types: `feat`, `fix`, `docs`, `test`,
   `chore`, `spike`. Scopes: `server`, `game`, `controller`, `docs`, `ops`.
