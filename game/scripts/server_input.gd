@@ -114,6 +114,11 @@ func _find_hud():
 func _hud_call(method: String, args: Array) -> void:
 	if _hud == null:
 		return
+	if not _hud.has_method(method):
+		# A scratch scene or a stale import may leave a scriptless CanvasLayer
+		# named Hud; the round still runs, just without display updates.
+		_log_once("hud_missing_%s" % method, "[ServerInput] Hud has no %s; skipping display update." % method)
+		return
 	_hud.callv(method, args)
 
 

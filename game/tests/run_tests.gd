@@ -48,6 +48,7 @@ func _initialize() -> void:
 	_test_round_clock()
 	_test_score_model()
 	_test_hud_scene()
+	_test_scriptless_hud_tolerance()
 	_test_main_round_lifecycle()
 	_test_project_settings()
 
@@ -1105,6 +1106,28 @@ func _test_hud_scene() -> void:
 
 	hud.free()
 	clock.free()
+
+
+func _test_scriptless_hud_tolerance() -> void:
+	# A scratch scene or stale import may leave a plain CanvasLayer named Hud
+	# with none of the display methods. The round must run without errors.
+	OS.set_environment("PD_GAME_TOKEN", "test-scriptless-hud")
+	var parent := Node.new()
+	var bare := CanvasLayer.new()
+	bare.name = "Hud"
+	parent.add_child(bare)
+	var si = ServerInputScript.new()
+	parent.add_child(si)
+	root.add_child(parent)
+	_check(si._hud != null, "a scriptless Hud node is still found")
+	_check(not si._hud.has_method("bind"), "a plain CanvasLayer has no bind")
+	si._hud_call("bind", [si._clock])
+	si._hud_call("set_state", ["Drive to your spot"])
+	si._hud_call("update_board", [[]])
+	si._hud_call("show_results", ["Round over", "Winner: none", []])
+	si._hud_call("hide_results", [])
+	_check(true, "display calls with a scriptless Hud are skipped")
+	parent.free()
 
 
 func _test_main_round_lifecycle() -> void:
