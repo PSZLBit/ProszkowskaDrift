@@ -68,7 +68,9 @@ var _round_id := 0
 ## authority; the game never starts, pauses, or resets on its own.
 var _clock: RoundClock
 var _scores: ScoreModel
-var _hud: Hud
+# Untyped on purpose: the scene-tree node may be a plain CanvasLayer when the
+# Hud script is not attached, and all use goes through _hud_call.
+var _hud: Node
 
 
 func _ready() -> void:

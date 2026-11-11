@@ -166,7 +166,9 @@ func _ensure_nodes() -> void:
 		prompt_label = results_panel.get_node_or_null("PromptLabel") as Label
 
 
+@warning_ignore("integer_division")
 func _format_time(ms: int) -> String:
+	# Integer division is intentional: MM:SS truncation.
 	var total_seconds := maxi(0, ms) / 1000
 	var minutes := total_seconds / 60
 	var seconds := total_seconds % 60

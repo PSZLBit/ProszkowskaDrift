@@ -48,14 +48,14 @@ func record_completion(
 	completion_ms: int,
 	center_offset_px: float,
 	angle_deg: float,
-	collisions: int,
+	collision_count: int,
 ) -> bool:
 	if not has_player(slot):
 		return false
 	var entry: Dictionary = _players[slot]
 	if bool(entry["completed"]):
 		return false
-	if completion_ms < 0 or collisions < 0:
+	if completion_ms < 0 or collision_count < 0:
 		return false
 	if not is_finite(center_offset_px) or not is_finite(angle_deg):
 		return false
@@ -67,13 +67,13 @@ func record_completion(
 	var center := compute_center_score(center_offset_px)
 	var angle_score := compute_angle_score(angle)
 	var precision := center + angle_score
-	var penalty := compute_penalty(collisions)
+	var penalty := compute_penalty(collision_count)
 	entry["completed"] = true
 	entry["task_id"] = task_id
 	entry["completion_ms"] = completion_ms
 	entry["center_offset_px"] = center_offset_px
 	entry["angle_deg"] = angle
-	entry["collisions"] = collisions
+	entry["collisions"] = collision_count
 	entry["time_score"] = time
 	entry["precision_score"] = precision
 	entry["center_score"] = center
@@ -109,15 +109,15 @@ func collisions(slot: int) -> int:
 ## Updates the live collision count for an unfinished slot so the scoreboard
 ## and the final ranking show hits even when the task never completes. Returns
 ## false for an unknown slot, a completed task, or a negative count.
-func set_collisions(slot: int, collisions: int) -> bool:
+func set_collisions(slot: int, collision_count: int) -> bool:
 	if not has_player(slot):
 		return false
 	var entry: Dictionary = _players[slot]
 	if bool(entry["completed"]):
 		return false
-	if collisions < 0:
+	if collision_count < 0:
 		return false
-	entry["collisions"] = collisions
+	entry["collisions"] = collision_count
 	return true
 
 
@@ -205,7 +205,10 @@ func round_result_payload(round_id: int) -> Dictionary:
 	}
 
 
+@warning_ignore("integer_division")
 static func compute_time_score(elapsed_ms: int) -> int:
+	# Integer division is intentional: the MFD baseline specifies
+	# max(10, 100 - (3 * elapsed_ms) / 1000) with integer division.
 	return maxi(MIN_TIME_SCORE, 100 - (3 * elapsed_ms) / 1000)
 
 

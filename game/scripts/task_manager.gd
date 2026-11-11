@@ -8,7 +8,7 @@ extends Node
 ## HUD, and results stay in #47; this signal is the hook #47 consumes.
 
 signal task_completed(slot: int, result: Dictionary)
-signal collisions_changed(slot: int, collisions: int)
+signal collisions_changed(slot: int, count: int)
 
 const MfdMap := preload("res://scripts/mfd_map.gd")
 const TaskAssignment := preload("res://scripts/task_assignment.gd")
