@@ -424,9 +424,7 @@ func _handle_host_command(data: Dictionary) -> void:
 		# assignment, so the round cannot start its tasks.
 		var round_id := int(data.get("roundId", 0))
 		if round_id <= 0:
-			push_error("[ServerInput] host_command start without a valid roundId; skipping task assignment.")
-			_phase = "playing"
-			clear_input()
+			push_error("[ServerInput] host_command start without a valid roundId; ignoring.")
 			host_command_received.emit(command, slot, 0)
 			return
 		_round_id = round_id
@@ -499,6 +497,8 @@ func _start_task_round() -> void:
 	manager.call("set_running", true, Time.get_ticks_msec())
 	if not manager.is_connected("task_completed", _on_task_completed):
 		manager.connect("task_completed", _on_task_completed)
+	if not manager.is_connected("collisions_changed", _on_collisions_changed):
+		manager.connect("collisions_changed", _on_collisions_changed)
 	_show_playing()
 	_send_playing_phase()
 
@@ -538,6 +538,14 @@ func _on_task_completed(slot: int, result: Dictionary) -> void:
 		_refresh_board()
 	_check_early_finish()
 	task_completed.emit(slot, result)
+
+
+## Live collision counts flow here so the scoreboard and the final ranking
+## show hits for unfinished tasks. Completed tasks keep the count recorded at
+## completion time.
+func _on_collisions_changed(slot: int, count: int) -> void:
+	if _scores.set_collisions(slot, count):
+		_refresh_board()
 
 
 ## Same payload the server forwards to controllers, with the slot added.
@@ -580,6 +588,7 @@ func _end_round() -> void:
 	_phase = "results"
 	clear_input()
 	_task_manager_call("set_running", [false, Time.get_ticks_msec()])
+	_sync_collisions()
 	if _clock != null:
 		_clock.show_results()
 	var winner := _scores.winner_slot()
@@ -607,6 +616,22 @@ func _show_paused() -> void:
 	_hud_call("set_state", ["Paused"])
 
 
+## Copies task-manager collision counts for unfinished slots into the score
+## model so results and ranking reflect hits even when nobody parked. Runs
+## before the results are built; live updates arrive via collisions_changed.
+func _sync_collisions() -> void:
+	var manager := _task_manager()
+	if manager == null:
+		return
+	for slot in _scores.ranking():
+		if _scores.tasks_completed(slot) > 0:
+			continue
+		var task: Dictionary = manager.call("get_task", slot)
+		if task.is_empty():
+			continue
+		_scores.set_collisions(slot, int(task.get("collisions", 0)))
+
+
 ## Rebuilds the scoreboard rows: score, current spot or Parked, and hit count.
 ## Rows cover connected slots plus registered-but-disconnected ones, so a
 ## reconnecting player keeps their row and the lobby shows zeroes.
@@ -623,13 +648,15 @@ func _refresh_board() -> void:
 		var hits := _scores.collisions(slot)
 		if _scores.tasks_completed(slot) > 0:
 			status = "Parked"
-		elif not bool(_active_slots.get(slot, false)):
-			status = "Reconnecting"
-		elif manager != null:
-			var task: Dictionary = manager.call("get_task", slot)
-			if not task.is_empty():
-				status = str(task.get("spotLabel", ""))
-				hits = int(task.get("collisions", 0))
+		else:
+			if manager != null:
+				var task: Dictionary = manager.call("get_task", slot)
+				if not task.is_empty():
+					hits = int(task.get("collisions", hits))
+					if bool(_active_slots.get(slot, false)):
+						status = str(task.get("spotLabel", ""))
+			if status.is_empty() and not bool(_active_slots.get(slot, false)):
+				status = "Reconnecting"
 		rows.append({
 			"slot": slot,
 			"score": _scores.total(slot),

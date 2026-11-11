@@ -489,7 +489,18 @@ func _test_task_manager() -> void:
 		"paused time is excluded from the completion duration",
 	)
 
-	for node in [manager, early, slow, held, kicked, paused, resumed]:
+	var hits = TaskManagerScript.new()
+	hits.start_round([1], 1, 180000, 0)
+	var hit_events: Array = []
+	hits.collisions_changed.connect(
+		func(slot: int, count: int) -> void: hit_events.append([slot, count])
+	)
+	hits.register_collision(1)
+	hits.register_collision(1)
+	_check_eq(hit_events, [[1, 1], [1, 2]], "collisions emit live counts")
+	_check_eq(int(hits.get_task(1)["collisions"]), 2, "collisions accumulate per slot")
+
+	for node in [manager, early, slow, held, kicked, paused, resumed, hits]:
 		(node as Node).free()
 
 
@@ -981,6 +992,22 @@ func _test_score_model() -> void:
 	_check(not kicked.has_player(2), "a kicked slot leaves the model")
 	_check_eq(kicked.ranking(), [1], "a kicked slot is excluded from results")
 
+	var live := ScoreModel.new()
+	live.register(1)
+	live.register(2)
+	live.register(3)
+	_check(live.set_collisions(1, 2), "live hits are recorded for an unfinished slot")
+	_check(live.set_collisions(2, 0), "zero hits are recorded")
+	_check_eq(live.collisions(1), 2, "live hits are readable")
+	_check(not live.set_collisions(9, 1), "live hits for an unknown slot are rejected")
+	_check(not live.set_collisions(1, -1), "negative live hits are rejected")
+	# Both unfinished: fewer hits must rank first, then the lower slot.
+	live.set_collisions(3, 1)
+	_check_eq(live.ranking(), [2, 3, 1], "unfinished players rank fewer hits first")
+	_check(live.record_completion(1, 11, 5000, 0.0, 0.0, 2), "completion keeps its final hit count")
+	_check(not live.set_collisions(1, 5), "live hits never overwrite a completed task")
+	_check_eq(live.collisions(1), 2, "completed hits stay frozen")
+
 
 func _test_hud_scene() -> void:
 	var packed := load("res://scenes/ui/hud.tscn") as PackedScene
@@ -1035,6 +1062,13 @@ func _test_hud_scene() -> void:
 		(third_row.get_child(1) as Label).text.contains("2 hits"),
 		"board rows use the plural hit word",
 	)
+	hud.update_board([
+		{"slot": 1, "score": 5, "status": "Parked", "hits": 0},
+		"bad-row",
+		{"slot": 9, "score": 5, "status": "Parked", "hits": 0},
+		{"score": 5},
+	])
+	_check_eq(hud.scores_box.get_child_count(), 1, "malformed board rows are skipped")
 
 	hud.flash_notice("P1 parked!")
 	_check_eq(hud.state_label.text, "P1 parked!", "completion flashes a notice")
@@ -1131,11 +1165,27 @@ func _test_main_round_lifecycle() -> void:
 	_check(tm.get_task(1)["spotIndex"] != 0, "round 2 rotates the starting spot")
 
 	# Expiry with no park: zero scores, no winner, every active slot listed.
+	# Hits during the round still reach the results and the ranking.
+	tm.register_collision(2)
+	tm.register_collision(2)
+	tm.register_collision(2)
 	si._clock.tick(180.0)
 	_check_eq(hud.timer_label.text, "00:00", "expiry zeroes the timer")
 	_check(hud.get_node("ResultsPanel").visible, "expiry shows results")
 	_check_eq(hud.winner_label.text, "Winner: none", "no completing player means no winner")
 	_check_eq(si._scores.total(1), 0, "an unparked player scores zero")
+	_check_eq(si._scores.collisions(2), 3, "unfinished hits survive expiry")
+	_check_eq(si._scores.ranking()[0], 1, "fewer hits rank first without a park")
+	_check(
+		str(si._result_lines()[1]).contains("3 hits"),
+		"results show unfinished hits",
+	)
+
+	# A start without the server roundId never enters playing.
+	si._handle_host_command({"command": "reset"})
+	si._handle_host_command({"command": "start", "roundId": 0})
+	_check_eq(si._phase, "ready", "a start without roundId stays ready")
+	_check(si._clock.phase == RoundClock.Phase.READY, "a start without roundId keeps the clock ready")
 
 	# Round 3: slot 2 disconnects but keeps its task; slot 1 parks and the
 	# round ends early without waiting for the timer.

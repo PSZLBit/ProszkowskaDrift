@@ -106,6 +106,21 @@ func collisions(slot: int) -> int:
 	return int(_players[slot]["collisions"])
 
 
+## Updates the live collision count for an unfinished slot so the scoreboard
+## and the final ranking show hits even when the task never completes. Returns
+## false for an unknown slot, a completed task, or a negative count.
+func set_collisions(slot: int, collisions: int) -> bool:
+	if not has_player(slot):
+		return false
+	var entry: Dictionary = _players[slot]
+	if bool(entry["completed"]):
+		return false
+	if collisions < 0:
+		return false
+	entry["collisions"] = collisions
+	return true
+
+
 ## Completion time in ms from round start, or -1 when not completed.
 func completion_time_ms(slot: int) -> int:
 	if not has_player(slot):
