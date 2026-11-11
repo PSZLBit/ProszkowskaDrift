@@ -486,7 +486,7 @@ func _start_task_round() -> void:
 	_scores.reset_round()
 	for slot in slots:
 		_scores.register(slot)
-	var manager := _task_manager()
+	var manager = _task_manager()
 	if manager == null:
 		return
 	var duration_ms := int(_config.get("roundDurationMs", 180000))
@@ -570,7 +570,7 @@ func _check_early_finish() -> void:
 	var slots := _connected_slots()
 	if slots.is_empty():
 		return
-	var manager := _task_manager()
+	var manager = _task_manager()
 	if manager == null:
 		return
 	for slot in slots:
@@ -620,7 +620,7 @@ func _show_paused() -> void:
 ## model so results and ranking reflect hits even when nobody parked. Runs
 ## before the results are built; live updates arrive via collisions_changed.
 func _sync_collisions() -> void:
-	var manager := _task_manager()
+	var manager = _task_manager()
 	if manager == null:
 		return
 	for slot in _scores.ranking():
@@ -637,7 +637,7 @@ func _sync_collisions() -> void:
 ## reconnecting player keeps their row and the lobby shows zeroes.
 func _refresh_board() -> void:
 	var rows: Array = []
-	var manager := _task_manager()
+	var manager = _task_manager()
 	var shown: Array = _connected_slots()
 	for slot in _scores.ranking():
 		if not shown.has(slot):
@@ -697,7 +697,7 @@ func _task_manager():
 
 
 func _task_manager_call(method: String, args: Array) -> void:
-	var manager := _task_manager()
+	var manager = _task_manager()
 	if manager == null:
 		return
 	manager.callv(method, args)
