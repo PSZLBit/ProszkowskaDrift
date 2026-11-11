@@ -314,10 +314,18 @@ func (s *Server) handleGameRoundResult(conn *gameConn, env protocol.Envelope) bo
 	if err != nil {
 		return s.rejectGameInvalid(conn, "Malformed round_result payload.")
 	}
+	if data.WinnerSlot < 0 || data.WinnerSlot > session.MaxPlayers {
+		return s.rejectGameInvalid(conn, "round_result winnerSlot out of range.")
+	}
+	seen := map[int]bool{}
 	for _, entry := range data.Scores {
 		if entry.Slot < 1 || entry.Slot > session.MaxPlayers {
 			return s.rejectGameInvalid(conn, "round_result slot out of range.")
 		}
+		if seen[entry.Slot] {
+			return s.rejectGameInvalid(conn, "round_result duplicate slot.")
+		}
+		seen[entry.Slot] = true
 	}
 	s.broadcast(protocol.TypeRoundResult, data)
 	return false

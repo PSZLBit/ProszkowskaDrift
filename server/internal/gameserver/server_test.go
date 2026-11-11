@@ -893,6 +893,25 @@ func TestGameResultWithBadSlotIsRejected(t *testing.T) {
 	if env := game.readType(protocol.TypeError); env.Type != protocol.TypeError {
 		t.Fatalf("unexpected envelope %+v", env)
 	}
+
+	game.send(protocol.TypeRoundResult, nil, protocol.RoundResultData{
+		RoundID: 1, WinnerSlot: 9,
+		Scores: []protocol.RoundScoreData{{Slot: 1, Score: 0, Tasks: 0, Collisions: 0}},
+	})
+	if env := game.readType(protocol.TypeError); env.Type != protocol.TypeError {
+		t.Fatalf("unexpected envelope %+v, want error for winnerSlot 9", env)
+	}
+
+	game.send(protocol.TypeRoundResult, nil, protocol.RoundResultData{
+		RoundID: 1, WinnerSlot: 1,
+		Scores: []protocol.RoundScoreData{
+			{Slot: 1, Score: 10, Tasks: 1, Collisions: 0},
+			{Slot: 1, Score: 20, Tasks: 1, Collisions: 0},
+		},
+	})
+	if env := game.readType(protocol.TypeError); env.Type != protocol.TypeError {
+		t.Fatalf("unexpected envelope %+v, want error for duplicate slot", env)
+	}
 }
 
 func TestGameConnectingAfterControllerGetsPlayerJoined(t *testing.T) {
