@@ -49,23 +49,36 @@ offset_top = -240.0
 offset_right = 300.0
 offset_bottom = 240.0
 
-[node name="TitleLabel" type="Label" parent="ResultsPanel"]
+[node name="Box" type="VBoxContainer" parent="ResultsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="ResultsPanel/Box"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 48
 text = "Round over"
 horizontal_alignment = 1
 
-[node name="WinnerLabel" type="Label" parent="ResultsPanel"]
+[node name="WinnerLabel" type="Label" parent="ResultsPanel/Box"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Winner: none"
 horizontal_alignment = 1
 
-[node name="Rows" type="VBoxContainer" parent="ResultsPanel"]
+[node name="Rows" type="VBoxContainer" parent="ResultsPanel/Box"]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="PromptLabel" type="Label" parent="ResultsPanel"]
+[node name="PromptLabel" type="Label" parent="ResultsPanel/Box"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "Press Enter to start the next round"

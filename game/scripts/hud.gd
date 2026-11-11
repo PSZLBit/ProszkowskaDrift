@@ -157,13 +157,13 @@ func _ensure_nodes() -> void:
 	if results_panel == null:
 		results_panel = get_node_or_null("ResultsPanel") as Control
 	if title_label == null and results_panel != null:
-		title_label = results_panel.get_node_or_null("TitleLabel") as Label
+		title_label = results_panel.get_node_or_null("Box/TitleLabel") as Label
 	if winner_label == null and results_panel != null:
-		winner_label = results_panel.get_node_or_null("WinnerLabel") as Label
+		winner_label = results_panel.get_node_or_null("Box/WinnerLabel") as Label
 	if results_rows == null and results_panel != null:
-		results_rows = results_panel.get_node_or_null("Rows") as VBoxContainer
+		results_rows = results_panel.get_node_or_null("Box/Rows") as VBoxContainer
 	if prompt_label == null and results_panel != null:
-		prompt_label = results_panel.get_node_or_null("PromptLabel") as Label
+		prompt_label = results_panel.get_node_or_null("Box/PromptLabel") as Label
 
 
 @warning_ignore("integer_division")
