@@ -1,7 +1,9 @@
 # Asset Credits
 
-This file records the source and licence of third-party assets under
-`game/assets/`. Update it whenever an asset is added or replaced.
+This file records the source and licence of project assets, including
+third-party assets under `game/assets/` and first-party assets used by the
+controller app and documentation. Update it whenever an asset is added or
+replaced.
 
 ## Parking Lot Top-Down Pixel Art Tileset ("Large Parking Lot")
 
@@ -32,6 +34,19 @@ This file records the source and licence of third-party assets under
   `game/tools/build_parking_lot_tileset.gd` writes `parking_lot.tres` from the
   placeholders and `parking_lot.local.tres` from the purchased sheets when they
   are installed. CI runs the generator before the tests.
+
+## Controller App Logo and Banner
+
+- Source: original assets created for this project by the repository owner for
+  PR #79.
+- Licence: project-owned. These files are not third-party assets and are not
+  redistributed as standalone resources.
+- AI disclosure: no AI tools were used to create these assets.
+- Files: `controller-android/app/src/main/res/drawable/logo.png`,
+  `controller-android/app/src/main/res/drawable/banner.png`,
+  density-specific `mipmap-*/ic_launcher*.png`,
+  `documentation/assets/banner.png`, `documentation/assets/logo.png`, and
+  `documentation/img/favicon.ico` (derived from the logo).
 
 ## Pending provenance
 

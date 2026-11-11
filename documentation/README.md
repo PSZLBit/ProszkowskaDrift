@@ -3,6 +3,8 @@
 Status: Decided
 Last updated: 2026-11-10
 
+![Proszkowska Drift banner](assets/banner.png)
+
 > All project artifacts are in English. This folder is the source of truth.
 > Code implements what is described here. Chat history does not override this folder.
 
