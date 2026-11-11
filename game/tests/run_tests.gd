@@ -49,6 +49,7 @@ func _initialize() -> void:
 	_test_score_model()
 	_test_hud_scene()
 	_test_scriptless_hud_tolerance()
+	_test_debug_drive()
 	_test_main_round_lifecycle()
 	_test_project_settings()
 
@@ -1127,6 +1128,56 @@ func _test_scriptless_hud_tolerance() -> void:
 	si._hud_call("show_results", ["Round over", "Winner: none", []])
 	si._hud_call("hide_results", [])
 	_check(true, "display calls with a scriptless Hud are skipped")
+	parent.free()
+
+
+func _test_debug_drive() -> void:
+	# F12 starts a serverless local round for slot 1 driven by the arrow keys,
+	# so scoring can be tested with no server or controller.
+	OS.set_environment("PD_GAME_TOKEN", "test-debug-drive")
+	var parent := Node.new()
+	var tm = TaskManagerScript.new()
+	parent.add_child(tm)
+	var si = ServerInputScript.new()
+	parent.add_child(si)
+	root.add_child(parent)
+	_check(not si._connected, "the debug game starts disconnected")
+
+	var f12 := InputEventKey.new()
+	f12.pressed = true
+	f12.keycode = KEY_F12
+	si._unhandled_input(f12)
+	_check(si._debug_drive, "F12 enables debug drive")
+	_check_eq(si._phase, "playing", "debug drive starts a local round")
+	_check(si._clock.phase == RoundClock.Phase.PLAYING, "debug drive runs the clock")
+	_check_eq(tm.task_count(), 1, "debug drive assigns one task to slot 1")
+	_check(tm.get_task(1)["spotLabel"] != "", "debug drive assigns a real target")
+
+	Input.action_press("ui_right")
+	Input.action_press("ui_up")
+	_check_eq(si.get_input(1), Vector2(1, 1), "arrows steer slot 1 in debug drive")
+	_check_eq(si.get_input(2), Vector2.ZERO, "other slots stay neutral in debug drive")
+	Input.action_release("ui_right")
+	Input.action_release("ui_up")
+
+	si._physics_process(1.0)
+	_check_eq(si._clock.remaining_ms, 179000, "debug drive ticks the clock")
+
+	tm.update_tasks(0.6, _parked_cars(tm, 0.0), 12400)
+	_check_eq(si._scores.total(1), 103, "a debug park scores the task")
+	_check_eq(si._phase, "results", "parking the only slot ends the debug round")
+	_check_eq(si._scores.winner_slot(), 1, "slot 1 wins the debug round")
+
+	si._unhandled_input(f12)
+	_check(not si._debug_drive, "F12 again leaves debug drive")
+	_check_eq(si._phase, "ready", "leaving debug drive returns to the lobby")
+	_check(si._scores.ranking().is_empty(), "leaving debug drive clears scores")
+
+	si._connected = true
+	si._unhandled_input(f12)
+	_check(not si._debug_drive, "F12 is refused while connected")
+	si._connected = false
+
 	parent.free()
 
 

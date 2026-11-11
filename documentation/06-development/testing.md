@@ -252,6 +252,9 @@ The game scaffold uses a small headless GDScript runner
 - HUD scene: timer formatting, score rendering, malformed-row tolerance,
   automatic results on expiry, and hiding stale results when a new round
   starts.
+- Round lifecycle: tree-attached start, park, early finish, reset, restart,
+  expiry, disconnect, invalid start rejection, scriptless-Hud tolerance, and
+  the F12 serverless debug round.
 - Project settings: main scene, 1920×1080 viewport, and fullscreen mode.
 - Local quit key: `Q` requests quit, while key repeat, key release, other keys,
   and mouse events do not.
@@ -692,6 +695,17 @@ Run on the target laptop with one fake controller, then repeat with four.
 
 Record: date, commit, pass/fail per step, Godot version, controller count.
 Do not mark the MFD parking row as passed without the target-hardware run.
+
+### Debug drive (F12, serverless playtest)
+
+Debug-only aid in `game/scripts/server_input.gd` for testing scoring with no
+server or controller. Run the game without starting the server and press
+`F12`: a local round starts for slot 1 and the arrow keys
+(`ui_left`/`ui_right`/`ui_up`/`ui_down`) steer car P1. Parking, scoring,
+results, and the timer all run locally; server sends are skipped while
+disconnected. Press `F12` again to return to the lobby. `F12` is refused while
+connected, so it can never hijack a real round. Covered by the
+`_test_debug_drive` headless test; not an MFD acceptance path.
 
 ## CI Plan
 

@@ -72,6 +72,12 @@ var _scores: ScoreModel
 # Hud script is not attached, and all use goes through _hud_call.
 var _hud: Node
 
+## Debug-only local playtest (F12): the arrow keys drive slot 1 with no
+## server. Only available while disconnected; the server stays the authority
+## in every real round.
+var _debug_drive := false
+var _debug_round_id := 0
+
 
 func _ready() -> void:
 	_setup_round_ui()
@@ -168,8 +174,14 @@ func _process(delta: float) -> void:
 
 
 ## Returns the latest input for one car as (steer, throttle), each in [-1, 1].
-## The store applies the 500 ms per-slot timeout.
+## The store applies the 500 ms per-slot timeout. In F12 debug drive, slot 1
+## reads the arrow keys instead (see _toggle_debug_drive).
 func get_input(slot: int) -> Vector2:
+	if _debug_drive and slot == 1:
+		return Vector2(
+			Input.get_axis("ui_left", "ui_right"),
+			Input.get_axis("ui_down", "ui_up"),
+		)
 	return _store.get_input(slot, Time.get_ticks_msec())
 
 
@@ -194,6 +206,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		print("[ServerInput] Quit key pressed; exiting.")
 		get_tree().quit()
 		return
+
+	if event is InputEventKey:
+		var debug_key := event as InputEventKey
+		if debug_key.pressed and not debug_key.echo and debug_key.keycode == KEY_F12:
+			_toggle_debug_drive()
+			return
 
 	if not _connected or not _game_ready_sent:
 		return
@@ -557,6 +575,47 @@ func _on_task_completed(slot: int, result: Dictionary) -> void:
 func _on_collisions_changed(slot: int, count: int) -> void:
 	if _scores.set_collisions(slot, count):
 		_refresh_board()
+
+
+## Toggles the serverless debug round: F12 starts a local round for slot 1
+## driven by the arrow keys; F12 again returns to the lobby. Refused while
+## connected so it can never hijack or corrupt a real server round.
+func _toggle_debug_drive() -> void:
+	if _connected:
+		print("[ServerInput] Debug drive needs no server; disconnect first.")
+		return
+	_debug_drive = not _debug_drive
+	if _debug_drive:
+		_active_slots[1] = true
+		_debug_round_id += 1
+		_round_id = _debug_round_id
+		_phase = "playing"
+		clear_input()
+		_start_task_round()
+		print("[ServerInput] Debug drive ON: arrows steer P1. F12 stops.")
+	else:
+		_stop_debug_round()
+		print("[ServerInput] Debug drive OFF.")
+
+
+## Returns a local debug round to the lobby without touching the server.
+func _stop_debug_round() -> void:
+	_phase = "ready"
+	clear_input()
+	_task_manager_call("set_running", [false, Time.get_ticks_msec()])
+	_task_manager_call("clear_round", [])
+	_active_slots.clear()
+	if _clock != null:
+		_clock.reset()
+	_scores.reset_round()
+	_show_lobby([])
+
+
+func _physics_process(delta: float) -> void:
+	# Debug-only clock tick. The production path ticks in _process while the
+	# server connection is open; this branch only runs for F12 local rounds.
+	if _debug_drive and not _connected:
+		_tick_round(delta)
 
 
 ## Same payload the server forwards to controllers, with the slot added.
