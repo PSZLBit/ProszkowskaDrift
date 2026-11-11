@@ -69,8 +69,12 @@ func update_board(rows: Array) -> void:
 			old_row.free()
 	_rows.clear()
 	for entry_raw in rows:
+		if not (entry_raw is Dictionary):
+			continue
 		var entry: Dictionary = entry_raw
 		var slot := int(entry.get("slot", 0))
+		if slot < 1 or slot > 4:
+			continue
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		var chip := ColorRect.new()
