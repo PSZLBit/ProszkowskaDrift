@@ -1027,21 +1027,32 @@ func _test_hud_scene() -> void:
 		"the HUD has a results panel",
 	)
 	_check(
-		hud.get_node_or_null("ResultsPanel/TitleLabel") != null,
+		hud.get_node_or_null("ResultsPanel/Box/TitleLabel") != null,
 		"the results panel has a title",
 	)
 	_check(
-		hud.get_node_or_null("ResultsPanel/WinnerLabel") != null,
+		hud.get_node_or_null("ResultsPanel/Box/WinnerLabel") != null,
 		"the results panel has a winner line",
 	)
 	_check(
-		hud.get_node_or_null("ResultsPanel/Rows") != null,
+		hud.get_node_or_null("ResultsPanel/Box/Rows") != null,
 		"the results panel has a rows container",
 	)
 	_check(
-		hud.get_node_or_null("ResultsPanel/PromptLabel") != null,
+		hud.get_node_or_null("ResultsPanel/Box/PromptLabel") != null,
 		"the results panel has a next-round prompt",
 	)
+	var box := hud.get_node_or_null("ResultsPanel/Box") as VBoxContainer
+	_check(box != null, "results content sits in a layout container")
+	if box != null:
+		var order: Array = []
+		for child in box.get_children():
+			order.append(str(child.name))
+		_check_eq(
+			order,
+			["TitleLabel", "WinnerLabel", "Rows", "PromptLabel"],
+			"results stack title, winner, rows, prompt without overlap",
+		)
 
 	var clock := RoundClock.new()
 	hud.bind(clock)
@@ -1091,7 +1102,7 @@ func _test_hud_scene() -> void:
 		"results start hidden",
 	)
 	hud.show_results("Round over", "Winner: P2", ["1. P2   103   Parked   0 hits   12.4 s"])
-	var panel_labels := hud.get_node("ResultsPanel/Rows").get_child_count()
+	var panel_labels := hud.get_node("ResultsPanel/Box/Rows").get_child_count()
 	_check_eq(panel_labels, 1, "results list one row per player")
 	_check_eq(hud.title_label.text, "Round over", "results show the title")
 	_check_eq(hud.winner_label.text, "Winner: P2", "results show the winner")
@@ -1120,6 +1131,9 @@ func _test_scriptless_hud_tolerance() -> void:
 	var si = ServerInputScript.new()
 	parent.add_child(si)
 	root.add_child(parent)
+	# _ready() is deferred for nodes added during SceneTree._initialize(), so
+	# bind the HUD explicitly. The later engine _ready re-run is idempotent.
+	si._setup_round_ui()
 	_check(si._hud != null, "a scriptless Hud node is still found")
 	_check(not si._hud.has_method("bind"), "a plain CanvasLayer has no bind")
 	si._hud_call("bind", [si._clock])
@@ -1137,6 +1151,7 @@ func _test_debug_drive() -> void:
 	OS.set_environment("PD_GAME_TOKEN", "test-debug-drive")
 	var parent := Node.new()
 	var tm = TaskManagerScript.new()
+	tm.name = "TaskManager"
 	parent.add_child(tm)
 	var si = ServerInputScript.new()
 	parent.add_child(si)
@@ -1193,7 +1208,10 @@ func _test_main_round_lifecycle() -> void:
 	# input creates its clock, scores, and HUD binding.
 	var main = packed.instantiate()
 	root.add_child(main)
+	# Same deferred-_ready note as above: bind explicitly for the assertions.
+	# The engine _ready re-run afterwards is idempotent.
 	var si = main.get_node("ServerInput")
+	si._setup_round_ui()
 	var tm = main.get_node("TaskManager")
 	var hud = main.get_node("Hud")
 	_check(si._clock != null, "the game owns a round clock")
