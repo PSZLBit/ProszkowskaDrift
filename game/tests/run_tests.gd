@@ -1178,7 +1178,8 @@ func _test_debug_drive() -> void:
 	si._physics_process(1.0)
 	_check_eq(si._clock.remaining_ms, 179000, "debug drive ticks the clock")
 
-	tm.update_tasks(0.6, _parked_cars(tm, 0.0), 12400)
+	var parked_at := int(tm.get_task(1)["assignedMs"]) + 12400
+	tm.update_tasks(0.6, _parked_cars(tm, 0.0), parked_at)
 	_check_eq(si._scores.total(1), 103, "a debug park scores the task")
 	_check_eq(si._phase, "results", "parking the only slot ends the debug round")
 	_check_eq(si._scores.winner_slot(), 1, "slot 1 wins the debug round")
@@ -1236,11 +1237,17 @@ func _test_main_round_lifecycle() -> void:
 	)
 	_check_eq(hud.scores_box.get_child_count(), 2, "the board lists both slots")
 
-	# Both park centered at 12.4 s: 63 time + 40 precision = 103 each.
-	tm.update_tasks(0.6, _parked_cars(tm, 0.0), 12400)
+	# Both park centered 12.4 s after assignment: 63 time + 40 precision = 103
+	# each. The timestamp is relative to the real assignedMs so wall-clock
+	# startup time cannot skew the worked example.
+	var parked_at := int(tm.get_task(1)["assignedMs"]) + 12400
+	tm.update_tasks(0.6, _parked_cars(tm, 0.0), parked_at)
 	_check_eq(si._scores.total(1), 103, "slot 1 scores the parked task")
 	_check_eq(si._scores.total(2), 103, "slot 2 scores the parked task")
-	_check_eq(hud.state_label.text, "P2 parked!", "the last completion flashes")
+	# The final park ends the round in the same call, so the results prompt
+	# wins over the completion flash (non-final flashes are covered separately
+	# in _test_hud_scene).
+	_check_eq(hud.state_label.text, "Round over", "the final park ends the round")
 	_check(hud.get_node("ResultsPanel").visible, "all-completed ends the round early")
 	_check_eq(hud.winner_label.text, "Winner: P1", "equal scores break by slot")
 	_check_eq(si._phase, "results", "the game reports results")
