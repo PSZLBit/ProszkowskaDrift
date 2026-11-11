@@ -205,7 +205,7 @@ and a fake game. Packages:
   expiry targeting the captured game connection, replacement-game readiness,
   stale-game message rejection, game-ready gating of `host_request`, ordered
   player notifications during game registration, kick identity, and atomic
-  controller-slot access, and game \	ask_result\/ound_result\ forwarding with slot, winnerSlot, and duplicate-slot rejection.
+  controller-slot access, and game `task_result`/`round_result` forwarding with slot, winnerSlot, and duplicate-slot rejection.
 
 Commands, from `server/`:
 

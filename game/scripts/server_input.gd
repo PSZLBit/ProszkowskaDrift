@@ -93,12 +93,16 @@ func _ready() -> void:
 	_connect()
 
 
-## Creates the round clock and score model, binds the HUD, and arms the expiry
-## path. Runs before the token check so headless scenes still get the UI.
-func _setup_round_ui() -> void:
+func _init() -> void:
 	_clock = RoundClock.new()
 	_scores = ScoreModel.new()
 	_clock.finished.connect(_on_clock_finished)
+
+
+## Binds the HUD and shows the lobby. Runs in _ready (so the scene tree
+## exists) before the token check so headless scenes still get the UI. The
+## clock and scores already exist from _init, so early readers never see null.
+func _setup_round_ui() -> void:
 	_hud = _find_hud()
 	_hud_call("bind", [_clock])
 	_show_lobby([])
@@ -696,7 +700,7 @@ func _result_lines() -> Array:
 	return lines
 
 
-func _task_manager():
+func _task_manager() -> Node:
 	var parent := get_parent()
 	if parent == null:
 		return null

@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://dtvugnobfodtt" path="res://scripts/hud.gd" id="1_hud"]
 
 [node name="Hud" type="CanvasLayer"]
+script = ExtResource("1_hud")
 
 [node name="TimerLabel" type="Label" parent="."]
 anchor_left = 0.5
