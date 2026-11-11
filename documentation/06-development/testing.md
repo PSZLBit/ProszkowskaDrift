@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-11-10
+Last updated: 2026-11-11
 
 The test-plan update is tracked in issue #17. The controller WebSocket client is
 promoted after cleanup (D-35) and covered by host-JVM fake-server tests and a
@@ -205,7 +205,7 @@ and a fake game. Packages:
   expiry targeting the captured game connection, replacement-game readiness,
   stale-game message rejection, game-ready gating of `host_request`, ordered
   player notifications during game registration, kick identity, and atomic
-  controller-slot access.
+  controller-slot access, and game \	ask_result\/ound_result\ forwarding with slot, winnerSlot, and duplicate-slot rejection.
 
 Commands, from `server/`:
 
@@ -245,10 +245,13 @@ The game scaffold uses a small headless GDScript runner
   placeholders in place.
 - Round clock: phase transitions, pause/resume, expiry, custom length, and
   ignored invalid ticks.
-- Score model: provisional formula, boundaries, ties (including collisions),
-  slot validation, and clamping.
-- HUD scene: timer formatting, score rendering, automatic results on expiry,
-  and hiding stale results when a new round starts.
+- Score model: MFD formula with the worked examples, boundaries, ties
+  (completed first, then score, fewer collisions, faster completion, lower
+  slot), live collision counts for unfinished slots, idempotent completion,
+  NaN/Inf rejection, slot validation, and clamping.
+- HUD scene: timer formatting, score rendering, malformed-row tolerance,
+  automatic results on expiry, and hiding stale results when a new round
+  starts.
 - Project settings: main scene, 1920×1080 viewport, and fullscreen mode.
 - Local quit key: `Q` requests quit, while key repeat, key release, other keys,
   and mouse events do not.
