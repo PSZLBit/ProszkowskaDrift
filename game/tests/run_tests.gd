@@ -9,6 +9,10 @@ const GameProtocol := preload("res://scripts/game_protocol.gd")
 const SlotInputStore := preload("res://scripts/slot_input_store.gd")
 const CarScript := preload("res://scripts/car.gd")
 const ServerInputScript := preload("res://scripts/server_input.gd")
+const ParkingLotArt := preload("res://scripts/parking_lot_art.gd")
+const ParkingLotMapScript := preload("res://scripts/parking_lot_map.gd")
+const RoundClock := preload("res://scripts/round_clock.gd")
+const ScoreModel := preload("res://scripts/score_model.gd")
 const MfdMap := preload("res://scripts/mfd_map.gd")
 const TaskAssignment := preload("res://scripts/task_assignment.gd")
 const ParkingDetector := preload("res://scripts/parking_detector.gd")
@@ -38,6 +42,15 @@ func _initialize() -> void:
 	_test_parking_detector()
 	_test_task_manager()
 	_test_main_scene()
+	_test_parking_lot_tileset()
+	_test_parking_lot_map()
+	_test_parking_lot_art_swap()
+	_test_round_clock()
+	_test_score_model()
+	_test_hud_scene()
+	_test_scriptless_hud_tolerance()
+	_test_debug_drive()
+	_test_main_round_lifecycle()
 	_test_project_settings()
 
 	if _failures == 0:
@@ -478,7 +491,18 @@ func _test_task_manager() -> void:
 		"paused time is excluded from the completion duration",
 	)
 
-	for node in [manager, early, slow, held, kicked, paused, resumed]:
+	var hits = TaskManagerScript.new()
+	hits.start_round([1], 1, 180000, 0)
+	var hit_events: Array = []
+	hits.collisions_changed.connect(
+		func(slot: int, count: int) -> void: hit_events.append([slot, count])
+	)
+	hits.register_collision(1)
+	hits.register_collision(1)
+	_check_eq(hit_events, [[1, 1], [1, 2]], "collisions emit live counts")
+	_check_eq(int(hits.get_task(1)["collisions"]), 2, "collisions accumulate per slot")
+
+	for node in [manager, early, slow, held, kicked, paused, resumed, hits]:
 		(node as Node).free()
 
 
@@ -494,6 +518,8 @@ func _test_main_scene() -> void:
 
 	var server_input := scene.find_child("ServerInput", true, false)
 	_check(server_input != null, "the main scene has one server input node")
+	var hud := scene.find_child("Hud", true, false)
+	_check(hud != null, "the main scene has a HUD overlay")
 
 	var slots: Array[int] = []
 	for car in cars:
@@ -532,6 +558,745 @@ func _test_main_scene() -> void:
 	var task_manager := scene.find_child("TaskManager", true, false)
 	_check(task_manager != null, "the main scene has a task manager node")
 	scene.free()
+
+
+func _test_parking_lot_tileset() -> void:
+	var builder = load("res://scripts/parking_lot_tileset_builder.gd")
+	if builder != null and not ResourceLoader.exists("res://tilesets/parking_lot.tres"):
+		builder.build(
+			"res://assets/placeholders/large_parking_lot/",
+			builder.placeholder_files(),
+			"res://tilesets/parking_lot.tres",
+		)
+	var tile_set := load("res://tilesets/parking_lot.tres") as TileSet
+	_check(tile_set != null, "parking_lot.tres loads")
+	if tile_set == null:
+		return
+
+	_check_eq(tile_set.tile_size, Vector2i(48, 48), "parking tiles are 48x48")
+	_check_eq(tile_set.get_source_count(), 8, "the tileset has eight atlas sources")
+	_check_eq(tile_set.get_physics_layers_count(), 1, "the tileset has one physics layer")
+	_check_eq(
+		tile_set.get_physics_layer_collision_layer(0),
+		1,
+		"parking tiles target the environment collision layer",
+	)
+	_check_eq(
+		tile_set.get_physics_layer_collision_mask(0),
+		2,
+		"parking tiles detect the car collision layer",
+	)
+
+	var expected := ["A2-1", "A2-2", "A4-walls", "B-01", "B-02", "B-03", "B-04", "B-05"]
+	var names: Array[String] = []
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		_check(source != null, "source %d is an atlas source" % index)
+		if source == null:
+			continue
+		names.append(source.resource_name)
+		_check(source.texture != null, "source %s has a texture" % source.resource_name)
+		_check_eq(
+			source.texture_region_size,
+			Vector2i(48, 48),
+			"source %s uses 48x48 regions" % source.resource_name,
+		)
+		if source.texture != null:
+			_check_eq(
+				source.texture.get_width() % 48,
+				0,
+				"source %s width is a 48px multiple" % source.resource_name,
+			)
+			_check_eq(
+				source.texture.get_height() % 48,
+				0,
+				"source %s height is a 48px multiple" % source.resource_name,
+			)
+	_check_eq(names, expected, "atlas sources are named in generation order")
+
+	var a2 := _find_atlas_source(tile_set, "A2-2")
+	_check(a2 != null, "the A2-2 ground source exists")
+	if a2 != null and a2.texture != null:
+		_check(
+			a2.texture.resource_path.ends_with(
+				"assets/placeholders/large_parking_lot/a2_2.png"
+			),
+			"the committed tileset uses the placeholder A2-2 sheet",
+		)
+		_check(a2.has_tile(Vector2i(1, 3)), "the plain ground tile exists")
+		_check(a2.has_tile(Vector2i(6, 3)), "the kerb tile exists")
+
+	var b01 := _find_atlas_source(tile_set, "B-01")
+	_check(b01 != null, "the B-01 parking source exists")
+	if b01 != null:
+		_check(b01.has_tile(Vector2i(0, 2)), "the first bay top tile exists")
+		_check(b01.has_tile(Vector2i(3, 3)), "the last bay bottom tile exists")
+
+
+func _test_parking_lot_map() -> void:
+	var packed := load("res://scenes/map/parking_lot.tscn") as PackedScene
+	_check(packed != null, "parking_lot.tscn loads")
+	if packed == null:
+		return
+
+	var map = packed.instantiate()
+	var tile_map: TileMapLayer = map.get_tile_map_layer()
+	_check(tile_map != null, "the parking map has a TileMapLayer")
+	if tile_map == null:
+		map.free()
+		return
+
+	_check_eq(tile_map.position, ParkingLotMapScript.MAP_OFFSET, "the map is centred vertically")
+	_check_eq(
+		ParkingLotMapScript.MAP_SIZE * 48,
+		Vector2i(1920, 1056),
+		"the 40x22 map fills the 1920px width",
+	)
+
+	var environment := map.get_node_or_null("Environment") as StaticBody2D
+	_check(environment != null, "the demo map has an environment body")
+	if environment != null:
+		_check_eq(environment.collision_layer, 1, "the map boundary uses the environment layer")
+		_check_eq(environment.collision_mask, 2, "the map boundary detects cars")
+		var boundary_shapes := environment.get_children()
+		var shape_count := 0
+		for child in boundary_shapes:
+			if child is CollisionShape2D and child.shape != null:
+				shape_count += 1
+		_check_eq(shape_count, 4, "the map boundary has four collision shapes")
+
+	map.build()
+	_check(tile_map.tile_set != null, "the parking map has a TileSet")
+	if tile_map.tile_set == null:
+		map.free()
+		return
+	_check_eq(
+		tile_map.get_cell_source_id(Vector2i(0, 0)),
+		ParkingLotMapScript.SOURCE_A2_2,
+		"the border uses the A2-2 source",
+	)
+	_check_eq(
+		tile_map.get_cell_atlas_coords(Vector2i(0, 0)),
+		ParkingLotMapScript.KERB_COORDS,
+		"the border uses the kerb tile",
+	)
+	_check_eq(
+		tile_map.get_cell_atlas_coords(Vector2i(1, 1)),
+		ParkingLotMapScript.GROUND_COORDS,
+		"the interior uses the plain ground tile",
+	)
+
+	for bay in ParkingLotMapScript.BAY_COUNT:
+		var column: int = ParkingLotMapScript.BAY_FIRST_COLUMN + bay
+		var top_row: int = ParkingLotMapScript.BAY_TOP_ROW
+		_check_eq(
+			tile_map.get_cell_source_id(Vector2i(column, top_row)),
+			ParkingLotMapScript.SOURCE_B_01,
+			"bay %d uses the B-01 source" % (bay + 1),
+		)
+		_check_eq(
+			tile_map.get_cell_atlas_coords(Vector2i(column, top_row)),
+			ParkingLotMapScript.BAY_TOP_COORDS + Vector2i(bay, 0),
+			"bay %d top marking is correct" % (bay + 1),
+		)
+		_check_eq(
+			tile_map.get_cell_atlas_coords(Vector2i(column, top_row + 1)),
+			ParkingLotMapScript.BAY_BOTTOM_COORDS + Vector2i(bay, 0),
+			"bay %d bottom marking is correct" % (bay + 1),
+		)
+
+	var spawns := map.get_node_or_null("Spawns") as Node2D
+	_check(spawns != null, "the parking map has spawn markers")
+	if spawns != null:
+		_check_eq(spawns.get_child_count(), 4, "there are four spawn markers")
+
+	var bays := map.get_node_or_null("Bays") as Node2D
+	_check(bays != null, "the parking map has bay markers")
+	if bays != null:
+		_check_eq(
+			bays.get_child_count(),
+			ParkingLotMapScript.BAY_COUNT,
+			"every bay has a marker",
+		)
+		for bay in ParkingLotMapScript.BAY_COUNT:
+			var marker := bays.get_node_or_null("Bay%d" % (bay + 1)) as Marker2D
+			_check(marker != null, "bay %d has a marker" % (bay + 1))
+			if marker != null:
+				var center := Vector2(
+					(ParkingLotMapScript.BAY_FIRST_COLUMN + bay + 0.5) * 48.0,
+					(ParkingLotMapScript.BAY_TOP_ROW + 1) * 48.0,
+				)
+				_check_eq(marker.position, center, "bay %d marker sits in its bay" % (bay + 1))
+
+	_check(
+		ParkingLotMapScript.should_use_local(true, true),
+		"an installed local TileSet is preferred",
+	)
+	_check(
+		not ParkingLotMapScript.should_use_local(true, false),
+		"a local TileSet without purchased sheets is stale",
+	)
+	_check(
+		not ParkingLotMapScript.should_use_local(false, true),
+		"a missing local TileSet falls back to committed",
+	)
+	_check(
+		not ParkingLotMapScript.should_use_local(false, false),
+		"a missing local TileSet without purchased sheets falls back",
+	)
+
+	map.free()
+
+
+func _test_parking_lot_art_swap() -> void:
+	_check_eq(
+		ParkingLotArt.REAL_FILES.size(),
+		8,
+		"every atlas source has a purchased file mapping",
+	)
+	_check_eq(
+		ParkingLotArt.REAL_FILES.get("A2-1", ""),
+		"Tile_A2-1 (2).png",
+		"the A2-1 mapping matches the purchased file",
+	)
+	_check_eq(
+		ParkingLotArt.REAL_FILES.get("B-05", ""),
+		"tile-B-05.png",
+		"the B-05 mapping matches the purchased file",
+	)
+	_check_eq(ParkingLotArt.apply(null), 0, "a missing TileSet is ignored")
+
+	var tile_set := load("res://tilesets/parking_lot.tres") as TileSet
+	_check(tile_set != null, "the tileset loads for the art-swap test")
+	if tile_set == null:
+		return
+
+	var before: Array = []
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		before.append(source.texture if source != null else null)
+
+	var swapped := ParkingLotArt.apply(
+		tile_set,
+		"res://assets/__missing_parking_lot__/",
+	)
+	_check_eq(
+		swapped,
+		0,
+		"missing purchased sheets leave the placeholder textures in place",
+	)
+
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		if source != null:
+			_check_eq(
+				source.texture,
+				before[index],
+				"source %d keeps its placeholder texture" % index,
+			)
+
+
+func _find_atlas_source(tile_set: TileSet, source_name: String) -> TileSetAtlasSource:
+	for index in tile_set.get_source_count():
+		var source := tile_set.get_source(tile_set.get_source_id(index)) as TileSetAtlasSource
+		if source != null and source.resource_name == source_name:
+			return source
+	return null
+
+
+func _test_round_clock() -> void:
+	var clock := RoundClock.new()
+	_check_eq(clock.phase, RoundClock.Phase.READY, "the clock starts ready")
+	_check_eq(clock.remaining_ms, 180000, "the clock starts full")
+
+	clock.start()
+	_check_eq(clock.phase, RoundClock.Phase.PLAYING, "start enters playing")
+	_check_eq(clock.remaining_ms, 180000, "start resets the timer")
+
+	clock.tick(1.0)
+	_check_eq(clock.remaining_ms, 179000, "one second elapses")
+
+	clock.tick(-1.0)
+	_check_eq(clock.remaining_ms, 179000, "negative ticks are ignored")
+	clock.tick(INF)
+	_check_eq(clock.remaining_ms, 179000, "non-finite ticks are ignored")
+
+	clock.pause()
+	_check_eq(clock.phase, RoundClock.Phase.PAUSED, "pause enters paused")
+	clock.tick(10.0)
+	_check_eq(clock.remaining_ms, 179000, "paused time does not elapse")
+
+	clock.resume()
+	_check_eq(clock.phase, RoundClock.Phase.PLAYING, "resume enters playing")
+
+	clock.reset()
+	_check_eq(clock.phase, RoundClock.Phase.READY, "reset returns to ready")
+	_check_eq(clock.remaining_ms, 180000, "reset restores the full time")
+
+	var emitted: Array = []
+	clock.time_changed.connect(func(remaining_ms: int) -> void: emitted.append(remaining_ms))
+	clock.start()
+	_check_eq(emitted, [180000], "start emits the reset time")
+	clock.reset()
+	_check_eq(emitted, [180000, 180000], "reset emits the restored time")
+
+	clock.configure(60000)
+	_check_eq(clock.round_length_ms, 60000, "configure applies the server duration")
+	_check_eq(clock.remaining_ms, 60000, "configure resets the idle timer")
+	_check_eq(emitted, [180000, 180000, 60000], "configure emits the new time")
+	clock.start()
+	clock.tick(10.0)
+	clock.configure(120000)
+	_check_eq(clock.remaining_ms, 50000, "configure while playing keeps the running timer")
+
+	var finished := [false]
+	clock.finished.connect(func() -> void: finished[0] = true)
+	clock.start()
+	clock.tick(180.0)
+	_check_eq(clock.remaining_ms, 0, "the timer clamps at zero")
+	_check_eq(clock.phase, RoundClock.Phase.FINISHED, "expiry enters finished")
+	_check(finished[0], "expiry emits finished")
+
+	clock.show_results()
+	_check_eq(clock.phase, RoundClock.Phase.RESULTS, "finished shows results")
+
+	var early_clock := RoundClock.new()
+	early_clock.start()
+	early_clock.show_results()
+	_check_eq(early_clock.phase, RoundClock.Phase.RESULTS, "an early finish shows results")
+	early_clock.free()
+
+	clock.reset()
+	clock.round_length_ms = 5000
+	clock.start()
+	_check_eq(clock.remaining_ms, 5000, "a custom length is used")
+	clock.tick(10.0)
+	_check_eq(clock.remaining_ms, 0, "oversized ticks clamp at zero")
+
+	clock.free()
+
+
+func _test_score_model() -> void:
+	_check_eq(ScoreModel.compute_time_score(0), 100, "zero elapsed time scores 100")
+	_check_eq(ScoreModel.compute_time_score(12400), 63, "12.4 s scores 63")
+	_check_eq(ScoreModel.compute_time_score(18900), 44, "18.9 s scores 44")
+	_check_eq(ScoreModel.compute_time_score(30000), 10, "30 s reaches the time floor")
+	_check_eq(ScoreModel.compute_time_score(60000), 10, "slow parks keep the time floor")
+	_check_eq(ScoreModel.compute_center_score(0.0), 20, "a centered park scores 20")
+	_check_eq(ScoreModel.compute_center_score(48.0), 0, "half-bay offset scores 0")
+	_check_eq(ScoreModel.compute_angle_score(0.0), 20, "aligned facing scores 20")
+	_check_eq(ScoreModel.compute_angle_score(10.0), 20, "10 degrees keeps full angle score")
+	_check_eq(ScoreModel.compute_angle_score(35.0), 0, "35 degrees scores 0")
+	_check_eq(ScoreModel.compute_penalty(0), 0, "a clean park has no penalty")
+	_check_eq(ScoreModel.compute_penalty(1), 10, "one hit costs 10")
+	_check_eq(ScoreModel.compute_penalty(9), 30, "the penalty caps at 30")
+	_check_eq(ScoreModel.rating_for(40), "perfect", "35-40 rates perfect")
+	_check_eq(ScoreModel.rating_for(25), "great", "25-34 rates great")
+	_check_eq(ScoreModel.rating_for(15), "good", "15-24 rates good")
+	_check_eq(ScoreModel.rating_for(0), "parked", "0-14 rates parked")
+
+	var scores := ScoreModel.new()
+	_check(not scores.register(0), "slot 0 is rejected by the score model")
+	_check(not scores.register(5), "slot 5 is rejected by the score model")
+	_check(scores.register(1), "slot 1 registers")
+	_check(scores.register(2), "slot 2 registers")
+	_check(scores.register(3), "slot 3 registers")
+	_check(scores.has_player(1), "player 1 is registered")
+	_check_eq(scores.total(1), 0, "an unfinished player scores zero")
+	_check_eq(scores.tasks_completed(1), 0, "an unfinished player has no tasks")
+	_check_eq(scores.total(99), 0, "unknown players score zero")
+	_check(not scores.record_completion(99, 1, 1000, 0.0, 0.0, 0), "unknown slots cannot complete")
+
+	# Worked examples from the MFD baseline: 103 = 63 time + 40 precision at
+	# 12.4 s, and 74 = 44 time + 40 precision - 10 for one hit at 18.9 s.
+	_check(scores.record_completion(2, 12, 12400, 0.0, 0.0, 0), "a clean centered park records")
+	_check(scores.record_completion(1, 11, 18900, 0.0, 0.0, 1), "a slow park with one hit records")
+	_check_eq(scores.total(2), 103, "worked example: clean park scores 103")
+	_check_eq(scores.total(1), 74, "worked example: slow park with one hit scores 74")
+	_check(not scores.record_completion(2, 12, 13000, 0.0, 0.0, 0), "a completed task records exactly once")
+	_check_eq(scores.total(2), 103, "a repeated completion changes nothing")
+
+	_check_eq(scores.ranking(), [2, 1, 3], "ranking orders completed first, then score")
+	_check_eq(scores.winner_slot(), 2, "the winner is the first ranked completing player")
+
+	var empty := ScoreModel.new()
+	empty.register(1)
+	empty.register(2)
+	_check_eq(empty.ranking(), [1, 2], "unfinished players rank by slot")
+	_check_eq(empty.winner_slot(), 0, "no completing player means no winner")
+
+	var task_payload: Dictionary = scores.task_result_payload(2)
+	_check_eq(task_payload["taskId"], 12, "task payload carries the task id")
+	_check_eq(task_payload["points"], 103, "task payload carries points")
+	_check_eq(task_payload["timeScore"], 63, "task payload carries the time score")
+	_check_eq(task_payload["precisionScore"], 40, "task payload carries precision")
+	_check_eq(task_payload["collisionPenalty"], 0, "task payload carries the penalty")
+	_check_eq(task_payload["rating"], "perfect", "task payload carries the rating")
+	_check_eq(task_payload["totalScore"], 103, "task payload carries the total")
+	_check(scores.task_result_payload(3).is_empty(), "unfinished slots have no task payload")
+
+	var round_payload: Dictionary = scores.round_result_payload(7)
+	_check_eq(round_payload["roundId"], 7, "round payload carries the round id")
+	_check_eq(round_payload["winnerSlot"], 2, "round payload carries the winner")
+	_check_eq(
+		round_payload["scores"],
+		[
+			{"slot": 2, "score": 103, "tasks": 1, "collisions": 0},
+			{"slot": 1, "score": 74, "tasks": 1, "collisions": 1},
+			{"slot": 3, "score": 0, "tasks": 0, "collisions": 0},
+		],
+		"round payload lists every registered slot in rank order",
+	)
+
+	var ties := ScoreModel.new()
+	ties.register(1)
+	ties.register(2)
+	ties.record_completion(1, 11, 5000, 0.0, 0.0, 1)
+	ties.record_completion(2, 12, 5000, 0.0, 0.0, 0)
+	_check_eq(ties.ranking(), [2, 1], "equal scores rank fewer collisions first")
+
+	var timing := ScoreModel.new()
+	timing.register(1)
+	timing.register(2)
+	timing.record_completion(1, 11, 9000, 0.0, 0.0, 0)
+	timing.record_completion(2, 12, 9000, 24.0, 20.0, 1)
+	# Slot 1: time 73 + precision 40 = 113. Slot 2: time 73 + center 10 +
+	# angle 12 - 10 = 85. Faster completion must not outrank a higher score.
+	_check_eq(timing.total(1), 113, "centered fast park scores 113")
+	_check_eq(timing.total(2), 85, "off-center park with a hit scores 85")
+	_check_eq(timing.ranking(), [1, 2], "higher score outranks faster completion")
+
+	var incomplete_last := ScoreModel.new()
+	incomplete_last.register(1)
+	incomplete_last.register(2)
+	incomplete_last.register(3)
+	incomplete_last.record_completion(3, 13, 29000, 47.0, 34.0, 9)
+	# Slot 3: time max(10, 100-87)=13, center 20-floor(19.58)=1, angle
+	# floor(20*1/25)=0, precision 1, penalty 30 -> max(0, 13+1-30)=0.
+	# Completed with 0 points still outranks unfinished players.
+	_check_eq(incomplete_last.total(3), 0, "a sloppy park can score zero")
+	_check_eq(incomplete_last.tasks_completed(3), 1, "a zero-point park still completed")
+	_check_eq(incomplete_last.ranking()[0], 3, "a completed task outranks unfinished players")
+
+	var invalid := ScoreModel.new()
+	invalid.register(1)
+	_check(not invalid.record_completion(1, 11, -5, 0.0, 0.0, 0), "negative time is rejected")
+	_check(not invalid.record_completion(1, 11, 1000, INF, 0.0, 0), "infinite offset is rejected")
+	_check(not invalid.record_completion(1, 11, 1000, 0.0, NAN, 0), "NaN angle is rejected")
+	_check(not invalid.record_completion(1, 11, 1000, 0.0, 0.0, -1), "negative collisions are rejected")
+	_check_eq(invalid.total(1), 0, "rejected completions score nothing")
+
+	var kicked := ScoreModel.new()
+	kicked.register(1)
+	kicked.register(2)
+	kicked.record_completion(1, 11, 5000, 0.0, 0.0, 0)
+	kicked.unregister(2)
+	_check(not kicked.has_player(2), "a kicked slot leaves the model")
+	_check_eq(kicked.ranking(), [1], "a kicked slot is excluded from results")
+
+	var live := ScoreModel.new()
+	live.register(1)
+	live.register(2)
+	live.register(3)
+	_check(live.set_collisions(1, 2), "live hits are recorded for an unfinished slot")
+	_check(live.set_collisions(2, 0), "zero hits are recorded")
+	_check_eq(live.collisions(1), 2, "live hits are readable")
+	_check(not live.set_collisions(9, 1), "live hits for an unknown slot are rejected")
+	_check(not live.set_collisions(1, -1), "negative live hits are rejected")
+	# Both unfinished: fewer hits must rank first, then the lower slot.
+	live.set_collisions(3, 1)
+	_check_eq(live.ranking(), [2, 3, 1], "unfinished players rank fewer hits first")
+	_check(live.record_completion(1, 11, 5000, 0.0, 0.0, 2), "completion keeps its final hit count")
+	_check(not live.set_collisions(1, 5), "live hits never overwrite a completed task")
+	_check_eq(live.collisions(1), 2, "completed hits stay frozen")
+
+
+func _test_hud_scene() -> void:
+	var packed := load("res://scenes/ui/hud.tscn") as PackedScene
+	_check(packed != null, "hud.tscn loads")
+	if packed == null:
+		return
+
+	var hud = packed.instantiate()
+	root.add_child(hud)
+	_check(hud.get_node_or_null("TimerLabel") != null, "the HUD has a timer label")
+	_check(hud.get_node_or_null("Scores") != null, "the HUD has a scores container")
+	_check(hud.get_node_or_null("StateLabel") != null, "the HUD has a state line")
+	_check(
+		hud.get_node_or_null("ResultsPanel") != null,
+		"the HUD has a results panel",
+	)
+	_check(
+		hud.get_node_or_null("ResultsPanel/Box/TitleLabel") != null,
+		"the results panel has a title",
+	)
+	_check(
+		hud.get_node_or_null("ResultsPanel/Box/WinnerLabel") != null,
+		"the results panel has a winner line",
+	)
+	_check(
+		hud.get_node_or_null("ResultsPanel/Box/Rows") != null,
+		"the results panel has a rows container",
+	)
+	_check(
+		hud.get_node_or_null("ResultsPanel/Box/PromptLabel") != null,
+		"the results panel has a next-round prompt",
+	)
+	var box := hud.get_node_or_null("ResultsPanel/Box") as VBoxContainer
+	_check(box != null, "results content sits in a layout container")
+	if box != null:
+		var order: Array = []
+		for child in box.get_children():
+			order.append(str(child.name))
+		_check_eq(
+			order,
+			["TitleLabel", "WinnerLabel", "Rows", "PromptLabel"],
+			"results stack title, winner, rows, prompt without overlap",
+		)
+
+	var clock := RoundClock.new()
+	hud.bind(clock)
+	hud.set_state("Drive to your spot")
+	_check_eq(hud.state_label.text, "Drive to your spot", "state copy is shown")
+	hud.update_board([
+		{"slot": 1, "score": 120, "status": "Parked", "hits": 1},
+		{"slot": 2, "score": 0, "status": "A-02", "hits": 0},
+		{"slot": 3, "score": 0, "status": "Reconnecting", "hits": 2},
+	])
+	_check_eq(hud.scores_box.get_child_count(), 3, "the board lists active slots only")
+	var first_row := hud.scores_box.get_child(0) as HBoxContainer
+	var first_text := (first_row.get_child(1) as Label).text
+	_check(first_text.contains("P1"), "board rows name the slot")
+	_check(first_text.contains("120"), "board rows show the score")
+	_check(first_text.contains("Parked"), "board rows show the status")
+	_check(first_text.contains("1 hit"), "board rows use the singular hit word")
+	var third_row := hud.scores_box.get_child(2) as HBoxContainer
+	_check(
+		(third_row.get_child(1) as Label).text.contains("2 hits"),
+		"board rows use the plural hit word",
+	)
+	hud.update_board([
+		{"slot": 1, "score": 5, "status": "Parked", "hits": 0},
+		"bad-row",
+		{"slot": 9, "score": 5, "status": "Parked", "hits": 0},
+		{"score": 5},
+	])
+	_check_eq(hud.scores_box.get_child_count(), 1, "malformed board rows are skipped")
+
+	hud.flash_notice("P1 parked!")
+	_check_eq(hud.state_label.text, "P1 parked!", "completion flashes a notice")
+	hud._process(1.0)
+	_check_eq(hud.state_label.text, "P1 parked!", "the notice survives one second")
+	hud._process(1.5)
+	_check_eq(
+		hud.state_label.text, "Drive to your spot", "the notice restores the base copy"
+	)
+
+	hud._on_time_changed(90000)
+	_check_eq(hud.timer_label.text, "01:30", "timer formats as MM:SS")
+	hud._on_time_changed(-1000)
+	_check_eq(hud.timer_label.text, "00:00", "negative time formats as zero")
+
+	_check(
+		not hud.get_node("ResultsPanel").visible,
+		"results start hidden",
+	)
+	hud.show_results("Round over", "Winner: P2", ["1. P2   103   Parked   0 hits   12.4 s"])
+	var panel_labels := hud.get_node("ResultsPanel/Box/Rows").get_child_count()
+	_check_eq(panel_labels, 1, "results list one row per player")
+	_check_eq(hud.title_label.text, "Round over", "results show the title")
+	_check_eq(hud.winner_label.text, "Winner: P2", "results show the winner")
+	_check(
+		hud.get_node("ResultsPanel").visible,
+		"show_results reveals the panel",
+	)
+	hud.hide_results()
+	_check(
+		not hud.get_node("ResultsPanel").visible,
+		"hide_results hides the panel for the next round",
+	)
+
+	hud.free()
+	clock.free()
+
+
+func _test_scriptless_hud_tolerance() -> void:
+	# A scratch scene or stale import may leave a plain CanvasLayer named Hud
+	# with none of the display methods. The round must run without errors.
+	OS.set_environment("PD_GAME_TOKEN", "test-scriptless-hud")
+	var parent := Node.new()
+	var bare := CanvasLayer.new()
+	bare.name = "Hud"
+	parent.add_child(bare)
+	var si = ServerInputScript.new()
+	parent.add_child(si)
+	root.add_child(parent)
+	# _ready() is deferred for nodes added during SceneTree._initialize(), so
+	# bind the HUD explicitly. The later engine _ready re-run is idempotent.
+	si._setup_round_ui()
+	_check(si._hud != null, "a scriptless Hud node is still found")
+	_check(not si._hud.has_method("bind"), "a plain CanvasLayer has no bind")
+	si._hud_call("bind", [si._clock])
+	si._hud_call("set_state", ["Drive to your spot"])
+	si._hud_call("update_board", [[]])
+	si._hud_call("show_results", ["Round over", "Winner: none", []])
+	si._hud_call("hide_results", [])
+	_check(true, "display calls with a scriptless Hud are skipped")
+	parent.free()
+
+
+func _test_debug_drive() -> void:
+	# F12 starts a serverless local round for slot 1 driven by the arrow keys,
+	# so scoring can be tested with no server or controller.
+	OS.set_environment("PD_GAME_TOKEN", "test-debug-drive")
+	var parent := Node.new()
+	var tm = TaskManagerScript.new()
+	tm.name = "TaskManager"
+	parent.add_child(tm)
+	var si = ServerInputScript.new()
+	parent.add_child(si)
+	root.add_child(parent)
+	_check(not si._connected, "the debug game starts disconnected")
+
+	var f12 := InputEventKey.new()
+	f12.pressed = true
+	f12.keycode = KEY_F12
+	si._unhandled_input(f12)
+	_check(si._debug_drive, "F12 enables debug drive")
+	_check_eq(si._phase, "playing", "debug drive starts a local round")
+	_check(si._clock.phase == RoundClock.Phase.PLAYING, "debug drive runs the clock")
+	_check_eq(tm.task_count(), 1, "debug drive assigns one task to slot 1")
+	_check(tm.get_task(1)["spotLabel"] != "", "debug drive assigns a real target")
+
+	Input.action_press("ui_right")
+	Input.action_press("ui_up")
+	_check_eq(si.get_input(1), Vector2(1, 1), "arrows steer slot 1 in debug drive")
+	_check_eq(si.get_input(2), Vector2.ZERO, "other slots stay neutral in debug drive")
+	Input.action_release("ui_right")
+	Input.action_release("ui_up")
+
+	si._physics_process(1.0)
+	_check_eq(si._clock.remaining_ms, 179000, "debug drive ticks the clock")
+
+	var parked_at := int(tm.get_task(1)["assignedMs"]) + 12400
+	tm.update_tasks(0.6, _parked_cars(tm, 0.0), parked_at)
+	_check_eq(si._scores.total(1), 103, "a debug park scores the task")
+	_check_eq(si._phase, "results", "parking the only slot ends the debug round")
+	_check_eq(si._scores.winner_slot(), 1, "slot 1 wins the debug round")
+
+	si._unhandled_input(f12)
+	_check(not si._debug_drive, "F12 again leaves debug drive")
+	_check_eq(si._phase, "ready", "leaving debug drive returns to the lobby")
+	_check(si._scores.ranking().is_empty(), "leaving debug drive clears scores")
+
+	si._connected = true
+	si._unhandled_input(f12)
+	_check(not si._debug_drive, "F12 is refused while connected")
+	si._connected = false
+
+	parent.free()
+
+
+func _test_main_round_lifecycle() -> void:
+	OS.set_environment("PD_GAME_TOKEN", "test-lifecycle")
+	var packed := load("res://scenes/main.tscn") as PackedScene
+	_check(packed != null, "main.tscn loads for the lifecycle test")
+	if packed == null:
+		return
+
+	# Adding the scene to the tree runs every _ready: cars wire to the
+	# shared input, the task manager wires car collisions, and the server
+	# input creates its clock, scores, and HUD binding.
+	var main = packed.instantiate()
+	root.add_child(main)
+	# Same deferred-_ready note as above: bind explicitly for the assertions.
+	# The engine _ready re-run afterwards is idempotent.
+	var si = main.get_node("ServerInput")
+	si._setup_round_ui()
+	var tm = main.get_node("TaskManager")
+	var hud = main.get_node("Hud")
+	_check(si._clock != null, "the game owns a round clock")
+	_check_eq(si._clock.phase, RoundClock.Phase.READY, "the clock starts ready")
+	_check_eq(hud.timer_label.text, "03:00", "the timer starts full")
+	_check_eq(hud.state_label.text, "Press Enter to start", "attract shows the start prompt")
+	_check(
+		not hud.get_node("ResultsPanel").visible,
+		"results start hidden in the scene",
+	)
+
+	si._handle_player_joined({"slot": 1, "label": "P1", "color": "red"})
+	si._handle_player_joined({"slot": 2, "label": "P2", "color": "blue"})
+	si._handle_host_command({"command": "start", "roundId": 1})
+	_check_eq(si._phase, "playing", "host start enters playing")
+	_check(si._clock.phase == RoundClock.Phase.PLAYING, "host start runs the clock")
+	_check_eq(hud.state_label.text, "Drive to your spot", "playing shows the drive prompt")
+	_check_eq(si._scores.ranking(), [1, 2], "round 1 registers both slots")
+	_check(
+		tm.get_task(1)["spotIndex"] != tm.get_task(2)["spotIndex"],
+		"round 1 targets are exclusive",
+	)
+	_check_eq(hud.scores_box.get_child_count(), 2, "the board lists both slots")
+
+	# Both park centered 12.4 s after assignment: 63 time + 40 precision = 103
+	# each. The timestamp is relative to the real assignedMs so wall-clock
+	# startup time cannot skew the worked example.
+	var parked_at := int(tm.get_task(1)["assignedMs"]) + 12400
+	tm.update_tasks(0.6, _parked_cars(tm, 0.0), parked_at)
+	_check_eq(si._scores.total(1), 103, "slot 1 scores the parked task")
+	_check_eq(si._scores.total(2), 103, "slot 2 scores the parked task")
+	# The final park ends the round in the same call, so the results prompt
+	# wins over the completion flash (non-final flashes are covered separately
+	# in _test_hud_scene).
+	_check_eq(hud.state_label.text, "Round over", "the final park ends the round")
+	_check(hud.get_node("ResultsPanel").visible, "all-completed ends the round early")
+	_check_eq(hud.winner_label.text, "Winner: P1", "equal scores break by slot")
+	_check_eq(si._phase, "results", "the game reports results")
+	_check(si._clock.phase == RoundClock.Phase.RESULTS, "the clock stops in results")
+
+	# Reset returns to lobby with a zeroed board; a new round rotates targets.
+	si._handle_host_command({"command": "reset"})
+	_check_eq(si._phase, "ready", "host reset returns to ready")
+	_check(not hud.get_node("ResultsPanel").visible, "reset hides results")
+	_check_eq(si._clock.remaining_ms, 180000, "reset restores the timer")
+	_check_eq(hud.timer_label.text, "03:00", "the timer shows full after reset")
+	_check_eq(hud.scores_box.get_child_count(), 2, "the lobby keeps connected rows")
+	si._handle_host_command({"command": "start", "roundId": 2})
+	_check(tm.get_task(1)["spotIndex"] != 0, "round 2 rotates the starting spot")
+
+	# Expiry with no park: zero scores, no winner, every active slot listed.
+	# Hits during the round still reach the results and the ranking.
+	tm.register_collision(2)
+	tm.register_collision(2)
+	tm.register_collision(2)
+	si._clock.tick(180.0)
+	_check_eq(hud.timer_label.text, "00:00", "expiry zeroes the timer")
+	_check(hud.get_node("ResultsPanel").visible, "expiry shows results")
+	_check_eq(hud.winner_label.text, "Winner: none", "no completing player means no winner")
+	_check_eq(si._scores.total(1), 0, "an unparked player scores zero")
+	_check_eq(si._scores.collisions(2), 3, "unfinished hits survive expiry")
+	_check_eq(si._scores.ranking()[0], 1, "fewer hits rank first without a park")
+	_check(
+		str(si._result_lines()[1]).contains("3 hits"),
+		"results show unfinished hits",
+	)
+
+	# A start without the server roundId never enters playing.
+	si._handle_host_command({"command": "reset"})
+	si._handle_host_command({"command": "start", "roundId": 0})
+	_check_eq(si._phase, "ready", "a start without roundId stays ready")
+	_check(si._clock.phase == RoundClock.Phase.READY, "a start without roundId keeps the clock ready")
+
+	# Round 3: slot 2 disconnects but keeps its task; slot 1 parks and the
+	# round ends early without waiting for the timer.
+	si._handle_host_command({"command": "start", "roundId": 3})
+	si._handle_player_left({"slot": 2, "reason": "disconnect"})
+	tm.update_tasks(0.6, _parked_cars(tm, 0.0), 8000)
+	_check(hud.get_node("ResultsPanel").visible, "one connected park ends the round early")
+	_check_eq(si._scores.winner_slot(), 1, "the connected park wins")
+	_check_eq(si._scores.tasks_completed(2), 0, "the disconnected slot keeps no score")
+	_check_eq(si._scores.total(2), 0, "the disconnected slot scores zero")
+
+	main.free()
 
 
 func _test_project_settings() -> void:

@@ -3,6 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://dpkabcrtgg3q3" path="res://assets/image_2024-03-02_131934629.png" id="1_background"]
 [ext_resource type="PackedScene" uid="uid://c0didsv7dx62i" path="res://scenes/sprites/car.tscn" id="2_car"]
 [ext_resource type="PackedScene" uid="uid://cm1oqj54hng44" path="res://scenes/server/server_input.tscn" id="3_server_input"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="4_hud"]
 [ext_resource type="Script" path="res://scripts/task_manager.gd" id="4_task_manager"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_horizontal"]
@@ -85,3 +86,5 @@ input_source = NodePath("../ServerInput")
 script = ExtResource("4_task_manager")
 
 [node name="ServerInput" parent="." instance=ExtResource("3_server_input")]
+
+[node name="Hud" parent="." instance=ExtResource("4_hud")]

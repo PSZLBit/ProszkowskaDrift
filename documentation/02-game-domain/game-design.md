@@ -482,6 +482,11 @@ blocking the festival queue.
 
 ## Scoring (Initial Tuning)
 
+Note: #47 implements the MFD subset of this formula in
+`game/scripts/score_model.gd` (one task per player, no finish bonus) and the
+MFD timer in `game/scripts/round_clock.gd`. The MVP restores five tasks,
+auto-skip, the finish bonus, and final tuning.
+
 Each task produces a score (illustrative pseudocode, not executable):
 
 ```python

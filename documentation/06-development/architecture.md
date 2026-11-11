@@ -40,7 +40,7 @@ or simulate the game.
 |-----------|---------|------------------|
 | Controller | Kotlin app on each tablet | Connect, authenticate with device token, send input, display task/score/time/state, reconnect. The API 19 scaffold and WebSocket client are merged (#63); production work is #48 |
 | Server | Go binary on laptop | Session state, slots, colors, input validation, heartbeats, reconnect, host authority, optional game supervision, logs. Sprint 0 slice implemented in `server/`; game-only supervision is implemented (PR #59, D-37); server restart and launcher remain later work
-| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current scaffold: one game connection, four slot-keyed cars, placeholder boundaries; no map, parking, or scoring yet |
+| Game | Godot 4 on laptop | Map, car movement, environment collisions, parking detection, scoring, HUD, attract/results, fullscreen display. Current state: one game connection, four slot-keyed cars, MFD task assignment and parking detection (#46, merged); demo parking-lot tilemap plus MFD timer, scoring, HUD, and results (#47, this branch) |
 | Display | TV/monitor | Shows the game only; no host UI in MVP |
 | Router/hotspot | Dedicated local network | Connects tablets and laptop; no internet dependency |
 
@@ -119,16 +119,37 @@ Godot 4.7.2 project with:
 - Host keys `Enter` (start/resume), `P` (pause/resume), and `R` (reset) that
   send `host_request`. `Q` exits the local game process without a server
   request. `dev_auto_start_round` is development-only and defaults to `false`.
-- `game/scenes/main.tscn`: placeholder background, boundary walls, and four cars
-  on slots 1–4, configured for a 1920×1080 fullscreen window.
+- `game/scenes/main.tscn`: placeholder background, boundary walls, two
+  planters, four cars on MFD spawns (slots 1–4), the task manager, and the
+  HUD, configured for a 1920×1080 fullscreen window.
+- `game/tilesets/` (generated, gitignored): `parking_lot.tres` is built from the
+  committed placeholder sheets by `game/tools/build_parking_lot_tileset.gd` (via
+  `ParkingLotTilesetBuilder`); `parking_lot.local.tres` is also built from the
+  purchased sheets when they are installed and is preferred by the map only
+  when the purchased sheets are present and the file loads (a stale local
+  TileSet is ignored). The demo map regenerates the committed-path TileSet on
+  demand when it is missing. The
+  map shows a 40×22 lot with a kerb, plain ground, four parking bays, four
+  boundary collision shapes, and spawn/bay markers; it is a tileset demo and the
+  base for #46, not final map geometry. All source tiles are available on the
+  grid; RPG Maker autotile rules and per-tile collision polygons are not
+  converted yet.
+- `game/scenes/ui/hud.tscn` plus `game/scripts/hud.gd`, `round_clock.gd`, and
+  `score_model.gd`: the MFD HUD, server-driven round timer, MFD scoring, and
+  results overlay (#47). The round starts on the accepted host command, the
+  timer drives expiry and early finish, and results list every active player;
+  all are covered by headless tests including a tree-attached round lifecycle.
 - `game/tests/run_tests.gd`: headless tests for protocol parsing, config
-  validation, slot input/timeout, car movement, scene structure, and project
-  settings. CI runs the same commands in `.github/workflows/game.yml`.
+  validation, slot input/timeout, car movement, scene structure, the
+  parking-lot TileSet and demo map, the round clock, MFD scoring, the HUD
+  scene, the full round lifecycle, and project settings. CI runs the same
+  commands in `.github/workflows/game.yml`.
 
-The scaffold does not implement tasks, parking detection, scoring, HUD, final
-map geometry, or final assets. The target laptop/TV run, readability, FPS, and
-input-to-visible measurements remain in issue #13 until recorded in
-`06-development/testing.md`.
+The scaffold does not implement final map geometry. MFD tasks, parking
+detection, scoring, timer, HUD, and results are implemented (#46, #47); the
+MVP adds five tasks, auto-skip, finish bonus, and controller feedback. The
+target laptop/TV run, readability, FPS, and input-to-visible measurements
+remain in issue #13 until recorded in `06-development/testing.md`.
 
 ## Authority and Trust Boundary
 

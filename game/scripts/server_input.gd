@@ -62,8 +62,26 @@ var _config: Dictionary = {}
 var _active_slots: Dictionary = {}
 var _round_id := 0
 
+## MFD round state owned by the game (D-38). The clock counts down while the
+## phase is playing, the scores hold one task result per active slot, and the
+## HUD renders whatever this node pushes. The server stays the phase and slot
+## authority; the game never starts, pauses, or resets on its own.
+var _clock: RoundClock
+var _scores: ScoreModel
+# Untyped on purpose: the scene-tree node may be a plain CanvasLayer when the
+# Hud script is not attached, and all use goes through _hud_call.
+var _hud: Node
+
+## Debug-only local playtest (F12): the arrow keys drive slot 1 with no
+## server. Only available while disconnected; the server stays the authority
+## in every real round.
+var _debug_drive := false
+var _debug_round_id := 0
+
 
 func _ready() -> void:
+	_setup_round_ui()
+
 	if "--dev-auto-start" in OS.get_cmdline_user_args():
 		dev_auto_start_round = true
 
@@ -81,8 +99,44 @@ func _ready() -> void:
 	_connect()
 
 
+func _init() -> void:
+	_clock = RoundClock.new()
+	_scores = ScoreModel.new()
+	_clock.finished.connect(_on_clock_finished)
+
+
+## Binds the HUD and shows the lobby. Runs in _ready (so the scene tree
+## exists) before the token check so headless scenes still get the UI. The
+## clock and scores already exist from _init, so early readers never see null.
+func _setup_round_ui() -> void:
+	_hud = _find_hud()
+	_hud_call("bind", [_clock])
+	_show_lobby([])
+
+
+func _find_hud():
+	var parent := get_parent()
+	if parent == null:
+		return null
+	return parent.get_node_or_null("Hud")
+
+
+func _hud_call(method: String, args: Array) -> void:
+	if _hud == null:
+		return
+	if not _hud.has_method(method):
+		# A scratch scene or a stale import may leave a scriptless CanvasLayer
+		# named Hud; the round still runs, just without display updates.
+		_log_once("hud_missing_%s" % method, "[ServerInput] Hud has no %s; skipping display update." % method)
+		return
+	_hud.callv(method, args)
+
+
 func _exit_tree() -> void:
 	_exiting = true
+	if _clock != null:
+		_clock.free()
+		_clock = null
 	if _socket != null:
 		_socket.close(1000, "game_exit")
 		_socket = null
@@ -108,6 +162,7 @@ func _process(delta: float) -> void:
 			_read_packets()
 			if _socket != null:
 				_tick_timers(delta)
+				_tick_round(delta)
 		WebSocketPeer.STATE_CLOSING:
 			pass
 		WebSocketPeer.STATE_CLOSED:
@@ -119,8 +174,14 @@ func _process(delta: float) -> void:
 
 
 ## Returns the latest input for one car as (steer, throttle), each in [-1, 1].
-## The store applies the 500 ms per-slot timeout.
+## The store applies the 500 ms per-slot timeout. In F12 debug drive, slot 1
+## reads the arrow keys instead (see _toggle_debug_drive).
 func get_input(slot: int) -> Vector2:
+	if _debug_drive and slot == 1:
+		return Vector2(
+			Input.get_axis("ui_left", "ui_right"),
+			Input.get_axis("ui_down", "ui_up"),
+		)
 	return _store.get_input(slot, Time.get_ticks_msec())
 
 
@@ -145,6 +206,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		print("[ServerInput] Quit key pressed; exiting.")
 		get_tree().quit()
 		return
+
+	if event is InputEventKey:
+		var debug_key := event as InputEventKey
+		if debug_key.pressed and not debug_key.echo and debug_key.keycode == KEY_F12:
+			_toggle_debug_drive()
+			return
 
 	if not _connected or not _game_ready_sent:
 		return
@@ -299,6 +366,8 @@ func _handle_config(data: Dictionary) -> void:
 			int(result["maxPlayers"]),
 		]
 	)
+	if _clock != null:
+		_clock.configure(int(result["roundDurationMs"]))
 	config_received.emit(_config)
 	_maybe_send_game_ready()
 
@@ -355,6 +424,7 @@ func _handle_player_joined(data: Dictionary) -> void:
 	)
 	slot_joined.emit(slot, str(data.get("label", "")), str(data.get("color", "")))
 	_task_manager_call("set_slot_connected", [slot, true])
+	_refresh_board()
 
 
 func _handle_player_left(data: Dictionary) -> void:
@@ -370,6 +440,8 @@ func _handle_player_left(data: Dictionary) -> void:
 	print("[ServerInput] player_left slot=%d reason=%s." % [slot, reason])
 	slot_left.emit(slot, reason)
 	_task_manager_call("set_slot_connected", [slot, false])
+	_refresh_board()
+	_check_early_finish()
 
 
 func _handle_host_command(data: Dictionary) -> void:
@@ -381,9 +453,7 @@ func _handle_host_command(data: Dictionary) -> void:
 		# assignment, so the round cannot start its tasks.
 		var round_id := int(data.get("roundId", 0))
 		if round_id <= 0:
-			push_error("[ServerInput] host_command start without a valid roundId; skipping task assignment.")
-			_phase = "playing"
-			clear_input()
+			push_error("[ServerInput] host_command start without a valid roundId; ignoring.")
 			host_command_received.emit(command, slot, 0)
 			return
 		_round_id = round_id
@@ -399,24 +469,41 @@ func _handle_host_command(data: Dictionary) -> void:
 			_phase = "paused"
 			clear_input()
 			_task_manager_call("set_running", [false, Time.get_ticks_msec()])
+			if _clock != null:
+				_clock.pause()
+			_show_paused()
 		"resume":
 			_phase = "playing"
 			_task_manager_call("set_running", [true, Time.get_ticks_msec()])
+			if _clock != null:
+				_clock.resume()
+			_show_playing()
 		"reset":
 			_phase = "ready"
 			clear_input()
 			_task_manager_call("set_running", [false, Time.get_ticks_msec()])
 			_task_manager_call("clear_round", [])
+			if _clock != null:
+				_clock.reset()
+			_scores.reset_round()
+			_show_lobby(_connected_slots())
 		"end":
 			_phase = "ended"
 			clear_input()
 			_task_manager_call("set_running", [false, Time.get_ticks_msec()])
 			_task_manager_call("clear_round", [])
+			_active_slots.clear()
+			if _clock != null:
+				_clock.reset()
+			_scores.reset_round()
+			_show_lobby([])
 		"kick":
 			_store.clear_slot(slot)
 			_saw_input.erase(slot)
 			_active_slots.erase(slot)
+			_scores.unregister(slot)
 			_task_manager_call("release_slot", [slot])
+			_refresh_board()
 
 	host_command_received.emit(command, slot, _round_id)
 
@@ -424,23 +511,38 @@ func _handle_host_command(data: Dictionary) -> void:
 ## Starts one MFD round: every connected slot gets one exclusive task.
 ## Late join is between rounds (D-24), so no task is assigned mid-round.
 func _start_task_round() -> void:
-	var manager := _task_manager()
+	var slots := _connected_slots()
+	_scores.reset_round()
+	for slot in slots:
+		_scores.register(slot)
+	var manager = _task_manager()
 	if manager == null:
 		return
-	var slots: Array = []
-	for slot_raw in _active_slots.keys():
-		slots.append(int(slot_raw))
-	slots.sort()
 	var duration_ms := int(_config.get("roundDurationMs", 180000))
+	if _clock != null:
+		_clock.configure(duration_ms)
+		_clock.start()
 	manager.call("start_round", slots, _round_id, duration_ms, Time.get_ticks_msec())
 	manager.call("set_running", true, Time.get_ticks_msec())
 	if not manager.is_connected("task_completed", _on_task_completed):
 		manager.connect("task_completed", _on_task_completed)
+	if not manager.is_connected("collisions_changed", _on_collisions_changed):
+		manager.connect("collisions_changed", _on_collisions_changed)
+	_show_playing()
+	_send_playing_phase()
 
 
-## Hook for #47: a completed task emits the result once with timing, center
-## offset, angle difference, and collision count. Scoring and the
-## task_result send stay in #47; this only records and re-emits.
+## Sorted list of currently connected slots.
+func _connected_slots() -> Array:
+	var slots: Array = []
+	for slot_raw in _active_slots.keys():
+		slots.append(int(slot_raw))
+	slots.sort()
+	return slots
+
+
+## Records a completed task: score it, refresh the board, tell the server, and
+## end the round early when every connected player has completed their task.
 func _on_task_completed(slot: int, result: Dictionary) -> void:
 	print(
 		"[ServerInput] task_completed slot=%d task=%s offset=%.1f angle=%.1f collisions=%d."
@@ -452,10 +554,212 @@ func _on_task_completed(slot: int, result: Dictionary) -> void:
 			int(result.get("collisions", 0)),
 		]
 	)
+	if _scores.record_completion(
+		slot,
+		int(result.get("taskId", 0)),
+		int(result.get("completionMs", 0)),
+		float(result.get("centerOffset", 0.0)),
+		float(result.get("angleDiff", 0.0)),
+		int(result.get("collisions", 0)),
+	):
+		_send("task_result", _task_result_payload(slot))
+		_hud_call("flash_notice", ["P%d parked!" % slot])
+		_refresh_board()
+	_check_early_finish()
 	task_completed.emit(slot, result)
 
 
-func _task_manager():
+## Live collision counts flow here so the scoreboard and the final ranking
+## show hits for unfinished tasks. Completed tasks keep the count recorded at
+## completion time.
+func _on_collisions_changed(slot: int, count: int) -> void:
+	if _scores.set_collisions(slot, count):
+		_refresh_board()
+
+
+## Toggles the serverless debug round: F12 starts a local round for slot 1
+## driven by the arrow keys; F12 again returns to the lobby. Refused while
+## connected so it can never hijack or corrupt a real server round.
+func _toggle_debug_drive() -> void:
+	if _connected:
+		print("[ServerInput] Debug drive needs no server; disconnect first.")
+		return
+	_debug_drive = not _debug_drive
+	if _debug_drive:
+		_active_slots[1] = true
+		_debug_round_id += 1
+		_round_id = _debug_round_id
+		_phase = "playing"
+		clear_input()
+		_start_task_round()
+		print("[ServerInput] Debug drive ON: arrows steer P1. F12 stops.")
+	else:
+		_stop_debug_round()
+		print("[ServerInput] Debug drive OFF.")
+
+
+## Returns a local debug round to the lobby without touching the server.
+func _stop_debug_round() -> void:
+	_phase = "ready"
+	clear_input()
+	_task_manager_call("set_running", [false, Time.get_ticks_msec()])
+	_task_manager_call("clear_round", [])
+	_active_slots.clear()
+	if _clock != null:
+		_clock.reset()
+	_scores.reset_round()
+	_show_lobby([])
+
+
+func _physics_process(delta: float) -> void:
+	# Debug-only clock tick. The production path ticks in _process while the
+	# server connection is open; this branch only runs for F12 local rounds.
+	if _debug_drive and not _connected:
+		_tick_round(delta)
+
+
+## Same payload the server forwards to controllers, with the slot added.
+func _task_result_payload(slot: int) -> Dictionary:
+	var payload := _scores.task_result_payload(slot)
+	payload["slot"] = slot
+	return payload
+
+
+## The round timer expired. Stop the cars, freeze detection, and publish the
+## results; the host starts the next round.
+func _on_clock_finished() -> void:
+	_end_round()
+
+
+## Ends the round early when at least one player is connected and every
+## connected player has completed their task. A disconnected slot does not
+## block the early end.
+func _check_early_finish() -> void:
+	if _phase != "playing":
+		return
+	var slots := _connected_slots()
+	if slots.is_empty():
+		return
+	var manager = _task_manager()
+	if manager == null:
+		return
+	for slot in slots:
+		var task: Dictionary = manager.call("get_task", slot)
+		if task.is_empty() or str(task.get("state", "")) != "completed":
+			return
+	_end_round()
+
+
+## Publishes the MFD results: stops input and detection, shows the results
+## panel, and sends phase and round_result to the server.
+func _end_round() -> void:
+	if _phase != "playing":
+		return
+	_phase = "results"
+	clear_input()
+	_task_manager_call("set_running", [false, Time.get_ticks_msec()])
+	_sync_collisions()
+	if _clock != null:
+		_clock.show_results()
+	var winner := _scores.winner_slot()
+	var winner_line := "Winner: P%d" % winner if winner > 0 else "Winner: none"
+	_hud_call("set_state", ["Round over"])
+	_hud_call("show_results", ["Round over", winner_line, _result_lines()])
+	_send("phase", {"phase": "results", "roundId": _round_id, "timeLeftMs": 0})
+	_send("round_result", _scores.round_result_payload(_round_id))
+
+
+## Lobby/attract screen: static prompt, hidden results, zeroed board.
+func _show_lobby(_slots: Array) -> void:
+	_hud_call("hide_results", [])
+	_hud_call("set_state", ["Press Enter to start"])
+	_refresh_board()
+
+
+func _show_playing() -> void:
+	_hud_call("hide_results", [])
+	_hud_call("set_state", ["Drive to your spot"])
+	_refresh_board()
+
+
+func _show_paused() -> void:
+	_hud_call("set_state", ["Paused"])
+
+
+## Copies task-manager collision counts for unfinished slots into the score
+## model so results and ranking reflect hits even when nobody parked. Runs
+## before the results are built; live updates arrive via collisions_changed.
+func _sync_collisions() -> void:
+	var manager = _task_manager()
+	if manager == null:
+		return
+	for slot in _scores.ranking():
+		if _scores.tasks_completed(slot) > 0:
+			continue
+		var task: Dictionary = manager.call("get_task", slot)
+		if task.is_empty():
+			continue
+		_scores.set_collisions(slot, int(task.get("collisions", 0)))
+
+
+## Rebuilds the scoreboard rows: score, current spot or Parked, and hit count.
+## Rows cover connected slots plus registered-but-disconnected ones, so a
+## reconnecting player keeps their row and the lobby shows zeroes.
+func _refresh_board() -> void:
+	var rows: Array = []
+	var manager = _task_manager()
+	var shown: Array = _connected_slots()
+	for slot in _scores.ranking():
+		if not shown.has(slot):
+			shown.append(slot)
+	shown.sort()
+	for slot in shown:
+		var status := ""
+		var hits := _scores.collisions(slot)
+		if _scores.tasks_completed(slot) > 0:
+			status = "Parked"
+		else:
+			if manager != null:
+				var task: Dictionary = manager.call("get_task", slot)
+				if not task.is_empty():
+					hits = int(task.get("collisions", hits))
+					if bool(_active_slots.get(slot, false)):
+						status = str(task.get("spotLabel", ""))
+			if status.is_empty() and not bool(_active_slots.get(slot, false)):
+				status = "Reconnecting"
+		rows.append({
+			"slot": slot,
+			"score": _scores.total(slot),
+			"status": status,
+			"hits": hits,
+		})
+	_hud_call("update_board", [rows])
+
+
+## Ranked result rows: "1. P2   103   Parked   0 hits   12.4 s".
+func _result_lines() -> Array:
+	var lines: Array = []
+	var rank := 1
+	for slot in _scores.ranking():
+		var state_word := "Parked" if _scores.tasks_completed(slot) > 0 else "No park"
+		var hits := _scores.collisions(slot)
+		var time_text := "-"
+		var completion := _scores.completion_time_ms(slot)
+		if completion >= 0:
+			time_text = "%.1f s" % (float(completion) / 1000.0)
+		lines.append("%d. P%d   %d   %s   %s   %s" % [
+			rank,
+			slot,
+			_scores.total(slot),
+			state_word,
+			"1 hit" if hits == 1 else "%d hits" % hits,
+			time_text,
+		])
+		rank += 1
+	return lines
+
+
+func _task_manager() -> Node:
 	var parent := get_parent()
 	if parent == null:
 		return null
@@ -463,7 +767,7 @@ func _task_manager():
 
 
 func _task_manager_call(method: String, args: Array) -> void:
-	var manager := _task_manager()
+	var manager = _task_manager()
 	if manager == null:
 		return
 	manager.callv(method, args)
@@ -489,6 +793,14 @@ func _handle_error(data: Dictionary) -> void:
 	push_warning("[ServerInput] server error code=%s message=%s." % [code, message])
 
 
+## Advances the round clock while the accepted phase is playing. The clock only
+## emits; starting, pausing, and resetting always come from host commands.
+func _tick_round(delta: float) -> void:
+	if _clock == null or _phase != "playing":
+		return
+	_clock.tick(delta)
+
+
 func _tick_timers(delta: float) -> void:
 	if not _game_ready_sent:
 		return
@@ -498,6 +810,7 @@ func _tick_timers(delta: float) -> void:
 		_heartbeat_accum -= HEARTBEAT_INTERVAL_SEC
 		if not _send("heartbeat", {"gameTimeMs": Time.get_ticks_msec()}):
 			return
+		_send_playing_phase()
 
 	if not dev_auto_start_round or _start_accepted:
 		return
@@ -509,6 +822,19 @@ func _tick_timers(delta: float) -> void:
 		return
 	_next_auto_start_at_ms = now + DEV_AUTO_START_RETRY_MS
 	_send_host_request("start")
+
+
+## Reports the playing phase with the authoritative time left, so controllers
+## see the round timer. Sent at 1 Hz alongside the heartbeat and immediately
+## on round start. Other phases are broadcast by the server itself.
+func _send_playing_phase() -> void:
+	if _phase != "playing" or _clock == null:
+		return
+	_send("phase", {
+		"phase": "playing",
+		"timeLeftMs": _clock.remaining_ms,
+		"roundId": _round_id,
+	})
 
 
 func _send_host_request(command: String, slot := 0) -> bool:
@@ -554,6 +880,10 @@ func _reset_connection_state() -> void:
 	_store.clear_all()
 	_saw_input.clear()
 	_active_slots.clear()
+	if _clock != null:
+		_clock.reset()
+	_scores.reset_round()
+	_show_lobby([])
 	_task_manager_call("set_running", [false, Time.get_ticks_msec()])
 
 

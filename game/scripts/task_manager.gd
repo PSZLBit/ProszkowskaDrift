@@ -8,6 +8,7 @@ extends Node
 ## HUD, and results stay in #47; this signal is the hook #47 consumes.
 
 signal task_completed(slot: int, result: Dictionary)
+signal collisions_changed(slot: int, count: int)
 
 const MfdMap := preload("res://scripts/mfd_map.gd")
 const TaskAssignment := preload("res://scripts/task_assignment.gd")
@@ -103,6 +104,7 @@ func register_collision(slot: int) -> void:
 	if str(_tasks[slot]["state"]) == "completed":
 		return
 	_tasks[slot]["collisions"] = int(_tasks[slot]["collisions"]) + 1
+	collisions_changed.emit(slot, int(_tasks[slot]["collisions"]))
 
 
 func get_task(slot: int) -> Dictionary:

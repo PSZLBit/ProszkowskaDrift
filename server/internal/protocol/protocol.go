@@ -226,6 +226,35 @@ type GameReadyData struct {
 	MapVersion  string `json:"mapVersion"`
 }
 
+// TaskResultData reports one completed parking task. The game adds the slot;
+// the server forwards the payload to controllers unchanged.
+type TaskResultData struct {
+	Slot             int    `json:"slot,omitempty"`
+	TaskID           int    `json:"taskId"`
+	Points           int    `json:"points"`
+	TimeScore        int    `json:"timeScore"`
+	PrecisionScore   int    `json:"precisionScore"`
+	CollisionPenalty int    `json:"collisionPenalty"`
+	Rating           string `json:"rating"`
+	TotalScore       int    `json:"totalScore"`
+}
+
+// RoundScoreData is one player's line in a round result.
+type RoundScoreData struct {
+	Slot       int `json:"slot"`
+	Score      int `json:"score"`
+	Tasks      int `json:"tasks"`
+	Collisions int `json:"collisions"`
+}
+
+// RoundResultData reports the round ranking. winnerSlot is 0 when no player
+// completed a task.
+type RoundResultData struct {
+	RoundID    int64            `json:"roundId"`
+	WinnerSlot int              `json:"winnerSlot"`
+	Scores     []RoundScoreData `json:"scores"`
+}
+
 // HostRequestData asks the server to execute a host command.
 type HostRequestData struct {
 	Command string `json:"command"`

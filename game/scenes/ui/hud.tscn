@@ -1,0 +1,85 @@
+[gd_scene format=3 uid="uid://betaejitbrd4t"]
+
+[ext_resource type="Script" uid="uid://dtvugnobfodtt" path="res://scripts/hud.gd" id="1_hud"]
+
+[node name="Hud" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="TimerLabel" type="Label" parent="."]
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 8.0
+offset_right = 200.0
+offset_bottom = 64.0
+theme_override_font_sizes/font_size = 48
+text = "03:00"
+horizontal_alignment = 1
+
+[node name="Scores" type="VBoxContainer" parent="."]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -336.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 332.0
+theme_override_constants/separation = 4
+
+[node name="StateLabel" type="Label" parent="."]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -400.0
+offset_top = -80.0
+offset_right = 400.0
+offset_bottom = -32.0
+theme_override_font_sizes/font_size = 32
+text = "Press Enter to start"
+horizontal_alignment = 1
+
+[node name="ResultsPanel" type="Panel" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -240.0
+offset_right = 300.0
+offset_bottom = 240.0
+
+[node name="Box" type="VBoxContainer" parent="ResultsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="ResultsPanel/Box"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "Round over"
+horizontal_alignment = 1
+
+[node name="WinnerLabel" type="Label" parent="ResultsPanel/Box"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Winner: none"
+horizontal_alignment = 1
+
+[node name="Rows" type="VBoxContainer" parent="ResultsPanel/Box"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="PromptLabel" type="Label" parent="ResultsPanel/Box"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Press Enter to start the next round"
+horizontal_alignment = 1

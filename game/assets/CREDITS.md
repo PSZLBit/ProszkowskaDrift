@@ -13,9 +13,9 @@ replaced.
   in game projects, prohibit reselling or redistributing the assets as
   standalone resources, and state that attribution is appreciated but not
   required.
-- Intended use: the tiles will be used in this game project and are not
-  redistributed as a standalone asset pack. Map integration is pending (#46);
-  the tiles are not referenced by any scene yet.
+- Intended use: the tiles are used through `game/tilesets/parking_lot.tres`
+  and the demo map `game/scenes/map/parking_lot.tscn`. Task integration is
+  tracked by #46; the demo map is not final map geometry.
 - AI disclosure: the itch.io page marks the pack as AI-assisted.
 - Files: `game/assets/Large Parking Lot/*.png`, eight tiles. The folder is not
   committed to Git (D-34); each team member obtains the purchased copy and
@@ -25,6 +25,15 @@ replaced.
   standalone resources. Do not remove the ignore rule or force-add the files.
 - Purchase record: held by the project team. Do not commit receipts or personal
   data.
+- Placeholder atlases: `game/assets/placeholders/large_parking_lot/` contains
+  original project-created placeholder sheets with the same pixel dimensions
+  and 48×48 grid as the purchased files. They are committed so the TileSet can be
+  generated in CI and on fresh clones. `game/scripts/parking_lot_art.gd` swaps in
+  the purchased textures at runtime when the local folder is present (D-35).
+- Generated tilesets: `game/tilesets/` is gitignored. Running
+  `game/tools/build_parking_lot_tileset.gd` writes `parking_lot.tres` from the
+  placeholders and `parking_lot.local.tres` from the purchased sheets when they
+  are installed. CI runs the generator before the tests.
 
 ## Controller App Logo and Banner
 

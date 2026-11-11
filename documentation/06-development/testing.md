@@ -1,7 +1,7 @@
 # Testing Strategy
 
 Status: Draft
-Last updated: 2026-11-10
+Last updated: 2026-11-11
 
 The test-plan update is tracked in issue #17. The controller WebSocket client is
 promoted after cleanup (D-35) and covered by host-JVM fake-server tests and a
@@ -205,7 +205,7 @@ and a fake game. Packages:
   expiry targeting the captured game connection, replacement-game readiness,
   stale-game message rejection, game-ready gating of `host_request`, ordered
   player notifications during game registration, kick identity, and atomic
-  controller-slot access.
+  controller-slot access, and game `task_result`/`round_result` forwarding with slot, winnerSlot, and duplicate-slot rejection.
 
 Commands, from `server/`:
 
@@ -237,6 +237,24 @@ The game scaffold uses a small headless GDScript runner
 - Car throttle, brake/reverse, coast, and steering math.
 - Car input-source wiring, including passing the car's own slot.
 - Main-scene structure: four cars, slots 1–4, collision layers, floating motion.
+- Parking-lot TileSet: eight 48×48 atlas sources, one physics layer, expected
+  ground/kerb/bay tiles, and committed placeholder texture paths.
+- Demo map: the 40×22 layout, boundary collision, border/interior/bay cells,
+  and four spawn plus four bay markers.
+- Runtime art swap: a missing purchased folder leaves the committed
+  placeholders in place.
+- Round clock: phase transitions, pause/resume, expiry, custom length, and
+  ignored invalid ticks.
+- Score model: MFD formula with the worked examples, boundaries, ties
+  (completed first, then score, fewer collisions, faster completion, lower
+  slot), live collision counts for unfinished slots, idempotent completion,
+  NaN/Inf rejection, slot validation, and clamping.
+- HUD scene: timer formatting, score rendering, malformed-row tolerance,
+  automatic results on expiry, and hiding stale results when a new round
+  starts.
+- Round lifecycle: tree-attached start, park, early finish, reset, restart,
+  expiry, disconnect, invalid start rejection, scriptless-Hud tolerance, and
+  the F12 serverless debug round.
 - Project settings: main scene, 1920×1080 viewport, and fullscreen mode.
 - Local quit key: `Q` requests quit, while key repeat, key release, other keys,
   and mouse events do not.
@@ -251,8 +269,10 @@ godot --headless --path game --script res://tests/run_tests.gd
 CI runs the same commands on pull requests touching `game/`
 (`.github/workflows/game.yml`).
 
-Still future: time/precision scoring, task assignment, parking detection, round
-transitions, tie-breakers, auto-skip, and a physics-level map/target test.
+Time/precision scoring, exclusive task assignment, parking detection, round
+transitions, and tie-breakers are covered by headless tests (`#46`, `#47`).
+Still future: auto-skip (MVP), a physics-level map/target test, and the final
+art pass.
 
 ## Contract and Integration Tests
 
@@ -590,6 +610,39 @@ Record the date, Godot version, server commit, FPS/tearing observations, and
 pass/fail per step. Do not mark the display criteria as passed until this check
 has been run on the target laptop/TV.
 
+### Parking-lot TileSet and demo map (`game/tilesets/parking_lot.tres`)
+
+Run when the placeholder sheets, the TileSet generator, the runtime art swap, or
+the demo map changes. Environment: Godot editor on the target laptop; run once
+with the purchased folder installed and once without it.
+
+| # | Step | Pass condition |
+|---|------|----------------|
+| 1 | Open `game/scenes/map/parking_lot.tscn` and run it. | The 40×22 map fills the 1920 px width, is centred vertically (12 px top and bottom), and shows a kerb border, plain ground, and four parking bays at the top left. |
+| 2 | With `game/assets/Large Parking Lot/` present, inspect the ground, kerb, and bays. | The scene uses the purchased art; no placeholder checker pattern remains. |
+| 3 | Remove or rename the purchased folder, reimport, and run the scene. | The scene still loads and shows the placeholder sheets; no missing-resource errors. |
+| 4 | Check the `Environment` body, `Spawns`, and `Bays` nodes in the 2D view. | The `Environment` body has four collision shapes and uses layer 1/mask 2; four spawn markers sit in the lower half; `Bay1`–`Bay4` are centred in the four bays. |
+| 5 | Change a placeholder, then run `godot --headless --path game --import` followed by `godot --headless --path game --script res://tools/build_parking_lot_tileset.gd`. | The generator exits 0, updates `game/tilesets/parking_lot.tres`, and the headless tests still pass. |
+| 6 | Run `git status --short --ignored` and inspect the staged file list. | Only placeholders and generated resources are staged; no file under `game/assets/Large Parking Lot/` is tracked. |
+
+Record: date, Godot version, pass/fail per step. The placeholder render is the
+CI/fresh-clone baseline; the purchased render is the local target look.
+
+### HUD and results overlay (`game/scenes/ui/hud.tscn`)
+
+Run when the HUD scene, its script, the round lifecycle, or scoring changes.
+Environment: Godot editor on the target laptop (and the target TV for readability).
+
+| # | Step | Pass condition |
+|---|------|----------------|
+| 1 | Connect fake controllers, run the game, press `Enter`. No auto-start: before the host starts, the timer shows full time and results stay hidden. | The timer counts down from 03:00, the scoreboard lists connected slots at 0, and the state line reads `Drive to your spot`. |
+| 2 | Let the timer expire without parking. | The timer shows 00:00, the results panel appears automatically with `Winner: none`, and the cars coast to a stop (no input accepted after the round). |
+| 3 | Start a new round, park each car, then let one round expire and finish another early by parking every connected car. | Each park flashes `P1 parked!` and updates the score live; the results panel lists ranked rows with score, state, hits, and time plus the winner and the next-round prompt. |
+| 4 | Inspect from the spectator distance on the target TV. | Timer, scores, state line, results, and target beacons are readable; the beacon color matches the assigned spot label. |
+
+Record: date, Godot version, pass/fail per step. Scoring follows the MFD
+baseline (D-38); the MVP restores five tasks and the finish bonus later.
+
 ### Car movement (`game/scripts/car.gd`)
 
 Run when the car script, its input handling, or its tuning changes.
@@ -642,6 +695,17 @@ Run on the target laptop with one fake controller, then repeat with four.
 
 Record: date, commit, pass/fail per step, Godot version, controller count.
 Do not mark the MFD parking row as passed without the target-hardware run.
+
+### Debug drive (F12, serverless playtest)
+
+Debug-only aid in `game/scripts/server_input.gd` for testing scoring with no
+server or controller. Run the game without starting the server and press
+`F12`: a local round starts for slot 1 and the arrow keys
+(`ui_left`/`ui_right`/`ui_up`/`ui_down`) steer car P1. Parking, scoring,
+results, and the timer all run locally; server sends are skipped while
+disconnected. Press `F12` again to return to the lobby. `F12` is refused while
+connected, so it can never hijack a real round. Covered by the
+`_test_debug_drive` headless test; not an MFD acceptance path.
 
 ## CI Plan
 
