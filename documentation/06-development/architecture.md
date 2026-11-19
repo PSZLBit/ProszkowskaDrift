@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-11-10
+Last updated: 2026-11-19
 
 This document describes the MVP runtime. Decisions are recorded in D-21, D-22,
 D-24, ADR-0001, ADR-0002, and ADR-0003. Message schemas are in
@@ -134,6 +134,12 @@ Godot 4.7.2 project with:
   base for #46, not final map geometry. All source tiles are available on the
   grid; RPG Maker autotile rules and per-tile collision polygons are not
   converted yet.
+- `game/scenes/map/mfd_tilemap.tscn` plus `game/scripts/mfd_tilemap.gd`: the
+  MFD visual map for `proszkowska-mfd-1` (D-40). It paints the 40×22 lot
+  (kerb, ring road, lot, corner grass islands, four 2×3 bays) from the
+  generated placeholder TileSet at runtime, with spawns, bays, walls, and
+  planters matching `mfd_map.gd`. No TileSet is committed (D-34, D-39);
+  detection stays authoritative and `TargetSpot` beacons highlight targets.
 - `game/scenes/ui/hud.tscn` plus `game/scripts/hud.gd`, `round_clock.gd`, and
   `score_model.gd`: the MFD HUD, server-driven round timer, MFD scoring, and
   results overlay (#47). The round starts on the accepted host command, the
@@ -141,7 +147,7 @@ Godot 4.7.2 project with:
   all are covered by headless tests including a tree-attached round lifecycle.
 - `game/tests/run_tests.gd`: headless tests for protocol parsing, config
   validation, slot input/timeout, car movement, scene structure, the
-  parking-lot TileSet and demo map, the round clock, MFD scoring, the HUD
+  parking-lot TileSet and demo map, the MFD tilemap, the round clock, MFD scoring, the HUD
   scene, the full round lifecycle, and project settings. CI runs the same
   commands in `.github/workflows/game.yml`.
 
