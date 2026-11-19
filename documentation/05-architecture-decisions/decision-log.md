@@ -1,7 +1,7 @@
 # Decision Log
 
 Status: Decided
-Last updated: 2026-11-10
+Last updated: 2026-11-19
 
 Register of all team decisions. Newest entries on top.
 For larger decisions, create an ADR file in this folder using `_templates/adr.md`
@@ -10,6 +10,7 @@ and link it here. The ADR threshold is defined in
 
 | Date       | ID   | Decision                                                                                                                                  | Status  | Owner |
 | ---------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----- |
+| 2026-11-19 | D-40 | The MFD visual map is committed as `game/scenes/map/mfd_tilemap.tscn` + `game/scripts/mfd_tilemap.gd`: it paints the 40×22 `proszkowska-mfd-1` layout (kerb, ring road, lot, grass islands, four 2×3 bays) from the generated placeholder TileSet at runtime, with markers matching `mfd_map.gd`. No TileSet or baked tile data is committed (D-34, D-39); detection stays authoritative and target beacons highlight spots. A 16px-grid `game/tile_map.tscn` draft referencing the local-only TileSet was not committed. | Decided | Team  |
 | 2026-11-10 | D-39 | The game keeps committed placeholder atlases for the purchased parking-lot tileset (brought in via the #47 branch; renumbered from D-35 to resolve a collision with the merged controller-scaffold D-35). Placeholders match the purchased sheets' pixel dimensions and 48×48 grid, and `ParkingLotTilesetBuilder` generates the TileSet on demand: `game/tilesets/parking_lot.tres` (gitignored) from the placeholders, plus `parking_lot.local.tres` (gitignored) from the purchased sheets when they are installed. The map and tests regenerate the committed-path TileSet when it is missing, and CI runs the generator before tests. No TileSet is committed (D-34). | Decided | Team  |
 | 2026-11-10 | D-38 | The Minimum Festival Demo gameplay baseline is Decided: the fixed map `proszkowska-mfd-1` has four 96×144 parking bays (`A-01`–`A-04`) and four spawns; one task per player is assigned exclusively in rotating spot order; a task completes with all four car corners inside the spot, speed ≤40 px/s, and a 0.5 s hold; the 180 s round ends early when all connected players finish; scoring is time 100→10 over 30 s plus center/angle precision 0–40 and −10 per collision (max −30), with no MFD finish bonus; the MFD shows a minimal display HUD and host-started results. Five tasks, auto-skip, finish bonus, controller feedback, countdown, pause/reset, and the 24-spot map remain MVP; D-19 is unchanged ([game design](../02-game-domain/game-design.md), [ADR-0004](adr-0004-host-command-roundid.md)). | Decided | Team  |
 | 2026-11-10 | D-37 | Game process supervision for the MVP is implemented as an optional in-process Go supervisor (`server/internal/supervisor`, enabled with `--game-binary`): it starts Godot with a per-launch token and restarts it after unexpected exits, returning the session to `Attract`. Server restart and the festival launcher/wrapper remain future work. The shell-script launcher option is not used. | Decided | Team  |
@@ -108,7 +109,7 @@ table above for history and have no active artifact.
 | [ADR-0002](adr-0002-legacy-android-controller.md) | D-08, D-20 |
 | [ADR-0003](adr-0003-session-lifecycle-and-recovery.md) | D-21, D-24 |
 | [ADR-0004](adr-0004-host-command-roundid.md) | D-38 |
-| [Runtime architecture](../06-development/architecture.md) | D-11, D-21, D-22, D-23, D-24, D-32, D-37 |
+| [Runtime architecture](../06-development/architecture.md) | D-11, D-21, D-22, D-23, D-24, D-32, D-37, D-40 |
 | [Protocol](../06-development/protocol.md) | D-21, D-23, D-24, D-32, D-38 |
 | [Testing strategy](../06-development/testing.md) | D-23, D-24, D-32 |
 | [Roadmap](../06-development/roadmap.md) | D-26, D-31, D-33 |

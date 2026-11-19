@@ -1,0 +1,74 @@
+[gd_scene format=3 uid="uid://bo7naou42gppt"]
+
+[ext_resource type="Script" path="res://scripts/mfd_tilemap.gd" id="1_mfd"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_horizontal"]
+size = Vector2(1920, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vertical"]
+size = Vector2(20, 1080)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_planter"]
+size = Vector2(96, 96)
+
+[node name="MfdTilemap" type="Node2D" unique_id=846302937]
+script = ExtResource("1_mfd")
+
+[node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=95922761]
+position = Vector2(0, 12)
+
+[node name="Environment" type="StaticBody2D" parent="." unique_id=1326358281]
+collision_layer = 1
+collision_mask = 2
+
+[node name="TopWall" type="CollisionShape2D" parent="Environment" unique_id=242397475]
+position = Vector2(960, 10)
+shape = SubResource("RectangleShape2D_horizontal")
+
+[node name="BottomWall" type="CollisionShape2D" parent="Environment" unique_id=492793514]
+position = Vector2(960, 1070)
+shape = SubResource("RectangleShape2D_horizontal")
+
+[node name="LeftWall" type="CollisionShape2D" parent="Environment" unique_id=811283459]
+position = Vector2(10, 540)
+shape = SubResource("RectangleShape2D_vertical")
+
+[node name="RightWall" type="CollisionShape2D" parent="Environment" unique_id=1079463498]
+position = Vector2(1910, 540)
+shape = SubResource("RectangleShape2D_vertical")
+
+[node name="PlanterWest" type="CollisionShape2D" parent="Environment" unique_id=1062157390]
+position = Vector2(240, 540)
+shape = SubResource("RectangleShape2D_planter")
+
+[node name="PlanterEast" type="CollisionShape2D" parent="Environment" unique_id=1548437706]
+position = Vector2(1680, 540)
+shape = SubResource("RectangleShape2D_planter")
+
+[node name="Spawns" type="Node2D" parent="." unique_id=566044536]
+
+[node name="Spawn1" type="Marker2D" parent="Spawns" unique_id=870285128]
+position = Vector2(672, 1000)
+
+[node name="Spawn2" type="Marker2D" parent="Spawns" unique_id=1964471285]
+position = Vector2(864, 1000)
+
+[node name="Spawn3" type="Marker2D" parent="Spawns" unique_id=182160815]
+position = Vector2(1056, 1000)
+
+[node name="Spawn4" type="Marker2D" parent="Spawns" unique_id=1229243770]
+position = Vector2(1248, 1000)
+
+[node name="Bays" type="Node2D" parent="." unique_id=1481848366]
+
+[node name="Bay1" type="Marker2D" parent="Bays" unique_id=1630925547]
+position = Vector2(384, 540)
+
+[node name="Bay2" type="Marker2D" parent="Bays" unique_id=14707783]
+position = Vector2(768, 540)
+
+[node name="Bay3" type="Marker2D" parent="Bays" unique_id=140904401]
+position = Vector2(1152, 540)
+
+[node name="Bay4" type="Marker2D" parent="Bays" unique_id=1571546156]
+position = Vector2(1536, 540)
