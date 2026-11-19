@@ -140,6 +140,8 @@ Godot 4.7.2 project with:
   generated placeholder TileSet at runtime, with spawns, bays, walls, and
   planters matching `mfd_map.gd`. No TileSet is committed (D-34, D-39);
   detection stays authoritative and `TargetSpot` beacons highlight targets.
+  The scene is not yet instanced in `game/scenes/main.tscn`; wiring it into
+  the playable scene is follow-up work.
 - `game/scenes/ui/hud.tscn` plus `game/scripts/hud.gd`, `round_clock.gd`, and
   `score_model.gd`: the MFD HUD, server-driven round timer, MFD scoring, and
   results overlay (#47). The round starts on the accepted host command, the
@@ -147,9 +149,9 @@ Godot 4.7.2 project with:
   all are covered by headless tests including a tree-attached round lifecycle.
 - `game/tests/run_tests.gd`: headless tests for protocol parsing, config
   validation, slot input/timeout, car movement, scene structure, the
-  parking-lot TileSet and demo map, the MFD tilemap, the round clock, MFD scoring, the HUD
-  scene, the full round lifecycle, and project settings. CI runs the same
-  commands in `.github/workflows/game.yml`.
+  parking-lot TileSet and demo map, the MFD tilemap, the round clock, MFD
+  scoring, the HUD scene, the full round lifecycle, and project settings.
+  CI runs the same commands in `.github/workflows/game.yml`.
 
 The scaffold does not implement final map geometry. MFD tasks, parking
 detection, scoring, timer, HUD, and results are implemented (#46, #47); the
