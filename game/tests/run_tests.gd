@@ -802,13 +802,15 @@ func _test_mfd_tilemap() -> void:
 		"grass islands use grass tiles",
 	)
 
+	# Hard-coded from mfd_map.gd spots (A-01 to A-04): centers x=384,768,1152,1536,
+	# size 96x144, floored to the 48px grid with the 12px vertical map offset.
+	# Do not recompute from spot_rect here; the test must catch offset errors.
+	var expected_origins := [Vector2i(7, 9), Vector2i(15, 9), Vector2i(23, 9), Vector2i(31, 9)]
+	var expected_base_columns := [0, 2, 0, 2]
 	var bay_cells := 0
 	for spot in MfdMap.spot_count():
-		var rect: Rect2 = MfdMap.spot_rect(spot)
-		var origin := Vector2i(
-			int(floor(rect.position.x / 48.0)),
-			int(floor((rect.position.y - MfdTilemapScript.MAP_OFFSET.y) / 48.0))
-		)
+		var origin: Vector2i = expected_origins[spot]
+		var base_column: int = expected_base_columns[spot]
 		for dy in MfdTilemapScript.BAY_CELLS.y:
 			for dx in MfdTilemapScript.BAY_CELLS.x:
 				_check_eq(
@@ -817,7 +819,6 @@ func _test_mfd_tilemap() -> void:
 					"MFD bay %d uses the B-01 source" % (spot + 1),
 				)
 				bay_cells += 1
-		var base_column: int = MfdTilemapScript.BAY_BASE_COLUMNS[spot % MfdTilemapScript.BAY_BASE_COLUMNS.size()]
 		_check_eq(
 			tile_map.get_cell_atlas_coords(origin),
 			Vector2i(base_column, MfdTilemapScript.BAY_TOP_ROW),
@@ -853,6 +854,8 @@ func _test_mfd_tilemap() -> void:
 	var environment := map.get_node_or_null("Environment") as StaticBody2D
 	_check(environment != null, "the MFD map has an environment body")
 	if environment != null:
+		_check_eq(environment.collision_layer, 1, "the MFD boundary uses the environment layer")
+		_check_eq(environment.collision_mask, 2, "the MFD boundary detects cars")
 		var solids := environment.find_children("*", "CollisionShape2D", true, false)
 		_check_eq(solids.size(), 6, "the environment has walls plus two MFD planters")
 		var positions: Array = []

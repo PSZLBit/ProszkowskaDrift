@@ -18,6 +18,7 @@ script = ExtResource("1_mfd")
 position = Vector2(0, 12)
 
 [node name="Environment" type="StaticBody2D" parent="." unique_id=1326358281]
+collision_layer = 1
 collision_mask = 2
 
 [node name="TopWall" type="CollisionShape2D" parent="Environment" unique_id=242397475]
