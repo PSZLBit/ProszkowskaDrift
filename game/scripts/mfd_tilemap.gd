@@ -17,7 +17,7 @@ const TILESET_PATH := "res://tilesets/parking_lot.tres"
 const TILESET_LOCAL_PATH := "res://tilesets/parking_lot.local.tres"
 
 const MAP_SIZE := Vector2i(40, 22)
-const MAP_OFFSET := Vector2i(0, 12)
+const MAP_OFFSET := Vector2(0, 12)
 
 ## Atlas source indices in `parking_lot.tres`, in generation order.
 const SOURCE_A2_1 := 0
@@ -45,29 +45,13 @@ const BAY_CELLS := Vector2i(2, 3)
 
 
 func _tileset_path() -> String:
-	if ResourceLoader.exists(TILESET_LOCAL_PATH):
-		var local := load(TILESET_LOCAL_PATH) as TileSet
-		if local != null and ParkingLotTilesetBuilder.purchased_available():
-			return TILESET_LOCAL_PATH
-		push_warning("Ignoring stale local TileSet %s." % TILESET_LOCAL_PATH)
-	if not ResourceLoader.exists(TILESET_PATH):
-		_generate_tileset()
-	return TILESET_PATH
+	return ParkingLotTilesetBuilder.preferred_tileset_path(TILESET_PATH, TILESET_LOCAL_PATH)
 
 
 ## Pure selection rule for tests: a local TileSet is only preferred when the
 ## file exists and the purchased sheets are installed.
 static func should_use_local(local_exists: bool, purchased_present: bool) -> bool:
 	return ParkingLotMap.should_use_local(local_exists, purchased_present)
-
-
-func _generate_tileset() -> void:
-	var builder := load("res://scripts/parking_lot_tileset_builder.gd")
-	if builder == null:
-		return
-	var base_dir := "res://assets/placeholders/large_parking_lot/"
-	var files: Dictionary = builder.placeholder_files()
-	builder.build(base_dir, files, TILESET_PATH)
 
 
 func _ready() -> void:
