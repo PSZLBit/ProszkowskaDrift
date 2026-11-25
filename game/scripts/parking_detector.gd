@@ -1,18 +1,22 @@
 extends RefCounted
-## MFD parking detection helpers (D-38).
+## MFD parking detection helpers (D-38, softened by playtest D-42).
 ##
 ## A task completes when all four car corners are inside the target rectangle
-## (boundary counts as inside) and the car speed from velocity.length() stays
-## at or below 40 px/s, both continuously for 0.5 s. Any failed frame resets
-## the hold timer. Facing never gates completion; it only affects scoring
-## in #47.
+## grown by the corner tolerance (boundary counts as inside) and the car
+## speed from velocity.length() stays at or below 60 px/s, both continuously
+## for 0.3 s. Any failed frame resets the hold timer. Facing never gates
+## completion; it only affects scoring in #47.
 
 ## Parked speed threshold in px/s, from velocity.length().
-const SPEED_MAX := 40.0
+const SPEED_MAX := 60.0
 ## Required continuous hold time in seconds.
-const HOLD_SEC := 0.5
+const HOLD_SEC := 0.3
 ## Tolerance for float comparisons at the tolerance boundary.
 const EPSILON := 0.001
+## Extra margin around the spot rectangle for the corner test, in pixels.
+## The 73.75 px car in a 96 px spot leaves ~11 px per side when aligned;
+## coarse touch controls need the slack so a visually-parked car completes.
+const CORNER_TOLERANCE_PX := 8.0
 
 
 ## Corners of the car rectangle (73.75x32.5) in world space.
@@ -31,19 +35,20 @@ static func car_corners(pos: Vector2, rotation_rad: float, size: Vector2) -> Arr
 	return corners
 
 
-## True when every corner is inside rect. The boundary counts as inside, so
-## the check is inclusive on all four edges (unlike Rect2.has_point, which
-## excludes the right/bottom edge).
+## True when every corner is inside rect grown by the corner tolerance. The
+## boundary counts as inside, so the check is inclusive on all four edges
+## (unlike Rect2.has_point, which excludes the right/bottom edge).
 static func all_inside(corners: Array, rect: Rect2) -> bool:
+	var grown := rect.grow(CORNER_TOLERANCE_PX)
 	for corner_raw in corners:
 		var corner: Vector2 = corner_raw
-		if corner.x < rect.position.x - EPSILON:
+		if corner.x < grown.position.x - EPSILON:
 			return false
-		if corner.x > rect.position.x + rect.size.x + EPSILON:
+		if corner.x > grown.position.x + grown.size.x + EPSILON:
 			return false
-		if corner.y < rect.position.y - EPSILON:
+		if corner.y < grown.position.y - EPSILON:
 			return false
-		if corner.y > rect.position.y + rect.size.y + EPSILON:
+		if corner.y > grown.position.y + grown.size.y + EPSILON:
 			return false
 	return true
 
