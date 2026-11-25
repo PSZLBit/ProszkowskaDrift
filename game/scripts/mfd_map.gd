@@ -30,6 +30,28 @@ const SPAWNS := {
 const PLANTER_CENTERS := [Vector2(240, 540), Vector2(1680, 540)]
 const PLANTER_SIZE := Vector2(96, 96)
 
+## Speed-bump strips on the ring road (D-41). Each strip is 96x96 px, one
+## cell wide across the 2-cell road band: three on the bottom road and three
+## mirrored on the top road. Bays, spawns, and planters are untouched (D-38).
+const SPEED_BUMPS := [
+	Rect2(Vector2(432, 924), Vector2(96, 96)),
+	Rect2(Vector2(912, 924), Vector2(96, 96)),
+	Rect2(Vector2(1392, 924), Vector2(96, 96)),
+	Rect2(Vector2(432, 60), Vector2(96, 96)),
+	Rect2(Vector2(912, 60), Vector2(96, 96)),
+	Rect2(Vector2(1392, 60), Vector2(96, 96)),
+]
+
+## Speed above which entering a bump strip triggers the bump response.
+const BUMP_TRIGGER_SPEED := 150.0
+
+## Speed the car is slowed to when it hits a bump too fast.
+const BUMP_SLOW_SPEED := 80.0
+
+## Random heading kick applied on a fast bump entry, in degrees; the side
+## (left or right) is random per entry.
+const BUMP_KICK_DEG := 12.0
+
 ## Slot colors for beacons and HUD, matching the protocol slot order.
 const SLOT_COLORS := {
 	1: Color(1.0, 0.25, 0.25),
@@ -80,6 +102,15 @@ static func planter_rects() -> Array:
 		var center: Vector2 = center_raw
 		rects.append(Rect2(center - PLANTER_SIZE / 2.0, PLANTER_SIZE))
 	return rects
+
+
+## Index of the speed-bump strip containing the point, or -1 when the point
+## is not on a bump strip.
+static func bump_at(pos: Vector2) -> int:
+	for i in SPEED_BUMPS.size():
+		if (SPEED_BUMPS[i] as Rect2).has_point(pos):
+			return i
+	return -1
 
 
 static func slot_color(slot: int) -> Color:

@@ -97,6 +97,9 @@ func build() -> void:
 	for spot in MfdMapData.spot_count():
 		_paint_bay(tile_map, spot)
 
+	for bump_raw in MfdMapData.SPEED_BUMPS:
+		_paint_bump(tile_map, bump_raw)
+
 
 ## Paints one 2x3 bay over the spot rect. The rect is authoritative for
 ## detection; its top-left corner is floored to the 48px grid.
@@ -119,6 +122,18 @@ func _paint_bay(tile_map: TileMapLayer, spot: int) -> void:
 
 func get_tile_map_layer() -> TileMapLayer:
 	return get_node_or_null("TileMapLayer") as TileMapLayer
+
+
+## Paints one 96x96 bump strip as a raised kerb band across the road.
+## The detection rectangle is authoritative; cells are floored to the grid.
+func _paint_bump(tile_map: TileMapLayer, bump: Rect2) -> void:
+	var x0 := int(floor(bump.position.x / 48.0))
+	var x1 := int(floor((bump.position.x + bump.size.x - 1.0) / 48.0))
+	var y0 := int(floor((bump.position.y - MAP_OFFSET.y) / 48.0))
+	var y1 := int(floor((bump.position.y + bump.size.y - 1.0 - MAP_OFFSET.y) / 48.0))
+	for cy in range(y0, y1 + 1):
+		for cx in range(x0, x1 + 1):
+			tile_map.set_cell(Vector2i(cx, cy), SOURCE_A2_1, KERB_COORDS)
 
 
 func _is_border(x: int, y: int) -> bool:
