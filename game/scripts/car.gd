@@ -11,6 +11,8 @@ extends CharacterBody2D
 ## `throttle` values through `get_input(slot)`. The controller input scheme is
 ## still TBD (D-14); the scaffold wires every car to the shared `ServerInput`.
 
+const MfdMapData := preload("res://scripts/mfd_map.gd")
+
 ## Player slot this car follows, 1-4. The server input store is keyed by slot.
 @export_range(1, 4, 1) var slot := 1
 
@@ -50,8 +52,18 @@ var throttle := 0.0
 ## again. The task manager counts these while a task is assigned.
 signal collision_started
 
+## Emitted once per fast entry into a speed-bump strip (D-41). The task
+## manager counts these like collisions while a task is assigned, so a fast
+## bump retracts points through the shared collision penalty.
+signal bump_hit
+
 ## Whether the car touched the environment last physics frame.
 var _was_touching := false
+
+## Index of the speed-bump strip the car is on, or -1 when it is not on one.
+## A fast entry (outside to inside above the trigger speed) fires bump_hit
+## once; staying inside or crossing slowly does not.
+var _last_bump := -1
 
 ## Signed forward speed in px/s; positive = forward, negative = reverse.
 var _speed := 0.0
@@ -79,6 +91,8 @@ func _physics_process(delta: float) -> void:
 	velocity = forward * _speed
 	move_and_slide()
 
+	check_speed_bump()
+
 	# Hitting the static environment reduces speed (game-design.md). Never
 	# destroys the car or ends the round. Counting collisions for the current
 	# task is the job of the task manager, which listens for
@@ -93,6 +107,28 @@ func _physics_process(delta: float) -> void:
 	if touching and not _was_touching:
 		collision_started.emit()
 	_was_touching = touching
+
+
+## Checks the speed-bump strips for this physics frame. A fast entry slows
+## the car to the bump crawl speed, kicks the heading a random side, and
+## emits bump_hit once. Returns true when the bump triggered.
+func check_speed_bump() -> bool:
+	var strip := MfdMapData.bump_at(position)
+	var entered := strip != -1 and strip != _last_bump
+	_last_bump = strip
+	if not entered:
+		return false
+	if absf(_speed) <= MfdMapData.BUMP_TRIGGER_SPEED:
+		return false
+	var travel := signf(_speed)
+	_speed = travel * MfdMapData.BUMP_SLOW_SPEED
+	var side := 1.0 if randf() < 0.5 else -1.0
+	rotation += deg_to_rad(side * MfdMapData.BUMP_KICK_DEG)
+	# Keep velocity in sync like the collision path below so a same-frame
+	# reader sees the post-bump speed instead of a stale value.
+	velocity = Vector2.RIGHT.rotated(rotation) * _speed
+	bump_hit.emit()
+	return true
 
 
 ## Returns the current input as (steer, throttle), each in [-1, 1].

@@ -2,10 +2,11 @@ extends Node
 ## MFD task lifecycle for one parking task per player (D-38, issue #46).
 ##
 ## ServerInput starts a round with the active slots and the server roundId;
-## this node assigns exclusive targets, tracks the 0.5 s parking hold with
+## this node assigns exclusive targets, tracks the parking hold with
 ## velocity.length() as the speed source, counts one collision per contact
-## episode, and emits task_completed exactly once per slot. Scoring, timer,
-## HUD, and results stay in #47; this signal is the hook #47 consumes.
+## episode plus one hit per fast speed-bump entry, and emits task_completed
+## exactly once per slot. Scoring, timer, HUD, and results stay in #47; this
+## signal is the hook #47 consumes.
 
 signal task_completed(slot: int, result: Dictionary)
 signal collisions_changed(slot: int, count: int)
@@ -190,6 +191,10 @@ func _wire_cars() -> void:
 			var slot := int(node.get("slot"))
 			if not node.is_connected("collision_started", register_collision):
 				node.connect("collision_started", register_collision.bind(slot))
+		if node.has_signal("bump_hit"):
+			var bump_slot := int(node.get("slot"))
+			if not node.is_connected("bump_hit", register_collision):
+				node.connect("bump_hit", register_collision.bind(bump_slot))
 
 
 func _car_nodes() -> Array:
@@ -208,7 +213,7 @@ func _spawn_beacons() -> void:
 		var rect: Rect2 = _tasks[slot]["spotRect"]
 		beacon.position = rect.get_center()
 		parent.add_child(beacon)
-		# Above the fullscreen Background but below the cars: both use the
+		# Above the MfdTilemap but below the cars: both use the
 		# default Z index, so tree order decides what is visible.
 		parent.move_child(beacon, 1)
 		beacon.setup(

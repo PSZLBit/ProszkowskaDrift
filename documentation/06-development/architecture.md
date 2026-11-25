@@ -1,7 +1,7 @@
 # Runtime Architecture
 
 Status: Decided
-Last updated: 2026-11-19
+Last updated: 2026-11-25
 
 This document describes the MVP runtime. Decisions are recorded in D-21, D-22,
 D-24, ADR-0001, ADR-0002, and ADR-0003. Message schemas are in
@@ -119,8 +119,8 @@ Godot 4.7.2 project with:
 - Host keys `Enter` (start/resume), `P` (pause/resume), and `R` (reset) that
   send `host_request`. `Q` exits the local game process without a server
   request. `dev_auto_start_round` is development-only and defaults to `false`.
-- `game/scenes/main.tscn`: placeholder background, boundary walls, two
-  planters, four cars on MFD spawns (slots 1–4), the task manager, and the
+- `game/scenes/main.tscn`: MFD tilemap instance (`mfd_tilemap.tscn`), four
+  cars on MFD spawns (slots 1–4), the task manager, and the
   HUD, configured for a 1920×1080 fullscreen window.
 - `game/tilesets/` (generated, gitignored): `parking_lot.tres` is built from the
   committed placeholder sheets by `game/tools/build_parking_lot_tileset.gd` (via
@@ -140,8 +140,9 @@ Godot 4.7.2 project with:
   generated placeholder TileSet at runtime, with spawns, bays, walls, and
   planters matching `mfd_map.gd`. No TileSet is committed (D-34, D-39);
   detection stays authoritative and `TargetSpot` beacons highlight targets.
-  The scene is not yet instanced in `game/scenes/main.tscn`; wiring it into
-  the playable scene is follow-up work.
+  the playable scene (`MfdTilemap` instance in `game/scenes/main.tscn`). Six
+  speed-bump strips on the ring road slow a fast entry to a crawl, kick the
+  heading to a random side, and count one hit (D-41).
 - `game/scenes/ui/hud.tscn` plus `game/scripts/hud.gd`, `round_clock.gd`, and
   `score_model.gd`: the MFD HUD, server-driven round timer, MFD scoring, and
   results overlay (#47). The round starts on the accepted host command, the
