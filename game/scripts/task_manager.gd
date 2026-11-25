@@ -2,7 +2,7 @@ extends Node
 ## MFD task lifecycle for one parking task per player (D-38, issue #46).
 ##
 ## ServerInput starts a round with the active slots and the server roundId;
-## this node assigns exclusive targets, tracks the 0.5 s parking hold with
+## this node assigns exclusive targets, tracks the parking hold with
 ## velocity.length() as the speed source, counts one collision per contact
 ## episode plus one hit per fast speed-bump entry, and emits task_completed
 ## exactly once per slot. Scoring, timer, HUD, and results stay in #47; this
