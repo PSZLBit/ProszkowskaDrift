@@ -870,13 +870,13 @@ func _test_mfd_tilemap() -> void:
 	for cell in bump_cells:
 		_check_eq(
 			tile_map.get_cell_source_id(cell),
-			MfdTilemapScript.SOURCE_A2_1,
-			"bump cell %s uses the ground source" % str(cell),
+			MfdTilemapScript.SOURCE_B_01,
+			"bump cell %s uses the B-01 source" % str(cell),
 		)
 		_check_eq(
 			tile_map.get_cell_atlas_coords(cell),
-			MfdTilemapScript.LOT_COORDS[0],
-			"bump cell %s is part of the solid dark band" % str(cell),
+			MfdTilemapScript.BUMP_COORDS,
+			"bump cell %s is the hazard-stripe tile" % str(cell),
 		)
 	_check_eq(
 		tile_map.get_cell_atlas_coords(Vector2i(11, 1)),

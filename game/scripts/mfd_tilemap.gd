@@ -43,6 +43,9 @@ const BAY_BOTTOM_ROW := 3
 const BAY_BASE_COLUMNS := [0, 2]
 const BAY_CELLS := Vector2i(2, 3)
 
+## Speed-bump tile in B-01: the yellow/black hazard stripe at atlas (12, 4).
+const BUMP_COORDS := Vector2i(12, 4)
+
 
 func _tileset_path() -> String:
 	return ParkingLotTilesetBuilder.preferred_tileset_path(TILESET_PATH, TILESET_LOCAL_PATH)
@@ -124,11 +127,10 @@ func get_tile_map_layer() -> TileMapLayer:
 	return get_node_or_null("TileMapLayer") as TileMapLayer
 
 
-## Paints one 96x96 bump strip as a solid dark ground band across the road,
-## contrasting with the lighter ring tiles in both the committed placeholder
-## and purchased art. (An alternating checker was tried first and read as
-## random speckles instead of a deliberate strip.) The detection rectangle
-## is authoritative; cells are floored to the grid.
+## Paints one 96x96 bump strip with the B-01 hazard-stripe tile across the
+## road (D-41). Ground-tile approximations (kerb, checker, dark band) all
+## read as noise against the road; the hazard tile is unambiguous. The
+## detection rectangle is authoritative; cells are floored to the grid.
 func _paint_bump(tile_map: TileMapLayer, bump: Rect2) -> void:
 	var x0 := int(floor(bump.position.x / 48.0))
 	var x1 := int(floor((bump.position.x + bump.size.x - 1.0) / 48.0))
@@ -136,7 +138,7 @@ func _paint_bump(tile_map: TileMapLayer, bump: Rect2) -> void:
 	var y1 := int(floor((bump.position.y + bump.size.y - 1.0 - MAP_OFFSET.y) / 48.0))
 	for cy in range(y0, y1 + 1):
 		for cx in range(x0, x1 + 1):
-			tile_map.set_cell(Vector2i(cx, cy), SOURCE_A2_1, LOT_COORDS[0])
+			tile_map.set_cell(Vector2i(cx, cy), SOURCE_B_01, BUMP_COORDS)
 
 
 func _is_border(x: int, y: int) -> bool:
