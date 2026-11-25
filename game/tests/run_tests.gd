@@ -46,6 +46,7 @@ func _initialize() -> void:
 	_test_parking_lot_tileset()
 	_test_parking_lot_map()
 	_test_mfd_tilemap()
+	_test_speed_bumps()
 	_test_parking_lot_art_swap()
 	_test_round_clock()
 	_test_score_model()
@@ -320,6 +321,37 @@ func _test_mfd_map() -> void:
 		MfdMap.slot_color(1), MfdMap.slot_color(2), MfdMap.slot_color(3), MfdMap.slot_color(4)
 	]
 	_check(colors[0] != colors[1] and colors[2] != colors[3], "slot colors are distinct")
+
+	_check_eq(MfdMap.SPEED_BUMPS.size(), 6, "six speed-bump strips on the ring road")
+	_check_eq(MfdMap.bump_at(Vector2(480, 972)), 0, "bottom strip 1 registers its center")
+	_check_eq(MfdMap.bump_at(Vector2(960, 972)), 1, "bottom strip 2 registers its center")
+	_check_eq(MfdMap.bump_at(Vector2(1440, 972)), 2, "bottom strip 3 registers its center")
+	_check_eq(MfdMap.bump_at(Vector2(480, 108)), 3, "top strip 1 registers its center")
+	_check_eq(MfdMap.bump_at(Vector2(960, 108)), 4, "top strip 2 registers its center")
+	_check_eq(MfdMap.bump_at(Vector2(1440, 108)), 5, "top strip 3 registers its center")
+	_check_eq(MfdMap.bump_at(Vector2(0, 0)), -1, "the kerb is not a bump")
+	_check_eq(MfdMap.bump_at(Vector2(672, 1000)), -1, "S1 spawn is not on a bump")
+	_check_eq(MfdMap.bump_at(Vector2(1248, 1000)), -1, "S4 spawn is not on a bump")
+	_check_eq(MfdMap.bump_at(Vector2(384, 540)), -1, "A-01 center is not on a bump")
+	for spot in MfdMap.spot_count():
+		var spot_rect: Rect2 = MfdMap.spot_rect(spot)
+		for bump in MfdMap.SPEED_BUMPS:
+			_check(
+				not (bump as Rect2).intersects(spot_rect),
+				"bump %d does not overlap spot %s" % [MfdMap.SPEED_BUMPS.find(bump), MfdMap.spot_label(spot)]
+			)
+	for planter in MfdMap.planter_rects():
+		for bump in MfdMap.SPEED_BUMPS:
+			_check(
+				not (bump as Rect2).intersects(planter),
+				"no bump overlaps a planter"
+			)
+	_check(
+		MfdMap.BUMP_TRIGGER_SPEED > MfdMap.BUMP_SLOW_SPEED,
+		"the bump trigger is above the bump crawl speed"
+	)
+	_check(MfdMap.BUMP_SLOW_SPEED >= 0.0, "the bump crawl speed is not negative")
+	_check(MfdMap.BUMP_KICK_DEG > 0.0, "the bump kick turns the car")
 
 
 func _test_task_assignment() -> void:
@@ -831,6 +863,27 @@ func _test_mfd_tilemap() -> void:
 		)
 	_check_eq(bay_cells, 24, "four 2x3 bays are painted")
 
+	var bump_cells := [
+		Vector2i(9, 1), Vector2i(10, 1), Vector2i(9, 2), Vector2i(10, 2),
+		Vector2i(9, 19), Vector2i(10, 19), Vector2i(9, 20), Vector2i(10, 20),
+	]
+	for cell in bump_cells:
+		_check_eq(
+			tile_map.get_cell_source_id(cell),
+			MfdTilemapScript.SOURCE_A2_1,
+			"bump cell %s uses the ground source" % str(cell),
+		)
+		_check_eq(
+			tile_map.get_cell_atlas_coords(cell),
+			MfdTilemapScript.KERB_COORDS,
+			"bump cell %s is painted as a raised band" % str(cell),
+		)
+	_check_eq(
+		tile_map.get_cell_atlas_coords(Vector2i(11, 1)),
+		MfdTilemapScript.RING_COORDS,
+		"the road next to a bump keeps its ring tile",
+	)
+
 	var spawns := map.get_node_or_null("Spawns") as Node2D
 	_check(spawns != null, "the MFD map has spawn markers")
 	if spawns != null:
@@ -882,6 +935,73 @@ func _test_mfd_tilemap() -> void:
 	)
 
 	map.free()
+
+
+func _test_speed_bumps() -> void:
+	var car = CarScript.new()
+	car.position = Vector2(480, 972)
+	car.rotation = -PI / 2.0
+	car._speed = 300.0
+	var hits: Array = [0]
+	car.bump_hit.connect(func() -> void: hits[0] += 1)
+
+	seed(7)
+	_check(car.check_speed_bump(), "a fast entry triggers the bump")
+	_check_eq(hits[0], 1, "one hit per bump entry")
+	_check(
+		car._speed <= MfdMap.BUMP_SLOW_SPEED + 0.001,
+		"a fast entry is slowed to the bump crawl speed",
+	)
+	_check(
+		is_equal_approx(absf(car.rotation + PI / 2.0), deg_to_rad(MfdMap.BUMP_KICK_DEG)),
+		"a fast entry kicks the heading by the bump angle",
+	)
+	_check_eq(car.velocity.length(), absf(car._speed), "velocity matches the slowed speed")
+
+	_check(not car.check_speed_bump(), "staying on the strip does not retrigger")
+	_check_eq(hits[0], 1, "no extra hit while staying on the strip")
+
+	car.position = Vector2(600, 972)
+	_check(not car.check_speed_bump(), "leaving the strip resets without triggering")
+	car._speed = 300.0
+	car.position = Vector2(480, 972)
+	_check(car.check_speed_bump(), "re-entry triggers again")
+	_check_eq(hits[0], 2, "re-entry counts a second hit")
+
+	var boundary = CarScript.new()
+	boundary.position = Vector2(480, 972)
+	boundary._speed = MfdMap.BUMP_TRIGGER_SPEED
+	_check(not boundary.check_speed_bump(), "trigger speed itself does not trigger")
+	_check_eq(boundary._speed, MfdMap.BUMP_TRIGGER_SPEED, "a boundary entry keeps its speed")
+
+	var slow = CarScript.new()
+	slow.position = Vector2(480, 972)
+	slow._speed = 100.0
+	_check(not slow.check_speed_bump(), "a slow entry does not trigger")
+	_check_eq(slow._speed, 100.0, "a slow car keeps its speed")
+
+	var reverse = CarScript.new()
+	reverse.position = Vector2(960, 108)
+	reverse.rotation = PI / 2.0
+	reverse._speed = -300.0
+	_check(reverse.check_speed_bump(), "a fast reverse entry triggers")
+	_check(reverse._speed < 0.0, "a reversing car keeps reversing after the bump")
+	_check_eq(reverse._speed, -MfdMap.BUMP_SLOW_SPEED, "reverse is slowed to the bump crawl speed")
+
+	var signs := {}
+	for s in range(20):
+		var probe = CarScript.new()
+		probe.position = Vector2(480, 972)
+		probe.rotation = 0.0
+		probe._speed = 300.0
+		seed(s)
+		probe.check_speed_bump()
+		signs[signf(probe.rotation)] = true
+		probe.free()
+	_check(signs.has(1.0) and signs.has(-1.0), "the kick goes left or right at random")
+
+	for node in [car, boundary, slow, reverse]:
+		(node as Node).free()
 
 
 func _test_parking_lot_art_swap() -> void:
