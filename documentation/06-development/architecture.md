@@ -140,7 +140,9 @@ Godot 4.7.2 project with:
   generated placeholder TileSet at runtime, with spawns, bays, walls, and
   planters matching `mfd_map.gd`. No TileSet is committed (D-34, D-39);
   detection stays authoritative and `TargetSpot` beacons highlight targets.
-  the playable scene (`MfdTilemap` instance in `game/scenes/main.tscn`).
+  the playable scene (`MfdTilemap` instance in `game/scenes/main.tscn`). Six
+  speed-bump strips on the ring road slow a fast entry to a crawl, kick the
+  heading to a random side, and count one hit (D-41).
 - `game/scenes/ui/hud.tscn` plus `game/scripts/hud.gd`, `round_clock.gd`, and
   `score_model.gd`: the MFD HUD, server-driven round timer, MFD scoring, and
   results overlay (#47). The round starts on the accepted host command, the

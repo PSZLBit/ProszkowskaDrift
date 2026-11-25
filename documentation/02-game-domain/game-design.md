@@ -1,7 +1,7 @@
 # Game Design — Proszkowska Drift MVP
 
 Status: Draft
-Last updated: 2026-11-10
+Last updated: 2026-11-25
 
 The MFD subset is baselined in the "MFD Baseline" section below (D-38,
 2026-11-10). The full GDD remains issue #32 and is deferred to the MVP
@@ -76,7 +76,7 @@ detail; detection uses the rectangles in the tables.
 | Inner lot | x 116–1804, y 116–964 |
 | Parking bays | 4, 96×144 px, labelled and centered as in the table below |
 | Spawns | 4, on the bottom road as in the table below |
-| Static obstacles | two 96×96 planters at `(240, 540)` and `(1680, 540)`; boundary walls |
+| Static obstacles | two 96×96 planters at `(240, 540)` and `(1680, 540)`; boundary walls; six 96×96 speed-bump strips on the ring road |
 | Target pool | 4 spots in the MFD; the MVP adds 20 more to the same map |
 
 Parking bays:
@@ -112,6 +112,23 @@ Map rules:
   tileset is installed locally only (D-34).
 - The map keeps the perimeter loop required by the M1 map and FR-G10, but no
   racing logic.
+
+### Speed Bumps (MFD)
+
+- Six 96×96 strips sit on the ring road: three on the bottom road (`x`
+  432–528, 912–1008, 1392–1488 at `y` 924–1020) and three mirrored on the top
+  road (`y` 60–156). Strip rectangles are data in `mfd_map.gd`
+  (`SPEED_BUMPS`); movement and scoring logic must read them from there and
+  must not hard-code coordinates.
+- Entering a strip faster than 150 px/s slows the car to 80 px/s, kicks its
+  heading ±12° to a random side, and counts one hit for the current task
+  (−10 through the shared collision cap of −30). Speed magnitude decides, so
+  fast reversing counts the same.
+- Entering at or below 150 px/s has no effect. Staying on a strip does not
+  re-trigger; leaving and re-entering fast does.
+- Strips are painted as a raised kerb band across the road tiles. Like the
+  bays, the paint follows the detection rectangle and may sit on the 48 px
+  grid while the rectangle stays authoritative.
 
 ### Task Assignment (MFD)
 
@@ -623,6 +640,9 @@ into the MVP implementation.
 | Collision penalty | −10 each, max −30 | Playtest |
 | Finish bonus | +100 + 5/s, cap +150 (MVP) | Playtest |
 | Parked speed threshold | 40 px/s | First MFD playtest |
+| Bump trigger speed | 150 px/s entry speed | First MFD playtest |
+| Bump crawl speed | 80 px/s after a fast entry | First MFD playtest |
+| Bump heading kick | ±12° to a random side | First MFD playtest |
 | Car max speed | 400 px/s | First map playtest |
 
 ## Controller Input Scheme (Open, D-14)
