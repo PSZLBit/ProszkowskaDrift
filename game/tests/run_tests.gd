@@ -873,15 +873,10 @@ func _test_mfd_tilemap() -> void:
 			MfdTilemapScript.SOURCE_A2_1,
 			"bump cell %s uses the ground source" % str(cell),
 		)
-		var want := (
-			MfdTilemapScript.KERB_COORDS
-			if (cell.x + cell.y) % 2 == 0
-			else MfdTilemapScript.LOT_COORDS[0]
-		)
 		_check_eq(
 			tile_map.get_cell_atlas_coords(cell),
-			want,
-			"bump cell %s alternates kerb and ground" % str(cell),
+			MfdTilemapScript.LOT_COORDS[0],
+			"bump cell %s is part of the solid dark band" % str(cell),
 		)
 	_check_eq(
 		tile_map.get_cell_atlas_coords(Vector2i(11, 1)),

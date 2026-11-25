@@ -124,11 +124,11 @@ func get_tile_map_layer() -> TileMapLayer:
 	return get_node_or_null("TileMapLayer") as TileMapLayer
 
 
-## Paints one 96x96 bump strip as a high-contrast band across the road: an
-## alternating kerb/ground checker that stays visible whether the generated
-## TileSet uses the committed placeholders or the purchased sheets (both are
-## sandy, but ground and kerb contrast strongly in each). The detection
-## rectangle is authoritative; cells are floored to the grid.
+## Paints one 96x96 bump strip as a solid dark ground band across the road,
+## contrasting with the lighter ring tiles in both the committed placeholder
+## and purchased art. (An alternating checker was tried first and read as
+## random speckles instead of a deliberate strip.) The detection rectangle
+## is authoritative; cells are floored to the grid.
 func _paint_bump(tile_map: TileMapLayer, bump: Rect2) -> void:
 	var x0 := int(floor(bump.position.x / 48.0))
 	var x1 := int(floor((bump.position.x + bump.size.x - 1.0) / 48.0))
@@ -136,8 +136,7 @@ func _paint_bump(tile_map: TileMapLayer, bump: Rect2) -> void:
 	var y1 := int(floor((bump.position.y + bump.size.y - 1.0 - MAP_OFFSET.y) / 48.0))
 	for cy in range(y0, y1 + 1):
 		for cx in range(x0, x1 + 1):
-			var coords := KERB_COORDS if (cx + cy) % 2 == 0 else LOT_COORDS[0]
-			tile_map.set_cell(Vector2i(cx, cy), SOURCE_A2_1, coords)
+			tile_map.set_cell(Vector2i(cx, cy), SOURCE_A2_1, LOT_COORDS[0])
 
 
 func _is_border(x: int, y: int) -> bool:

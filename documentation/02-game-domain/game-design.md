@@ -126,9 +126,9 @@ Map rules:
   fast reversing counts the same.
 - Entering at or below 150 px/s has no effect. Staying on a strip does not
   re-trigger; leaving and re-entering fast does.
-- Strips are painted as a raised kerb band across the road tiles. Like the
-  bays, the paint follows the detection rectangle and may sit on the 48 px
-  grid while the rectangle stays authoritative.
+- Strips are painted as a solid dark ground band across the road tiles. Like
+  the bays, the paint follows the detection rectangle and may sit on the
+  48 px grid while the rectangle stays authoritative.
 
 ### Task Assignment (MFD)
 
