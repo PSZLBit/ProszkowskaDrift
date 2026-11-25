@@ -161,10 +161,10 @@ Map rules:
 
 - The car footprint is its collision rectangle: 73.75×32.5 px. Transform its
   four corners by the car's position and rotation.
-- A task completes when all of the following hold for 0.5 s continuously:
-  1. all four corners are inside the target spot rectangle (the boundary counts
-     as inside);
-  2. the car's speed is at most 40 px/s.
+- A task completes when all of the following hold for 0.3 s continuously:
+  1. all four corners are inside the target spot rectangle grown by 8 px on
+     every side (the boundary counts as inside);
+  2. the car's speed is at most 60 px/s.
 - Any failed frame resets the hold timer to zero.
 - Facing is not a completion gate. It only affects `angle_score`; a car facing
   the opposite way can still complete the task.
@@ -633,13 +633,14 @@ into the MVP implementation.
 | Tasks per player | 1 (MFD), 5 (MVP) | First 4-player playtest |
 | MFD target spots | 4 (`A-01`–`A-04`) | First MFD playtest |
 | MFD parking bay | 96×144 px | First MFD playtest |
-| MFD task hold | 0.5 s | First MFD playtest |
+| MFD task hold | 0.3 s | Playtest 2026-11-25: 0.5 s reset too easily on touch controls |
+| MFD corner tolerance | 8 px around the spot | Playtest 2026-11-25: 11 px car margins too tight |
 | Task time decay | 100 → 10 over 30 s | Playtest |
 | Auto-skip | 45 s (MVP) | Playtest |
 | Precision window | ±10° full, ±35° zero | Playtest |
 | Collision penalty | −10 each, max −30 | Playtest |
 | Finish bonus | +100 + 5/s, cap +150 (MVP) | Playtest |
-| Parked speed threshold | 40 px/s | First MFD playtest |
+| Parked speed threshold | 60 px/s | Playtest 2026-11-25: 40 px/s punished stopping creep |
 | Bump trigger speed | 150 px/s entry speed | First MFD playtest |
 | Bump crawl speed | 80 px/s after a fast entry | First MFD playtest |
 | Bump heading kick | ±12° to a random side | First MFD playtest |
