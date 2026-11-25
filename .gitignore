@@ -47,6 +47,9 @@ coverage.html
 /game/export/
 /game/build/
 
+# Local editor-only plugins (e.g. the godot_ai MCP helper); never commit.
+/game/addons/
+
 # Purchased third-party art assets stay local; see game/assets/CREDITS.md (D-34).
 /game/assets/Large Parking Lot/
 /game/tilesets/*.local.tres
