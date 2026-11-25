@@ -402,21 +402,42 @@ func _test_parking_detector() -> void:
 	]
 	_check(ParkingDetector.all_inside(edge, rect), "the boundary counts as inside")
 
+	var near_left := [
+		rect.position + Vector2(-ParkingDetector.CORNER_TOLERANCE_PX, 0),
+		rect.position + Vector2(rect.size.x, 0),
+		rect.position + rect.size,
+		rect.position + Vector2(0, rect.size.y),
+	]
+	_check(
+		ParkingDetector.all_inside(near_left, rect),
+		"a corner within tolerance outside counts as inside",
+	)
+	var past_left := [
+		rect.position + Vector2(-ParkingDetector.CORNER_TOLERANCE_PX - 1.0, 0),
+		rect.position + Vector2(rect.size.x, 0),
+		rect.position + rect.size,
+		rect.position + Vector2(0, rect.size.y),
+	]
+	_check(
+		not ParkingDetector.all_inside(past_left, rect),
+		"a corner past tolerance outside fails the check",
+	)
+
 	_check(ParkingDetector.speed_ok(0.0), "a stopped car passes the speed gate")
-	_check(ParkingDetector.speed_ok(40.0), "40 px/s passes the speed gate")
-	_check(not ParkingDetector.speed_ok(41.0), "above 40 px/s fails the speed gate")
+	_check(ParkingDetector.speed_ok(60.0), "60 px/s passes the speed gate")
+	_check(not ParkingDetector.speed_ok(61.0), "above 60 px/s fails the speed gate")
 
 	_check_eq(ParkingDetector.angle_diff_deg(-90.0, -90.0), 0.0, "aligned facing has zero difference")
 	_check_eq(ParkingDetector.angle_diff_deg(90.0, -90.0), 180.0, "opposite facing differs by 180")
 
 	var hold := ParkingDetector.Hold.new()
-	_check(not hold.call("update", 0.25, true, true), "half the hold time does not complete")
-	_check(hold.call("update", 0.25, true, true), "0.5 s continuous hold completes")
+	_check(not hold.call("update", 0.15, true, true), "half the hold time does not complete")
+	_check(hold.call("update", 0.15, true, true), "0.3 s continuous hold completes")
 	var reset_hold := ParkingDetector.Hold.new()
-	reset_hold.call("update", 0.4, true, true)
+	reset_hold.call("update", 0.2, true, true)
 	reset_hold.call("update", 0.1, false, true)
 	_check(
-		not reset_hold.call("update", 0.4, true, true), "leaving the spot resets the hold timer"
+		not reset_hold.call("update", 0.2, true, true), "leaving the spot resets the hold timer"
 	)
 
 
@@ -464,8 +485,8 @@ func _test_task_manager() -> void:
 	early.set_running(true, 0)
 	var early_done: Array = []
 	early.task_completed.connect(func(slot: int, result: Dictionary) -> void: early_done.append(slot))
-	early.update_tasks(0.3, _parked_cars(early, 0.0), 300)
-	early.update_tasks(0.3, _parked_cars(early, 100.0), 600)
+	early.update_tasks(0.2, _parked_cars(early, 0.0), 300)
+	early.update_tasks(0.2, _parked_cars(early, 100.0), 600)
 	_check(early_done.is_empty(), "leaving the spot or speeding up prevents completion")
 
 	var slow = TaskManagerScript.new()
@@ -513,7 +534,7 @@ func _test_task_manager() -> void:
 			resumed_done.append(slot)
 			resumed_results.append(result)
 	)
-	resumed.update_tasks(0.3, _parked_cars(resumed, 0.0), 1300)
+	resumed.update_tasks(0.2, _parked_cars(resumed, 0.0), 1300)
 	resumed.set_running(false, 1300)
 	resumed.set_running(true, 5300)
 	resumed.update_tasks(0.5, _parked_cars(resumed, 0.0), 5800)
