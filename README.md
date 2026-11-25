@@ -1,6 +1,6 @@
 # Proszkowska Drift
 
-Last updated: 2026-11-09
+Last updated: 2026-11-10
 
 Working title for a local multiplayer arcade parking game. One to four players
 use Android tablets as controllers; a laptop runs the game and shows it on a TV
@@ -161,6 +161,26 @@ go run ./cmd/fakecontroller -clients 4 -duration 60s
 Press `Enter` in the game window to start the round and `Q` to quit. For an
 automated smoke run, use `godot --headless --path game -- --dev-auto-start`;
 the flag is development-only.
+
+One-command demo (Windows PowerShell, issue #77): start the server, four
+simulated controllers, and the Godot game with a single command:
+
+```powershell
+.\scripts\demo.ps1
+```
+
+With a real tablet instead of simulated controllers, the script prints the
+laptop address, waits for one tablet to connect, then starts the game:
+
+```powershell
+.\scripts\demo.ps1 -UseRealController
+```
+
+Install the controller debug APK on the tablet (`controller-android/`,
+`./gradlew :app:assembleDebug`), join the same Wi-Fi network, long-press the
+server line in the app, and enter the printed address. The tablet drives
+slot P1. The manual hardware check is recorded in
+[`documentation/06-development/testing.md`](documentation/06-development/testing.md).
 
 Run the Godot tests:
 
