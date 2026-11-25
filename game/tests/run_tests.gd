@@ -11,6 +11,7 @@ const CarScript := preload("res://scripts/car.gd")
 const ServerInputScript := preload("res://scripts/server_input.gd")
 const ParkingLotArt := preload("res://scripts/parking_lot_art.gd")
 const ParkingLotMapScript := preload("res://scripts/parking_lot_map.gd")
+const MfdTilemapScript := preload("res://scripts/mfd_tilemap.gd")
 const RoundClock := preload("res://scripts/round_clock.gd")
 const ScoreModel := preload("res://scripts/score_model.gd")
 const MfdMap := preload("res://scripts/mfd_map.gd")
@@ -44,6 +45,7 @@ func _initialize() -> void:
 	_test_main_scene()
 	_test_parking_lot_tileset()
 	_test_parking_lot_map()
+	_test_mfd_tilemap()
 	_test_parking_lot_art_swap()
 	_test_round_clock()
 	_test_score_model()
@@ -742,6 +744,140 @@ func _test_parking_lot_map() -> void:
 	)
 	_check(
 		not ParkingLotMapScript.should_use_local(false, false),
+		"a missing local TileSet without purchased sheets falls back",
+	)
+
+	map.free()
+
+
+func _test_mfd_tilemap() -> void:
+	var packed := load("res://scenes/map/mfd_tilemap.tscn") as PackedScene
+	_check(packed != null, "mfd_tilemap.tscn loads")
+	if packed == null:
+		return
+
+	var map = packed.instantiate()
+	var tile_map: TileMapLayer = map.get_tile_map_layer()
+	_check(tile_map != null, "the MFD map has a TileMapLayer")
+	if tile_map == null:
+		map.free()
+		return
+
+	_check_eq(tile_map.position, MfdTilemapScript.MAP_OFFSET, "the MFD map is centred vertically")
+	_check(tile_map.tile_set == null, "the MFD map paints its TileSet at runtime")
+	_check(tile_map.get_used_cells().is_empty(), "the MFD map commits no baked tile data")
+
+	map.build()
+	_check(tile_map.tile_set != null, "the MFD map has a TileSet after build")
+	if tile_map.tile_set == null:
+		map.free()
+		return
+	_check_eq(
+		tile_map.get_used_cells().size(),
+		MfdTilemapScript.MAP_SIZE.x * MfdTilemapScript.MAP_SIZE.y,
+		"the MFD map fills 40x22",
+	)
+	_check_eq(
+		tile_map.get_cell_source_id(Vector2i(0, 0)),
+		MfdTilemapScript.SOURCE_A2_1,
+		"the MFD border uses the A2-1 source",
+	)
+	_check_eq(
+		tile_map.get_cell_atlas_coords(Vector2i(0, 0)),
+		MfdTilemapScript.KERB_COORDS,
+		"the MFD border uses the kerb tile",
+	)
+	_check_eq(
+		tile_map.get_cell_atlas_coords(Vector2i(1, 1)),
+		MfdTilemapScript.RING_COORDS,
+		"the MFD ring uses the ring tile",
+	)
+	_check_eq(
+		tile_map.get_cell_atlas_coords(Vector2i(10, 10)),
+		MfdTilemapScript.LOT_COORDS[0],
+		"the MFD interior uses the lot tile",
+	)
+	_check(
+		MfdTilemapScript.GRASS_COORDS.has(tile_map.get_cell_atlas_coords(Vector2i(2, 2))),
+		"grass islands use grass tiles",
+	)
+
+	# Hard-coded from mfd_map.gd spots (A-01 to A-04): centers x=384,768,1152,1536,
+	# size 96x144, floored to the 48px grid with the 12px vertical map offset.
+	# Do not recompute from spot_rect here; the test must catch offset errors.
+	var expected_origins := [Vector2i(7, 9), Vector2i(15, 9), Vector2i(23, 9), Vector2i(31, 9)]
+	var expected_base_columns := [0, 2, 0, 2]
+	var bay_cells := 0
+	for spot in MfdMap.spot_count():
+		var origin: Vector2i = expected_origins[spot]
+		var base_column: int = expected_base_columns[spot]
+		for dy in MfdTilemapScript.BAY_CELLS.y:
+			for dx in MfdTilemapScript.BAY_CELLS.x:
+				_check_eq(
+					tile_map.get_cell_source_id(origin + Vector2i(dx, dy)),
+					MfdTilemapScript.SOURCE_B_01,
+					"MFD bay %d uses the B-01 source" % (spot + 1),
+				)
+				bay_cells += 1
+		_check_eq(
+			tile_map.get_cell_atlas_coords(origin),
+			Vector2i(base_column, MfdTilemapScript.BAY_TOP_ROW),
+			"MFD bay %d top marking matches its design" % (spot + 1),
+		)
+		_check_eq(
+			tile_map.get_cell_atlas_coords(origin + Vector2i(1, 2)),
+			Vector2i(base_column + 1, MfdTilemapScript.BAY_BOTTOM_ROW),
+			"MFD bay %d bottom marking matches its design" % (spot + 1),
+		)
+	_check_eq(bay_cells, 24, "four 2x3 bays are painted")
+
+	var spawns := map.get_node_or_null("Spawns") as Node2D
+	_check(spawns != null, "the MFD map has spawn markers")
+	if spawns != null:
+		_check_eq(spawns.get_child_count(), 4, "there are four MFD spawn markers")
+		for slot in [1, 2, 3, 4]:
+			var marker := spawns.get_node_or_null("Spawn%d" % slot) as Marker2D
+			_check(marker != null, "MFD spawn %d has a marker" % slot)
+			if marker != null:
+				_check_eq(marker.position, MfdMap.spawn_pos(slot), "MFD spawn %d matches the baseline" % slot)
+
+	var bays := map.get_node_or_null("Bays") as Node2D
+	_check(bays != null, "the MFD map has bay markers")
+	if bays != null:
+		_check_eq(bays.get_child_count(), 4, "there are four MFD bay markers")
+		for spot in MfdMap.spot_count():
+			var marker := bays.get_node_or_null("Bay%d" % (spot + 1)) as Marker2D
+			_check(marker != null, "MFD bay %d has a marker" % (spot + 1))
+			if marker != null:
+				_check_eq(marker.position, MfdMap.spot_rect(spot).get_center(), "MFD bay %d sits on its spot" % (spot + 1))
+
+	var environment := map.get_node_or_null("Environment") as StaticBody2D
+	_check(environment != null, "the MFD map has an environment body")
+	if environment != null:
+		_check_eq(environment.collision_layer, 1, "the MFD boundary uses the environment layer")
+		_check_eq(environment.collision_mask, 2, "the MFD boundary detects cars")
+		var solids := environment.find_children("*", "CollisionShape2D", true, false)
+		_check_eq(solids.size(), 6, "the environment has walls plus two MFD planters")
+		var positions: Array = []
+		for solid in solids:
+			positions.append((solid as Node2D).position)
+		_check(positions.has(Vector2(240, 540)), "the west planter matches the MFD baseline")
+		_check(positions.has(Vector2(1680, 540)), "the east planter matches the MFD baseline")
+
+	_check(
+		MfdTilemapScript.should_use_local(true, true),
+		"an installed local TileSet is preferred",
+	)
+	_check(
+		not MfdTilemapScript.should_use_local(true, false),
+		"a local TileSet without purchased sheets is stale",
+	)
+	_check(
+		not MfdTilemapScript.should_use_local(false, true),
+		"a missing local TileSet falls back to committed",
+	)
+	_check(
+		not MfdTilemapScript.should_use_local(false, false),
 		"a missing local TileSet without purchased sheets falls back",
 	)
 

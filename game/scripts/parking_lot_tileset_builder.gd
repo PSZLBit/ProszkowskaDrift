@@ -68,3 +68,30 @@ static func purchased_files() -> Dictionary:
 
 static func purchased_available() -> bool:
 	return ResourceLoader.exists("res://assets/Large Parking Lot/" + SHEETS[0]["purchased"])
+
+
+## Shared TileSet path resolution for the parking-lot maps.
+##
+## Prefers the local TileSet only when the file exists, loads, and the
+## purchased sheets are installed; a stale local file falls back to the
+## committed path. Generates the committed TileSet from the placeholders
+## when it is missing, so fresh clones and CI work without manual steps.
+static func preferred_tileset_path(committed_path: String, local_path: String) -> String:
+	if ResourceLoader.exists(local_path):
+		# A local TileSet is only usable when the purchased sheets are
+		# installed and the file actually loads. Otherwise it is a stale
+		# artifact referencing missing textures; loading it fails and the
+		# map would render blank, so fall back to the committed path.
+		var local := load(local_path) as TileSet
+		if local != null and purchased_available():
+			return local_path
+		push_warning("Ignoring stale local TileSet %s." % local_path)
+	if not ResourceLoader.exists(committed_path):
+		var build_error := build(
+			"res://assets/placeholders/large_parking_lot/",
+			placeholder_files(),
+			committed_path
+		)
+		if build_error != OK:
+			push_error("Could not generate %s." % committed_path)
+	return committed_path
